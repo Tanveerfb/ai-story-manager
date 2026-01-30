@@ -6,19 +6,14 @@ import {
   Typography,
   Box,
   Paper,
-  Timeline,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDot,
-  TimelineOppositeContent,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
   Grid,
   Chip,
+  Card,
+  CardContent,
 } from '@mui/material';
 
 export default function TimelinePage() {
@@ -53,7 +48,7 @@ export default function TimelinePage() {
     }
   };
 
-  const getEventColor = (type: string) => {
+  const getEventColor = (type: string): 'primary' | 'secondary' | 'error' | 'default' => {
     switch (type) {
       case 'dialogue':
         return 'primary';
@@ -62,7 +57,7 @@ export default function TimelinePage() {
       case 'revelation':
         return 'error';
       default:
-        return 'grey';
+        return 'default';
     }
   };
 
@@ -98,48 +93,48 @@ export default function TimelinePage() {
             </Typography>
           </Paper>
         ) : (
-          <Timeline position="alternate">
+          <Grid container spacing={2}>
             {filteredEvents.map((event, index) => (
-              <TimelineItem key={event.id}>
-                <TimelineOppositeContent color="text.secondary">
-                  {event.timestamp_in_story || `Event ${index + 1}`}
-                </TimelineOppositeContent>
-                <TimelineSeparator>
-                  <TimelineDot color={getEventColor(event.event_type)} />
-                  {index < filteredEvents.length - 1 && <TimelineConnector />}
-                </TimelineSeparator>
-                <TimelineContent>
-                  <Paper sx={{ p: 2 }}>
-                    <Box sx={{ mb: 1 }}>
+              <Grid item xs={12} key={event.id}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                       <Chip
                         label={event.event_type}
                         size="small"
                         color={getEventColor(event.event_type)}
                       />
+                      {event.timestamp_in_story && (
+                        <Typography variant="caption" color="text.secondary">
+                          {event.timestamp_in_story}
+                        </Typography>
+                      )}
                     </Box>
-                    <Typography variant="h6" component="div">
+                    <Typography variant="h6" gutterBottom>
                       {event.description}
                     </Typography>
                     {event.content && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      <Typography variant="body2" color="text.secondary" paragraph>
                         {event.content}
                       </Typography>
                     )}
-                    {event.characters && (
-                      <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                        Character: {event.characters.name}
-                      </Typography>
-                    )}
-                    {event.locations && (
-                      <Typography variant="caption" display="block">
-                        Location: {event.locations.name}
-                      </Typography>
-                    )}
-                  </Paper>
-                </TimelineContent>
-              </TimelineItem>
+                    <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                      {event.characters && (
+                        <Typography variant="caption">
+                          Character: {event.characters.name}
+                        </Typography>
+                      )}
+                      {event.locations && (
+                        <Typography variant="caption">
+                          Location: {event.locations.name}
+                        </Typography>
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
             ))}
-          </Timeline>
+          </Grid>
         )}
       </Box>
     </Container>

@@ -12,7 +12,13 @@ export async function POST(request: NextRequest) {
 
     // Chunk text if too large
     const chunks = chunkText(text, 6000);
-    const allResults = {
+    const allResults: {
+      characters: any[];
+      locations: any[];
+      events: any[];
+      relationships: any[];
+      summary: string;
+    } = {
       characters: [],
       locations: [],
       events: [],

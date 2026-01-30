@@ -6,12 +6,6 @@ import { extractEntities } from '@/lib/ollama';
 import { insertStoryPart, insertCharacter, insertLocation, insertEvent, insertRelationship } from '@/lib/supabase';
 import { cleanText, countWords } from '@/lib/parsers';
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 async function parseFormData(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get('file') as File;
