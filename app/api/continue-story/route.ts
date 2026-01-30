@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { continueStory } from '@/lib/ollama';
 import { getStoryParts, getCharacters, insertStoryPart } from '@/lib/supabase';
-import { buildStoryContext, buildContinuationPrompt } from '@/lib/contextBuilder';
+import { buildStoryContext } from '@/lib/contextBuilder';
 import { countWords } from '@/lib/parsers';
 import { supabase } from '@/lib/supabase';
 
@@ -33,13 +33,6 @@ export async function POST(request: NextRequest) {
       recentParts,
       characters,
       relationships || []
-    );
-
-    // Build full prompt
-    const fullPrompt = buildContinuationPrompt(
-      userPrompt,
-      context,
-      characterFocus
     );
 
     // Generate continuation

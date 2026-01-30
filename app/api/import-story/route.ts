@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
+import { tmpdir } from 'os';
 import mammoth from 'mammoth';
 import { extractEntities } from '@/lib/ollama';
 import { insertStoryPart, insertCharacter, insertLocation, insertEvent, insertRelationship } from '@/lib/supabase';
@@ -32,10 +33,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save file temporarily
+    // Save file temporarily - use OS-specific temp directory
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    tempFilePath = join('/tmp', `upload-${Date.now()}.docx`);
+    tempFilePath = join(tmpdir(), `upload-${Date.now()}.docx`);
     await writeFile(tempFilePath, buffer);
 
     // Parse DOCX
@@ -56,6 +57,9 @@ export async function POST(request: NextRequest) {
       summary: entities.summary || undefined,
     });
 
+    // Track errors for better reporting
+    const errors: string[] = [];
+
     // Save characters
     const savedCharacters = [];
     for (const char of entities.characters || []) {
@@ -69,7 +73,8 @@ export async function POST(request: NextRequest) {
           first_appearance_part: partNumber,
         });
         savedCharacters.push(saved);
-      } catch (error) {
+      } catch (error: any) {
+        errors.push(`Failed to save character ${char.name}: ${error.message}`);
         console.error(`Failed to save character ${char.name}:`, error);
       }
     }
@@ -86,7 +91,8 @@ export async function POST(request: NextRequest) {
           first_mentioned_part: partNumber,
         });
         savedLocations.push(saved);
-      } catch (error) {
+      } catch (error: any) {
+        errors.push(`Failed to save location ${loc.name}: ${error.message}`);
         console.error(`Failed to save location ${loc.name}:`, error);
       }
     }
@@ -103,7 +109,8 @@ export async function POST(request: NextRequest) {
           significance: 5,
         });
         savedEvents.push(saved);
-      } catch (error) {
+      } catch (error: any) {
+        errors.push(`Failed to save event: ${error.message}`);
         console.error('Failed to save event:', error);
       }
     }
@@ -125,14 +132,19 @@ export async function POST(request: NextRequest) {
           });
           savedRelationships.push(saved);
         }
-      } catch (error) {
+      } catch (error: any) {
+        errors.push(`Failed to save relationship: ${error.message}`);
         console.error('Failed to save relationship:', error);
       }
     }
 
     // Clean up temp file
     if (tempFilePath) {
-      await unlink(tempFilePath);
+      try {
+        await unlink(tempFilePath);
+      } catch (cleanupError: any) {
+        console.warn('Failed to cleanup temporary file:', cleanupError.message);
+      }
     }
 
     return NextResponse.json({
@@ -144,6 +156,7 @@ export async function POST(request: NextRequest) {
         events: savedEvents.length,
         relationships: savedRelationships.length,
       },
+      errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error: any) {
     console.error('Import error:', error);
@@ -152,8 +165,8 @@ export async function POST(request: NextRequest) {
     if (tempFilePath) {
       try {
         await unlink(tempFilePath);
-      } catch (e) {
-        // Ignore cleanup errors
+      } catch (cleanupError: any) {
+        console.warn('Failed to cleanup temporary file:', cleanupError.message);
       }
     }
 
