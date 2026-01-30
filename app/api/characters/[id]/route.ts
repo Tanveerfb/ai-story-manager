@@ -4,10 +4,11 @@ import { supabase } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const character = await getCharacterById(params.id);
+    const { id } = await context.params;
+    const character = await getCharacterById(id);
     return NextResponse.json(character);
   } catch (error: any) {
     return NextResponse.json(
@@ -19,15 +20,16 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const body = await request.json();
 
     const { data, error } = await supabase
       .from('characters')
       .update(body)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 

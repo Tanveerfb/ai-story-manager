@@ -36,10 +36,11 @@ export default function CharacterDetailPage() {
   const [tabValue, setTabValue] = useState(0);
 
   useEffect(() => {
-    if (params.id) {
-      fetchCharacter(params.id as string);
+    const id = params.id as string;
+    if (id) {
+      fetchCharacter(id);
     }
-  }, [params.id]);
+  }, [params]);
 
   const fetchCharacter = async (id: string) => {
     try {

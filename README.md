@@ -16,7 +16,7 @@ A comprehensive story management web application that allows importing existing 
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 14 (App Router), Material UI, React, TypeScript
+- **Frontend**: Next.js 15 (App Router), Material UI, React, TypeScript
 - **Backend**: Next.js API Routes (Node.js)
 - **Database**: Supabase (PostgreSQL)
 - **AI**: Local LLM via Ollama (llama3.1:70b)
