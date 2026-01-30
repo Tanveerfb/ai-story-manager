@@ -36,10 +36,21 @@ export default function FileUpload({
 
       if (e.dataTransfer.files && e.dataTransfer.files[0]) {
         const file = e.dataTransfer.files[0];
-        validateAndSelectFile(file);
+        if (file.size > maxSize) {
+          alert(`File size must be less than ${maxSize / 1024 / 1024}MB`);
+          return;
+        }
+
+        if (accept && !file.name.endsWith(accept.replace('*', ''))) {
+          alert(`Only ${accept} files are supported`);
+          return;
+        }
+
+        setSelectedFile(file);
+        onFileSelect(file);
       }
     },
-    [maxSize]
+    [maxSize, accept, onFileSelect]
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
