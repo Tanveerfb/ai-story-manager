@@ -140,10 +140,10 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-**For mobile/network access**, run with the `-H` flag to bind to all network interfaces:
+**For mobile/network access**, run with the `--hostname` flag to bind to all network interfaces:
 
 ```bash
-npm run dev -- -H 0.0.0.0
+npm run dev -- --hostname 0.0.0.0
 ```
 
 Then access from mobile using your PC's IP: `http://192.168.x.x:3000`
@@ -265,8 +265,10 @@ Update your `.env.local` file:
 
 ```env
 # Change from localhost to your PC's local IP
-OLLAMA_API_URL=http://192.168.1.100:11434  # Replace with YOUR IP
+OLLAMA_API_URL=http://192.168.x.x:11434  # Replace x.x with your actual IP (e.g., 192.168.1.100)
 ```
+
+**Security Note**: This uses HTTP (unencrypted) which is acceptable for local network usage. However, avoid transmitting highly sensitive data over this connection. The traffic is only on your local network and not exposed to the internet.
 
 **Windows Users**: Ensure Windows Firewall allows connections to port 11434 (see Ollama installation section above).
 
@@ -280,7 +282,7 @@ ollama serve
 #### 3. Run Next.js with Network Binding
 
 ```bash
-npm run dev -- -H 0.0.0.0
+npm run dev -- --hostname 0.0.0.0
 ```
 
 This allows the web app to be accessed from other devices on your network.
@@ -289,7 +291,7 @@ This allows the web app to be accessed from other devices on your network.
 
 On your mobile device:
 1. Connect to the **same WiFi network** as your PC
-2. Open browser and navigate to: `http://192.168.1.100:3000` (replace with YOUR PC's IP)
+2. Open browser and navigate to: `http://192.168.x.x:3000` (replace x.x with your PC's actual IP, e.g., `http://192.168.1.100:3000`)
 3. The app should load and work normally
 4. AI generation will use Ollama running on your PC
 
@@ -297,13 +299,15 @@ On your mobile device:
 
 - **Cannot connect to web app**: 
   - Verify mobile device is on same WiFi network
-  - Check PC firewall allows port 3000
-  - Try disabling PC firewall temporarily to test
+  - Check if PC firewall allows incoming connections on port 3000
+  - **Windows**: Add inbound rule for TCP port 3000 in Windows Firewall (similar to Ollama setup)
+  - **macOS**: System Settings > Network > Firewall > Options > Allow port 3000
+  - **Linux**: Configure iptables/ufw to allow port 3000: `sudo ufw allow 3000/tcp`
   
 - **Web app loads but AI generation fails**:
   - Verify OLLAMA_API_URL in .env.local uses PC's local IP, not localhost
   - Check Ollama is running: `ollama list`
-  - Verify firewall allows port 11434
+  - Verify firewall allows port 11434 (add inbound rule if needed)
   
 - **Slow mobile performance**:
   - Normal - AI generation happens on PC, which may take 30-90 seconds
