@@ -1,124 +1,190 @@
-import axios from 'axios';
+import { Ollama } from "ollama";
 
-const OLLAMA_API_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:70b';
+const ollama = new Ollama({
+  host: process.env.OLLAMA_HOST || "http://127.0.0.1:11434",
+});
 
-// Quality-focused AI settings
-const AI_TEMPERATURE = parseFloat(process.env.AI_TEMPERATURE || '0.82');
-const AI_TOP_P = parseFloat(process.env.AI_TOP_P || '0.92');
-const AI_TOP_K = parseInt(process.env.AI_TOP_K || '50');
-const AI_MAX_TOKENS = parseInt(process.env.AI_MAX_TOKENS || '1500');
-const AI_REPEAT_PENALTY = parseFloat(process.env.AI_REPEAT_PENALTY || '1.1');
-const AI_NUM_CTX = parseInt(process.env.AI_NUM_CTX || '8192');
+const MODEL = process.env.OLLAMA_MODEL || "llama3.1-force-gpu";
+const NUM_CTX = parseInt(process.env.AI_NUM_CTX || "2048", 10);
 
-interface OllamaGenerateOptions {
-  model?: string;
+interface GenerateOptions {
   prompt: string;
   system?: string;
-  temperature?: number;
-  top_p?: number;
-  top_k?: number;
-  num_predict?: number;
-  repeat_penalty?: number;
+  format?: "json" | "";
   num_ctx?: number;
-  format?: 'json' | '';
+  temperature?: number;
+  num_predict?: number;
 }
 
-export async function generateText(options: OllamaGenerateOptions): Promise<string> {
-  try {
-    const response = await axios.post(
-      `${OLLAMA_API_URL}/api/generate`,
-      {
-        model: options.model || OLLAMA_MODEL,
-        prompt: options.prompt,
-        system: options.system,
-        temperature: options.temperature ?? AI_TEMPERATURE,
-        top_p: options.top_p ?? AI_TOP_P,
-        top_k: options.top_k ?? AI_TOP_K,
-        num_predict: options.num_predict ?? AI_MAX_TOKENS,
-        repeat_penalty: options.repeat_penalty ?? AI_REPEAT_PENALTY,
-        num_ctx: options.num_ctx ?? AI_NUM_CTX,
-        format: options.format,
-        stream: false,
-      },
-      {
-        timeout: 180000, // 3 minutes timeout for quality model
-      }
-    );
+async function generateText(options: GenerateOptions): Promise<string> {
+  const response = await ollama.generate({
+    model: MODEL,
+    prompt: options.prompt,
+    system: options.system || "",
+    format: options.format,
+    options: {
+      num_ctx: options.num_ctx || NUM_CTX,
+      temperature: options.temperature || 0.7,
+      num_predict: options.num_predict || 1000,
+    },
+    stream: false,
+  });
 
-    return response.data.response;
-  } catch (error: any) {
-    console.error('Ollama API error:', error.message);
-    throw new Error(`Failed to generate text: ${error.message}`);
-  }
+  return response.response;
 }
 
 export async function extractEntities(text: string): Promise<any> {
-  const system = `You are an AI that extracts structured information from story text. 
-Extract all characters, locations, events, and relationships. 
-Return your response as valid JSON with the following structure:
-{
-  "characters": [{"name": "", "role": "", "description": "", "personality": [], "physical_traits": []}],
-  "locations": [{"name": "", "description": "", "type": ""}],
-  "events": [{"description": "", "event_type": "", "characters": [], "location": ""}],
-  "relationships": [{"character_1": "", "character_2": "", "relationship_type": "", "description": ""}],
-  "summary": ""
-}`;
+  const system = `Extract from story: character names with personality (1 sentence), 3 traits, goals, relationships, locations.
 
-  const prompt = `Extract entities from this story text:\n\n${text}`;
+JSON format:
+{
+  "characters": [{"name": "Name", "personality": "brief", "traits": ["t1","t2","t3"], "goals": "brief", "description": "appearance"}],
+  "relationships": [{"character_1": "N1", "character_2": "N2", "type": "romantic/friendship/rivalry/family", "dynamic": "brief"}],
+  "locations": [{"name": "Place", "description": "brief", "atmosphere": "mood"}],
+  "events": [{"description": "what happened", "emotional_impact": "impact"}],
+  "themes": ["theme1", "theme2"]
+}
+
+Ignore pronouns: you, she, he, I, me, they, boyfriend, girlfriend, ChatGPT, AI, narrator, babe, baby.`;
+
+  const prompt = `Extract:\n\n${text.substring(0, 2500)}\n\nJSON:`;
 
   try {
     const response = await generateText({
       prompt,
       system,
-      format: 'json',
-      num_ctx: 4096, // Explicit context limit
-      temperature: 0.3, // Lower temperature for more consistent extraction
+      format: "json",
+      num_ctx: 2048,
+      temperature: 0.3,
+      num_predict: 500,
     });
 
-    // Parse JSON response
     const parsed = JSON.parse(response);
-    return parsed;
+
+    const EXCLUDE = [
+      "you",
+      "your",
+      "yours",
+      "i",
+      "me",
+      "my",
+      "mine",
+      "myself",
+      "he",
+      "him",
+      "his",
+      "she",
+      "her",
+      "hers",
+      "they",
+      "them",
+      "their",
+      "we",
+      "us",
+      "our",
+      "chatgpt",
+      "gpt",
+      "ai",
+      "narrator",
+      "boyfriend",
+      "girlfriend",
+      "lover",
+      "partner",
+      "friend",
+      "stranger",
+      "babe",
+      "baby",
+      "darling",
+      "sweetheart",
+      "honey",
+    ];
+
+    const cleanedCharacters = (parsed.characters || [])
+      .filter((char: any) => {
+        const name = (char.name || "").toLowerCase().trim();
+        return name.length > 1 && !EXCLUDE.includes(name);
+      })
+      .map((char: any) => ({
+        name: char.name?.trim() || "Unknown",
+        role: "side",
+        personality: char.personality?.trim() || null,
+        traits: Array.isArray(char.traits) ? char.traits.slice(0, 5) : [],
+        description: char.description?.trim() || null,
+        goals: char.goals?.trim() || null,
+        arc: null,
+        backstory: null,
+      }));
+
+    const cleanedRelationships = (parsed.relationships || [])
+      .filter((rel: any) => {
+        const c1 = (rel.character_1 || "").toLowerCase().trim();
+        const c2 = (rel.character_2 || "").toLowerCase().trim();
+        return !EXCLUDE.includes(c1) && !EXCLUDE.includes(c2);
+      })
+      .map((rel: any) => ({
+        character_1: rel.character_1?.trim() || "",
+        character_2: rel.character_2?.trim() || "",
+        relationship_type: rel.type?.trim() || "unknown",
+        dynamic: rel.dynamic?.trim() || null,
+        development: null,
+        description: rel.dynamic?.trim() || null,
+      }));
+
+    const cleanedLocations = (parsed.locations || []).map((loc: any) => ({
+      name: loc.name?.trim() || "",
+      type: "indoor",
+      description: loc.description?.trim() || "",
+      atmosphere: loc.atmosphere?.trim() || null,
+      significance: null,
+    }));
+
+    const cleanedEvents = (parsed.events || []).map((evt: any) => ({
+      description: evt.description?.trim() || "",
+      participants: [],
+      emotional_impact: evt.emotional_impact?.trim() || null,
+      consequences: null,
+      significance: null,
+      content: evt.description?.trim() || "",
+    }));
+
+    return {
+      characters: cleanedCharacters,
+      locations: cleanedLocations,
+      events: cleanedEvents,
+      relationships: cleanedRelationships,
+      themes: Array.isArray(parsed.themes) ? parsed.themes.slice(0, 5) : [],
+      summary: parsed.summary || "",
+    };
   } catch (error: any) {
-    console.error('Entity extraction error:', error.message);
-    // Return empty structure on error instead of throwing
+    console.error("Entity extraction error:", error.message);
     return {
       characters: [],
       locations: [],
       events: [],
       relationships: [],
-      summary: '',
+      themes: [],
+      summary: "",
     };
   }
 }
 
-export async function continueStory(context: string, userPrompt: string): Promise<string> {
-  const system = `You are a creative story writer. Continue the story naturally based on the provided context.
-Maintain character consistency, respect established relationships, and keep the narrative engaging.
-Write in a natural, flowing style that matches the tone of the existing story.`;
+export async function generateStorySummary(text: string): Promise<string> {
+  const system = `Create a 2 paragraph summary covering main characters, plot, and themes.`;
 
-  const prompt = `STORY CONTEXT:\n${context}\n\nUSER REQUEST:\n${userPrompt}\n\nContinue the story:`;
+  const prompt = `Summarize:\n\n${text.substring(0, 4000)}`;
 
   try {
     const response = await generateText({
       prompt,
       system,
+      num_ctx: 2048,
+      temperature: 0.5,
+      num_predict: 250,
     });
 
-    return response;
+    return response.trim();
   } catch (error: any) {
-    console.error('Story continuation error:', error.message);
-    throw error;
-  }
-}
-
-export async function testConnection(): Promise<boolean> {
-  try {
-    const response = await axios.get(`${OLLAMA_API_URL}/api/tags`, {
-      timeout: 5000,
-    });
-    return response.status === 200;
-  } catch (error) {
-    return false;
+    console.error("Summary generation error:", error.message);
+    return "Summary generation failed.";
   }
 }

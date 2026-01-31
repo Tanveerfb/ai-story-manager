@@ -1,78 +1,80 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Warn if environment variables are not set (during development)
 if (!supabaseUrl || !supabaseAnonKey) {
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === "development") {
     console.warn(
-      '⚠️ Supabase environment variables not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file.'
+      "⚠️ Supabase environment variables not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file.",
     );
   }
 }
 
 // Use placeholder values for build time, but will fail at runtime if not configured
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
+  supabaseUrl || "https://placeholder.supabase.co",
+  supabaseAnonKey || "placeholder-key",
 );
 
 // Helper functions for common queries
 
 export async function getStoryParts(limit?: number) {
   const query = supabase
-    .from('story_parts')
-    .select('*')
-    .order('part_number', { ascending: true });
-  
+    .from("story_parts")
+    .select("*")
+    .order("part_number", { ascending: true });
+
   if (limit) {
     query.limit(limit);
   }
-  
+
   const { data, error } = await query;
-  
+
   if (error) throw error;
   return data;
 }
 
 export async function getCharacters(roleFilter?: string) {
   let query = supabase
-    .from('characters')
-    .select('*')
-    .order('name', { ascending: true });
-  
+    .from("characters")
+    .select("*")
+    .order("name", { ascending: true });
+
   if (roleFilter) {
-    query = query.eq('role', roleFilter);
+    query = query.eq("role", roleFilter);
   }
-  
+
   const { data, error } = await query;
-  
+
   if (error) throw error;
   return data;
 }
 
 export async function getCharacterById(id: string) {
   const { data, error } = await supabase
-    .from('characters')
-    .select(`
+    .from("characters")
+    .select(
+      `
       *,
       character_traits (*),
       relationships:relationships!character_1_id (*)
-    `)
-    .eq('id', id)
+    `,
+    )
+    .eq("id", id)
     .single();
-  
+
   if (error) throw error;
   return data;
 }
 
 export async function getLocations() {
   const { data, error } = await supabase
-    .from('locations')
-    .select('*')
-    .order('name', { ascending: true });
-  
+    .from("locations")
+    .select("*")
+    .order("name", { ascending: true });
+
   if (error) throw error;
   return data;
 }
@@ -83,21 +85,21 @@ export async function getEvents(filters?: {
   locationId?: string;
 }) {
   let query = supabase
-    .from('events')
-    .select('*, story_parts(*), characters(*), locations(*)');
-  
+    .from("events")
+    .select("*, story_parts(*), characters(*), locations(*)");
+
   if (filters?.storyPartId) {
-    query = query.eq('story_part_id', filters.storyPartId);
+    query = query.eq("story_part_id", filters.storyPartId);
   }
   if (filters?.characterId) {
-    query = query.eq('character_id', filters.characterId);
+    query = query.eq("character_id", filters.characterId);
   }
   if (filters?.locationId) {
-    query = query.eq('location_id', filters.locationId);
+    query = query.eq("location_id", filters.locationId);
   }
-  
+
   const { data, error } = await query;
-  
+
   if (error) throw error;
   return data;
 }
@@ -110,55 +112,86 @@ export async function insertStoryPart(storyPart: {
   summary?: string;
 }) {
   const { data, error } = await supabase
-    .from('story_parts')
+    .from("story_parts")
     .insert(storyPart)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
 
 export async function insertCharacter(character: any) {
   const { data, error } = await supabase
-    .from('characters')
+    .from("characters")
     .insert(character)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
 
 export async function insertLocation(location: any) {
   const { data, error } = await supabase
-    .from('locations')
+    .from("locations")
     .insert(location)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
 
 export async function insertEvent(event: any) {
   const { data, error } = await supabase
-    .from('events')
+    .from("events")
     .insert(event)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
 
 export async function insertRelationship(relationship: any) {
   const { data, error } = await supabase
-    .from('relationships')
+    .from("relationships")
     .insert(relationship)
     .select()
     .single();
-  
+
+  if (error) throw error;
+  return data;
+}
+
+export async function insertTheme(theme: {
+  story_part_id: string;
+  theme: string;
+  description?: string;
+}) {
+  const { data, error } = await supabase
+    .from("themes")
+    .insert(theme)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getThemes(storyPartId?: string) {
+  let query = supabase
+    .from("themes")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (storyPartId) {
+    query = query.eq("story_part_id", storyPartId);
+  }
+
+  const { data, error } = await query;
+
   if (error) throw error;
   return data;
 }

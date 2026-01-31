@@ -1,0 +1,5 @@
+FROM llama3.1:8b
+
+PARAMETER num_gpu 1
+PARAMETER num_thread 2
+PARAMETER low_vram false

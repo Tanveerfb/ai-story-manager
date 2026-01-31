@@ -1,0 +1,69 @@
+export interface Character {
+  id?: string;
+  name: string;
+  role?: "main" | "side" | "minor";
+  description?: string | null;
+  personality?: string | null;
+  physical_traits?: string | null; // JSON string of traits array
+  traits?: string[]; // Temporary array before saving
+  first_appearance_part?: number;
+  avatar_url?: string | null;
+  background?: string | null;
+  created_at?: string;
+}
+
+export interface Location {
+  id?: string;
+  name: string;
+  description?: string | null;
+  type?: "indoor" | "outdoor" | "mystical" | "unknown";
+  importance?: "major" | "minor";
+  first_mentioned_part?: number;
+  created_at?: string;
+}
+
+export interface StoryEvent {
+  id?: string;
+  story_part_id: string;
+  event_type?: "action" | "dialogue" | "description" | "revelation";
+  description: string;
+  content?: string | null;
+  significance?: number;
+  created_at?: string;
+}
+
+export interface Relationship {
+  id?: string;
+  character_1_id: string;
+  character_2_id: string;
+  relationship_type: string;
+  description?: string | null;
+  created_at?: string;
+}
+
+export interface ExtractedEntities {
+  characters: Array<{
+    name: string;
+    role?: string;
+    personality?: string;
+    traits?: string[];
+    description?: string;
+  }>;
+  locations: Array<{
+    name: string;
+    description?: string;
+    type?: string;
+  }>;
+  events: Array<{
+    description: string;
+    event_type?: string;
+    content?: string;
+  }>;
+  relationships: Array<{
+    character_1: string;
+    character_2: string;
+    relationship_type: string;
+    description?: string;
+  }>;
+  summary?: string;
+}

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { Box, Button, Typography, LinearProgress, Paper } from '@mui/material';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { useState, useCallback } from "react";
+import { Box, Button, Typography, LinearProgress, Paper } from "@mui/material";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -12,7 +12,7 @@ interface FileUploadProps {
 
 export default function FileUpload({
   onFileSelect,
-  accept = '.docx',
+  accept = ".docx,.md,.markdown",
   maxSize = 52428800, // 50MB
 }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false);
@@ -21,9 +21,9 @@ export default function FileUpload({
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   }, []);
@@ -41,7 +41,7 @@ export default function FileUpload({
           return;
         }
 
-        if (accept && !file.name.endsWith(accept.replace('*', ''))) {
+        if (accept && !file.name.endsWith(accept.replace("*", ""))) {
           alert(`Only ${accept} files are supported`);
           return;
         }
@@ -50,7 +50,7 @@ export default function FileUpload({
         onFileSelect(file);
       }
     },
-    [maxSize, accept, onFileSelect]
+    [maxSize, accept, onFileSelect],
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,7 +66,7 @@ export default function FileUpload({
       return;
     }
 
-    if (accept && !file.name.endsWith(accept.replace('*', ''))) {
+    if (accept && !file.name.endsWith(accept.replace("*", ""))) {
       alert(`Only ${accept} files are supported`);
       return;
     }
@@ -78,12 +78,12 @@ export default function FileUpload({
   return (
     <Paper
       sx={{
-        border: dragActive ? '2px dashed #1976d2' : '2px dashed #ccc',
+        border: dragActive ? "2px dashed #1976d2" : "2px dashed #ccc",
         borderRadius: 2,
         p: 4,
-        textAlign: 'center',
-        bgcolor: dragActive ? 'action.hover' : 'background.paper',
-        cursor: 'pointer',
+        textAlign: "center",
+        bgcolor: dragActive ? "action.hover" : "background.paper",
+        cursor: "pointer",
       }}
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
@@ -95,12 +95,14 @@ export default function FileUpload({
         id="file-upload"
         accept={accept}
         onChange={handleChange}
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
       />
-      <label htmlFor="file-upload" style={{ cursor: 'pointer' }}>
-        <CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+      <label htmlFor="file-upload" style={{ cursor: "pointer" }}>
+        <CloudUploadIcon sx={{ fontSize: 48, color: "primary.main", mb: 2 }} />
         <Typography variant="h6" gutterBottom>
-          {selectedFile ? selectedFile.name : 'Drop your file here or click to browse'}
+          {selectedFile
+            ? selectedFile.name
+            : "Drop your file here or click to browse"}
         </Typography>
         <Typography variant="body2" color="text.secondary">
           Supported format: {accept} (Max size: {maxSize / 1024 / 1024}MB)

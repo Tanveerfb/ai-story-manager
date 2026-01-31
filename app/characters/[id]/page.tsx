@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import {
   Container,
   Typography,
@@ -12,7 +12,7 @@ import {
   Chip,
   Avatar,
   Grid,
-} from '@mui/material';
+} from "@mui/material";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -50,7 +50,7 @@ export default function CharacterDetailPage() {
         setCharacter(data);
       }
     } catch (error) {
-      console.error('Failed to fetch character:', error);
+      console.error("Failed to fetch character:", error);
     } finally {
       setLoading(false);
     }
@@ -65,13 +65,13 @@ export default function CharacterDetailPage() {
   }
 
   const personality = character.personality
-    ? typeof character.personality === 'string'
-      ? JSON.parse(character.personality)
+    ? typeof character.personality === "string"
+      ? character.personality
       : character.personality
-    : [];
+    : null;
 
   const physicalTraits = character.physical_traits
-    ? typeof character.physical_traits === 'string'
+    ? typeof character.physical_traits === "string"
       ? JSON.parse(character.physical_traits)
       : character.physical_traits
     : [];
@@ -116,7 +116,7 @@ export default function CharacterDetailPage() {
               Background
             </Typography>
             <Typography paragraph>
-              {character.background || 'No background information available.'}
+              {character.background || "No background information available."}
             </Typography>
 
             {character.first_appearance_part && (
@@ -128,19 +128,15 @@ export default function CharacterDetailPage() {
 
           <TabPanel value={tabValue} index={1}>
             <Typography variant="h6" gutterBottom>
-              Personality Traits
+              Personality
             </Typography>
             <Box sx={{ mb: 3 }}>
-              {Array.isArray(personality) && personality.length > 0 ? (
-                personality.map((trait: any, index: number) => (
-                  <Chip
-                    key={index}
-                    label={typeof trait === 'string' ? trait : trait.name || trait}
-                    sx={{ m: 0.5 }}
-                  />
-                ))
+              {personality ? (
+                <Typography paragraph>{personality}</Typography>
               ) : (
-                <Typography color="text.secondary">No personality traits recorded.</Typography>
+                <Typography color="text.secondary">
+                  No personality information recorded.
+                </Typography>
               )}
             </Box>
 
@@ -152,13 +148,17 @@ export default function CharacterDetailPage() {
                 physicalTraits.map((trait: any, index: number) => (
                   <Chip
                     key={index}
-                    label={typeof trait === 'string' ? trait : trait.name || trait}
+                    label={
+                      typeof trait === "string" ? trait : trait.name || trait
+                    }
                     color="secondary"
                     sx={{ m: 0.5 }}
                   />
                 ))
               ) : (
-                <Typography color="text.secondary">No physical traits recorded.</Typography>
+                <Typography color="text.secondary">
+                  No physical traits recorded.
+                </Typography>
               )}
             </Box>
           </TabPanel>
@@ -179,7 +179,9 @@ export default function CharacterDetailPage() {
                 </Paper>
               ))
             ) : (
-              <Typography color="text.secondary">No relationships recorded.</Typography>
+              <Typography color="text.secondary">
+                No relationships recorded.
+              </Typography>
             )}
           </TabPanel>
         </Paper>

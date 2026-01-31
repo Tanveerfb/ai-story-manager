@@ -4,45 +4,62 @@ export interface ExtractedEntities {
     name: string;
     role?: string;
     description?: string;
-    personality?: any;
+    personality?: string;
+    traits?: string[];
+    goals?: string;
+    arc?: string;
+    backstory?: string;
     physical_traits?: any;
   }>;
   locations?: Array<{
     name: string;
     description?: string;
     type?: string;
+    atmosphere?: string;
+    significance?: string;
   }>;
   events?: Array<{
     event_type?: string;
     description?: string;
     content?: string;
+    participants?: string[];
+    emotional_impact?: string;
+    consequences?: string;
+    significance?: string;
   }>;
   relationships?: Array<{
     character_1: string;
     character_2: string;
     relationship_type?: string;
     description?: string;
+    dynamic?: string;
+    development?: string;
   }>;
+  themes?: string[];
   summary?: string;
 }
 
 // Type aliases for better type safety
-type Character = NonNullable<ExtractedEntities['characters']>[number];
-type Location = NonNullable<ExtractedEntities['locations']>[number];
+type Character = NonNullable<ExtractedEntities["characters"]>[number];
+type Location = NonNullable<ExtractedEntities["locations"]>[number];
 
 // Merge and deduplicate entities from multiple extraction chunks
-export function mergeEntities(entitiesArray: ExtractedEntities[]): ExtractedEntities {
+export function mergeEntities(
+  entitiesArray: ExtractedEntities[],
+): ExtractedEntities {
   const merged: ExtractedEntities = {
     characters: [],
     locations: [],
     events: [],
     relationships: [],
-    summary: '',
+    themes: [],
+    summary: "",
   };
 
   const characterMap = new Map<string, Character>();
   const locationMap = new Map<string, Location>();
   const relationshipSet = new Set<string>();
+  const themeSet = new Set<string>();
 
   for (const entities of entitiesArray) {
     // Merge characters (deduplicate by name)
@@ -52,34 +69,64 @@ export function mergeEntities(entitiesArray: ExtractedEntities[]): ExtractedEnti
         if (!characterMap.has(key)) {
           characterMap.set(key, char);
         } else {
-          // Merge descriptions if richer
-          const existing = characterMap.get(key);
-          if (existing) {
-            if (char.description && char.description.length > (existing.description?.length || 0)) {
-              existing.description = char.description;
-            }
-            if (char.personality) {
-              existing.personality = { ...existing.personality, ...char.personality };
-            }
-            if (char.physical_traits) {
-              existing.physical_traits = { ...existing.physical_traits, ...char.physical_traits };
-            }
+          // Merge data, preferring longer/richer descriptions
+          const existing = characterMap.get(key)!;
+
+          if (
+            char.description &&
+            char.description.length > (existing.description?.length || 0)
+          ) {
+            existing.description = char.description;
+          }
+          if (
+            char.personality &&
+            char.personality.length > (existing.personality?.length || 0)
+          ) {
+            existing.personality = char.personality;
+          }
+          if (char.goals && char.goals.length > (existing.goals?.length || 0)) {
+            existing.goals = char.goals;
+          }
+          if (char.arc) {
+            existing.arc = (existing.arc || "") + " " + char.arc;
+          }
+          if (
+            char.backstory &&
+            char.backstory.length > (existing.backstory?.length || 0)
+          ) {
+            existing.backstory = char.backstory;
+          }
+
+          // Merge traits arrays
+          if (char.traits && Array.isArray(char.traits)) {
+            const existingTraits = Array.isArray(existing.traits)
+              ? existing.traits
+              : [];
+            existing.traits = [...new Set([...existingTraits, ...char.traits])];
           }
         }
       }
     }
 
-    // Merge locations (deduplicate by name)
+    // Merge locations
     if (entities.locations) {
       for (const loc of entities.locations) {
         const key = loc.name.toLowerCase().trim();
         if (!locationMap.has(key)) {
           locationMap.set(key, loc);
         } else {
-          // Merge descriptions if richer
-          const existing = locationMap.get(key);
-          if (existing && loc.description && loc.description.length > (existing.description?.length || 0)) {
+          const existing = locationMap.get(key)!;
+          if (
+            loc.description &&
+            loc.description.length > (existing.description?.length || 0)
+          ) {
             existing.description = loc.description;
+          }
+          if (loc.atmosphere && !existing.atmosphere) {
+            existing.atmosphere = loc.atmosphere;
+          }
+          if (loc.significance && !existing.significance) {
+            existing.significance = loc.significance;
           }
         }
       }
@@ -93,7 +140,10 @@ export function mergeEntities(entitiesArray: ExtractedEntities[]): ExtractedEnti
     // Merge relationships (deduplicate by character pair)
     if (entities.relationships) {
       for (const rel of entities.relationships) {
-        const key = [rel.character_1, rel.character_2].sort().join('|').toLowerCase();
+        const key = [rel.character_1, rel.character_2]
+          .sort()
+          .join("|")
+          .toLowerCase();
         if (!relationshipSet.has(key)) {
           relationshipSet.add(key);
           merged.relationships!.push(rel);
@@ -101,124 +151,50 @@ export function mergeEntities(entitiesArray: ExtractedEntities[]): ExtractedEnti
       }
     }
 
+    // Merge themes
+    if (entities.themes && Array.isArray(entities.themes)) {
+      entities.themes.forEach((theme) => {
+        if (theme && theme.trim()) {
+          themeSet.add(theme.trim().toLowerCase());
+        }
+      });
+    }
+
     // Combine summaries
     if (entities.summary) {
-      merged.summary += (merged.summary ? ' ' : '') + entities.summary;
+      merged.summary += (merged.summary ? " " : "") + entities.summary;
     }
   }
 
   merged.characters = Array.from(characterMap.values());
   merged.locations = Array.from(locationMap.values());
+  merged.themes = Array.from(themeSet);
 
   return merged;
 }
 
-// Parse conversation format from ChatGPT exports
-export function parseConversation(text: string): Array<{ speaker: string; message: string }> {
-  const lines = text.split('\n');
-  const conversation: Array<{ speaker: string; message: string }> = [];
-  let currentSpeaker = '';
-  let currentMessage = '';
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    
-    // Check for speaker indicators
-    const speakerMatch = trimmed.match(/^(You|User|ChatGPT|Assistant):\s*/i);
-    
-    if (speakerMatch) {
-      // Save previous message if exists
-      if (currentSpeaker && currentMessage) {
-        conversation.push({
-          speaker: currentSpeaker,
-          message: currentMessage.trim(),
-        });
-      }
-      
-      // Start new message
-      currentSpeaker = speakerMatch[1];
-      currentMessage = trimmed.substring(speakerMatch[0].length);
-    } else if (trimmed) {
-      // Continue current message
-      currentMessage += '\n' + trimmed;
-    }
-  }
-
-  // Add last message
-  if (currentSpeaker && currentMessage) {
-    conversation.push({
-      speaker: currentSpeaker,
-      message: currentMessage.trim(),
-    });
-  }
-
-  return conversation;
-}
-
-// Extract speaker from line
-export function extractSpeaker(line: string): string | null {
-  const match = line.match(/^(You|User|ChatGPT|Assistant):\s*/i);
-  return match ? match[1] : null;
-}
-
-// Chunk text for AI processing based on word count
-export function chunkText(text: string, maxWords: number = 6000): string[] {
-  const chunks: string[] = [];
-  const paragraphs = text.split('\n\n');
-  let currentChunk = '';
-  let currentWordCount = 0;
-
-  for (const paragraph of paragraphs) {
-    const paragraphWords = countWords(paragraph);
-    
-    // If this single paragraph exceeds maxWords, we need to force split it
-    if (paragraphWords > maxWords) {
-      // Save current chunk if exists
-      if (currentChunk) {
-        chunks.push(currentChunk.trim());
-        currentChunk = '';
-        currentWordCount = 0;
-      }
-      
-      // Force split this large paragraph by words
-      const words = paragraph.split(/\s+/);
-      for (let i = 0; i < words.length; i += maxWords) {
-        chunks.push(words.slice(i, i + maxWords).join(' '));
-      }
-    } else if (currentWordCount + paragraphWords > maxWords && currentChunk) {
-      // Current chunk would exceed limit, start a new chunk
-      chunks.push(currentChunk.trim());
-      currentChunk = paragraph;
-      currentWordCount = paragraphWords;
-    } else {
-      // Add to current chunk
-      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
-      currentWordCount += paragraphWords;
-    }
-  }
-
-  if (currentChunk) {
-    chunks.push(currentChunk.trim());
-  }
-
-  // Safety check: if no chunks created somehow, return the text as one chunk
-  if (chunks.length === 0 && text.length > 0) {
-    chunks.push(text);
-  }
-
-  return chunks;
+// Clean text by removing extra whitespace and normalizing line breaks
+export function cleanText(text: string): string {
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+/g, " ")
+    .trim();
 }
 
 // Count words in text
 export function countWords(text: string): number {
-  return text.trim().split(/\s+/).length;
+  return text.split(/\s+/).filter((word) => word.length > 0).length;
 }
 
-// Clean extra whitespace
-export function cleanText(text: string): string {
-  return text
-    .replace(/\r\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
+// Chunk text into smaller pieces for processing
+export function chunkText(text: string, wordsPerChunk: number): string[] {
+  const words = text.split(/\s+/);
+  const chunks: string[] = [];
+
+  for (let i = 0; i < words.length; i += wordsPerChunk) {
+    chunks.push(words.slice(i, i + wordsPerChunk).join(" "));
+  }
+
+  return chunks;
 }
