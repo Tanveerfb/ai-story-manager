@@ -33,6 +33,7 @@ const drawerWidth = 240;
 const menuItems = [
   { text: 'Dashboard', icon: <HomeIcon />, path: '/' },
   { text: 'Import Story', icon: <UploadFileIcon />, path: '/import' },
+  { text: 'Batch Import', icon: <UploadFileIcon />, path: '/import/batch' },
   { text: 'Story Viewer', icon: <MenuBookIcon />, path: '/story' },
   { text: 'Continue Story', icon: <CreateIcon />, path: '/continue' },
   { text: 'Characters', icon: <PeopleIcon />, path: '/characters' },
