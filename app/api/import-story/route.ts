@@ -46,10 +46,11 @@ export async function POST(request: NextRequest) {
     const isDocx = fileName.endsWith(".docx");
     const isMarkdown =
       fileName.endsWith(".md") || fileName.endsWith(".markdown");
+    const isText = fileName.endsWith(".txt");
 
-    if (!isDocx && !isMarkdown) {
+    if (!isDocx && !isMarkdown && !isText) {
       return NextResponse.json(
-        { error: "Only .docx and .md files are supported" },
+        { error: "Only .docx, .md, .markdown, and .txt files are supported" },
         { status: 400 },
       );
     }
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     // Save file temporarily
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const fileExtension = isDocx ? ".docx" : ".md";
+    const fileExtension = isDocx ? ".docx" : isText ? ".txt" : ".md";
     tempFilePath = join(tmpdir(), `upload-${Date.now()}${fileExtension}`);
     await writeFile(tempFilePath, buffer);
 
@@ -69,16 +70,15 @@ export async function POST(request: NextRequest) {
       const result = await mammoth.extractRawText({ path: tempFilePath });
       rawText = result.value;
     } else {
-      // Parse Markdown - just read as text
+      // Parse Markdown/TXT - just read as text
       rawText = await readFile(tempFilePath, "utf-8");
     }
 
     const cleanedText = cleanText(rawText);
     const wordCount = countWords(cleanedText);
 
-    console.log(
-      `File parsed (${isDocx ? "DOCX" : "Markdown"}): ${wordCount} words`,
-    );
+    const fileType = isDocx ? "DOCX" : isText ? "TXT" : "Markdown";
+    console.log(`File parsed (${fileType}): ${wordCount} words`);
 
     // Extract entities using AI with chunking for large files
     let entities: ExtractedEntities;
