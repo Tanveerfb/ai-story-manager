@@ -94,18 +94,26 @@ Route (app)                                 Size  First Load JS
 After the upgrade, npm audit reports 2 moderate severity vulnerabilities:
 
 1. **eslint <9.26.0** - Stack Overflow when serializing objects with circular references
+   - CVE: GHSA-p5wg-g6qr-c7cg
    - Status: Not addressing (breaking change)
    - Impact: Low (development tool only)
    - Note: Would require upgrading to eslint@9, which has breaking changes
+   - Risk Assessment: Acceptable - ESLint is only used during development, not in production
 
 2. **next 15.0.0-canary.0 - 15.6.0-canary.60** - Unbounded Memory Consumption via PPR Resume Endpoint
-   - Status: Not applicable (using stable 15.5.11, not canary)
-   - Impact: None (canary-specific issue)
+   - CVE: GHSA-5f7q-jpqc-wp7h
+   - Status: Partially affected (15.5.11 falls within range)
+   - Impact: Low-Medium (requires PPR feature to be enabled)
+   - Note: PPR (Partial Prerendering) is an experimental feature not enabled by default
+   - Risk Assessment: Acceptable - This application does not use PPR feature
+   - Mitigation: Ensure PPR is not enabled in next.config.js
 
 **Decision:** These remaining vulnerabilities are acceptable:
 - ESLint vulnerability only affects development environment
-- Next.js canary vulnerability doesn't apply to stable releases
-- Upgrading would introduce breaking changes without significant security benefit
+- Next.js PPR vulnerability only affects applications using experimental PPR feature
+- Current application does not use PPR
+- Upgrading Next.js to 15.6.0+ would require testing and may introduce breaking changes
+- Upgrading ESLint would introduce breaking changes without significant security benefit
 
 ### Security Best Practices Implemented
 
@@ -133,6 +141,12 @@ After the upgrade, npm audit reports 2 moderate severity vulnerabilities:
    - Input validation
    - Error handling in all routes
    - Proper HTTP status codes
+
+6. **Network Security (Mobile Access)**
+   - HTTP used only for local network communication
+   - Security warnings in documentation about unencrypted local connections
+   - Firewall configuration guidance for Windows/macOS/Linux
+   - Explicit instructions to keep traffic on local network only
 
 ### Testing Performed
 
@@ -165,8 +179,8 @@ After the upgrade, npm audit reports 2 moderate severity vulnerabilities:
 All critical security vulnerabilities have been addressed. The application is now running on Next.js 15.5.11, which includes all security patches for the identified DoS vulnerabilities. The codebase has been updated to maintain compatibility with Next.js 15, and all functionality has been verified to work correctly.
 
 **Security Status:** ✅ **SECURE**
-**Last Updated:** January 30, 2026
-**Next Review:** February 30, 2026 (or upon new security advisories)
+**Last Updated:** January 31, 2026
+**Next Review:** February 28, 2026 (or upon new security advisories)
 
 ---
 
