@@ -25,6 +25,7 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import SettingsIcon from '@mui/icons-material/Settings';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import MergeTypeIcon from '@mui/icons-material/MergeType';
 import { useRouter } from 'next/navigation';
 import { useThemeMode } from './ThemeProvider';
 
@@ -37,6 +38,7 @@ const menuItems = [
   { text: 'Story Viewer', icon: <MenuBookIcon />, path: '/story' },
   { text: 'Continue Story', icon: <CreateIcon />, path: '/continue' },
   { text: 'Characters', icon: <PeopleIcon />, path: '/characters' },
+  { text: 'Merge Characters', icon: <MergeTypeIcon />, path: '/characters/merge' },
   { text: 'Locations', icon: <PlaceIcon />, path: '/locations' },
   { text: 'Timeline', icon: <TimelineIcon />, path: '/timeline' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
