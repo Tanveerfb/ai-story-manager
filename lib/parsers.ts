@@ -165,11 +165,27 @@ export function chunkText(text: string, maxWords: number = 6000): string[] {
   for (const paragraph of paragraphs) {
     const paragraphWords = countWords(paragraph);
     
-    if (currentWordCount + paragraphWords > maxWords && currentChunk) {
+    // If this single paragraph exceeds maxWords, we need to force split it
+    if (paragraphWords > maxWords) {
+      // Save current chunk if exists
+      if (currentChunk) {
+        chunks.push(currentChunk.trim());
+        currentChunk = '';
+        currentWordCount = 0;
+      }
+      
+      // Force split this large paragraph by words
+      const words = paragraph.split(/\s+/);
+      for (let i = 0; i < words.length; i += maxWords) {
+        chunks.push(words.slice(i, i + maxWords).join(' '));
+      }
+    } else if (currentWordCount + paragraphWords > maxWords && currentChunk) {
+      // Current chunk would exceed limit, start a new chunk
       chunks.push(currentChunk.trim());
       currentChunk = paragraph;
       currentWordCount = paragraphWords;
     } else {
+      // Add to current chunk
       currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
       currentWordCount += paragraphWords;
     }
@@ -179,12 +195,9 @@ export function chunkText(text: string, maxWords: number = 6000): string[] {
     chunks.push(currentChunk.trim());
   }
 
-  // If no chunks created (e.g., single giant paragraph), force split
+  // Safety check: if no chunks created somehow, return the text as one chunk
   if (chunks.length === 0 && text.length > 0) {
-    const words = text.split(/\s+/);
-    for (let i = 0; i < words.length; i += maxWords) {
-      chunks.push(words.slice(i, i + maxWords).join(' '));
-    }
+    chunks.push(text);
   }
 
   return chunks;
