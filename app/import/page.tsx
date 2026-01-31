@@ -68,7 +68,7 @@ export default function ImportPage() {
           Import Story
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          Upload a DOCX file containing your story. The AI will automatically extract
+          Upload a .docx, .md, .markdown, or .txt file containing your story. The AI will automatically extract
           characters, locations, events, and relationships.
         </Typography>
 
@@ -140,6 +140,7 @@ export default function ImportPage() {
             <Typography>• Locations: {success.extracted.locations}</Typography>
             <Typography>• Events: {success.extracted.events}</Typography>
             <Typography>• Relationships: {success.extracted.relationships}</Typography>
+            <Typography>• Themes: {success.extracted.themes}</Typography>
           </Paper>
         )}
       </Box>

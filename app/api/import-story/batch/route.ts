@@ -20,27 +20,28 @@ import {
   ExtractedEntities,
 } from "@/lib/parsers";
 
-async function parseFormData(request: NextRequest) {
-  const formData = await request.formData();
-  const file = formData.get("file") as File;
-  const partNumber = parseInt(formData.get("partNumber") as string) || 1;
-  const title = (formData.get("title") as string) || "";
-  const skipExtraction = formData.get("skipExtraction") === "true";
-
-  return { file, partNumber, title, skipExtraction };
+interface FileProcessResult {
+  success: boolean;
+  fileName: string;
+  partNumber: number;
+  error?: string;
+  extracted?: {
+    characters: number;
+    locations: number;
+    events: number;
+    relationships: number;
+    themes: number;
+  };
 }
 
-export async function POST(request: NextRequest) {
+async function processFile(
+  file: File,
+  partNumber: number,
+  skipExtraction: boolean,
+): Promise<FileProcessResult> {
   let tempFilePath: string | null = null;
 
   try {
-    const { file, partNumber, title, skipExtraction } =
-      await parseFormData(request);
-
-    if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
-    }
-
     // Check file extension
     const fileName = file.name.toLowerCase();
     const isDocx = fileName.endsWith(".docx");
@@ -49,10 +50,12 @@ export async function POST(request: NextRequest) {
     const isText = fileName.endsWith(".txt");
 
     if (!isDocx && !isMarkdown && !isText) {
-      return NextResponse.json(
-        { error: "Only .docx, .md, .markdown, and .txt files are supported" },
-        { status: 400 },
-      );
+      return {
+        success: false,
+        fileName: file.name,
+        partNumber,
+        error: "Only .docx, .md, .markdown, and .txt files are supported",
+      };
     }
 
     // Save file temporarily
@@ -66,11 +69,9 @@ export async function POST(request: NextRequest) {
     let rawText: string;
 
     if (isDocx) {
-      // Parse DOCX
       const result = await mammoth.extractRawText({ path: tempFilePath });
       rawText = result.value;
     } else {
-      // Parse Markdown/TXT - just read as text
       rawText = await readFile(tempFilePath, "utf-8");
     }
 
@@ -78,7 +79,9 @@ export async function POST(request: NextRequest) {
     const wordCount = countWords(cleanedText);
 
     const fileType = isDocx ? "DOCX" : isText ? "TXT" : "Markdown";
-    console.log(`File parsed (${fileType}): ${wordCount} words`);
+    console.log(
+      `File ${file.name} parsed (${fileType}): ${wordCount} words`,
+    );
 
     // Extract entities using AI with chunking for large files
     let entities: ExtractedEntities;
@@ -94,11 +97,10 @@ export async function POST(request: NextRequest) {
         summary: "",
       };
     } else {
-      // Chunk the text for large files (5000 words per chunk for detailed extraction)
+      // Chunk the text for large files
       const chunks = chunkText(cleanedText, 5000);
-      console.log(`Processing ${chunks.length} chunk(s)...`);
+      console.log(`Processing ${chunks.length} chunk(s) for ${file.name}...`);
 
-      // Extract entities from each chunk
       const allEntities = [];
       for (let i = 0; i < chunks.length; i++) {
         console.log(
@@ -108,9 +110,6 @@ export async function POST(request: NextRequest) {
         try {
           const chunkEntities = await extractEntities(chunks[i]);
           allEntities.push(chunkEntities);
-          console.log(
-            `Chunk ${i + 1} extracted: ${chunkEntities.characters?.length || 0} characters, ${chunkEntities.locations?.length || 0} locations, ${chunkEntities.events?.length || 0} events`,
-          );
 
           // Add 1 second delay between chunks to let GPU reset
           if (i < chunks.length - 1) {
@@ -131,24 +130,18 @@ export async function POST(request: NextRequest) {
       // Merge and deduplicate entities
       console.log("Merging entities from all chunks...");
       entities = mergeEntities(allEntities);
-      console.log(
-        `Final results: ${entities.characters?.length || 0} characters, ${entities.locations?.length || 0} locations, ${entities.events?.length || 0} events, ${entities.relationships?.length || 0} relationships, ${entities.themes?.length || 0} themes`,
-      );
     }
 
     // Save story part
     const storyPart = await insertStoryPart({
       part_number: partNumber,
-      title: title || undefined,
+      title: file.name.replace(/\.(docx|md|markdown|txt)$/i, ""),
       content: cleanedText,
       word_count: wordCount,
       summary: entities.summary || undefined,
     });
 
-    // Track errors for better reporting
-    const errors: string[] = [];
-
-    // Save characters with detailed fields
+    // Save characters
     const savedCharacters = [];
     for (const char of entities.characters || []) {
       try {
@@ -167,14 +160,12 @@ export async function POST(request: NextRequest) {
           first_appearance_part: partNumber,
         });
         savedCharacters.push(saved);
-        console.log(`✓ Saved character: ${char.name}`);
       } catch (error: any) {
-        errors.push(`Failed to save character ${char.name}: ${error.message}`);
-        console.error(`✗ Failed to save character ${char.name}:`, error);
+        console.error(`Failed to save character ${char.name}:`, error);
       }
     }
 
-    // Save locations with detailed fields
+    // Save locations
     const savedLocations = [];
     for (const loc of entities.locations || []) {
       try {
@@ -188,14 +179,12 @@ export async function POST(request: NextRequest) {
           first_mentioned_part: partNumber,
         });
         savedLocations.push(saved);
-        console.log(`✓ Saved location: ${loc.name}`);
       } catch (error: any) {
-        errors.push(`Failed to save location ${loc.name}: ${error.message}`);
-        console.error(`✗ Failed to save location ${loc.name}:`, error);
+        console.error(`Failed to save location ${loc.name}:`, error);
       }
     }
 
-    // Save events with detailed fields
+    // Save events
     const savedEvents = [];
     for (const event of entities.events || []) {
       try {
@@ -211,18 +200,15 @@ export async function POST(request: NextRequest) {
           significance: 5,
         });
         savedEvents.push(saved);
-        console.log(`✓ Saved event`);
       } catch (error: any) {
-        errors.push(`Failed to save event: ${error.message}`);
-        console.error("✗ Failed to save event:", error);
+        console.error("Failed to save event:", error);
       }
     }
 
-    // Save relationships with detailed fields
+    // Save relationships
     const savedRelationships = [];
     for (const rel of entities.relationships || []) {
       try {
-        // Find character IDs by name
         const char1 = savedCharacters.find((c) => c.name === rel.character_1);
         const char2 = savedCharacters.find((c) => c.name === rel.character_2);
 
@@ -236,17 +222,9 @@ export async function POST(request: NextRequest) {
             development: rel.development || null,
           });
           savedRelationships.push(saved);
-          console.log(
-            `✓ Saved relationship: ${rel.character_1} - ${rel.character_2}`,
-          );
-        } else {
-          console.warn(
-            `⚠ Skipped relationship: Characters not found (${rel.character_1}, ${rel.character_2})`,
-          );
         }
       } catch (error: any) {
-        errors.push(`Failed to save relationship: ${error.message}`);
-        console.error("✗ Failed to save relationship:", error);
+        console.error("Failed to save relationship:", error);
       }
     }
 
@@ -260,10 +238,8 @@ export async function POST(request: NextRequest) {
           description: null,
         });
         savedThemes.push(saved);
-        console.log(`✓ Saved theme: ${theme}`);
       } catch (error: any) {
-        errors.push(`Failed to save theme: ${error.message}`);
-        console.error("✗ Failed to save theme:", error);
+        console.error("Failed to save theme:", error);
       }
     }
 
@@ -276,9 +252,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    return {
       success: true,
-      storyPart,
+      fileName: file.name,
+      partNumber,
       extracted: {
         characters: savedCharacters.length,
         locations: savedLocations.length,
@@ -286,10 +263,9 @@ export async function POST(request: NextRequest) {
         relationships: savedRelationships.length,
         themes: savedThemes.length,
       },
-      errors: errors.length > 0 ? errors : undefined,
-    });
+    };
   } catch (error: any) {
-    console.error("Import error:", error);
+    console.error(`Error processing ${file.name}:`, error);
 
     // Clean up temp file on error
     if (tempFilePath) {
@@ -300,8 +276,78 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    return {
+      success: false,
+      fileName: file.name,
+      partNumber,
+      error: error.message || "Failed to process file",
+    };
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const skipExtraction = formData.get("skipExtraction") === "true";
+    const startingPartNumber =
+      parseInt(formData.get("startingPartNumber") as string) || 1;
+
+    // Collect all files
+    const files: File[] = [];
+    let fileIndex = 0;
+    while (true) {
+      const file = formData.get(`file_${fileIndex}`) as File;
+      if (!file) break;
+      files.push(file);
+      fileIndex++;
+    }
+
+    if (files.length === 0) {
+      return NextResponse.json(
+        { error: "No files uploaded" },
+        { status: 400 },
+      );
+    }
+
+    console.log(`Processing ${files.length} files in batch...`);
+
+    // Process files sequentially
+    const results: FileProcessResult[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const partNumber = startingPartNumber + i;
+
+      console.log(
+        `\n=== Processing file ${i + 1}/${files.length}: ${file.name} (Part ${partNumber}) ===`,
+      );
+
+      const result = await processFile(file, partNumber, skipExtraction);
+      results.push(result);
+
+      // Add 1 second delay between files for GPU stability
+      if (i < files.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
+
+    console.log(
+      `\n=== Batch import completed: ${successCount} succeeded, ${failureCount} failed ===`,
+    );
+
+    return NextResponse.json({
+      success: true,
+      totalFiles: files.length,
+      successCount,
+      failureCount,
+      results,
+    });
+  } catch (error: any) {
+    console.error("Batch import error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to import story" },
+      { error: error.message || "Failed to process batch import" },
       { status: 500 },
     );
   }
