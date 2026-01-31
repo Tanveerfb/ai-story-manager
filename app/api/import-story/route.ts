@@ -5,22 +5,23 @@ import { tmpdir } from 'os';
 import mammoth from 'mammoth';
 import { extractEntities } from '@/lib/ollama';
 import { insertStoryPart, insertCharacter, insertLocation, insertEvent, insertRelationship } from '@/lib/supabase';
-import { cleanText, countWords } from '@/lib/parsers';
+import { cleanText, countWords, chunkText, mergeEntities, ExtractedEntities } from '@/lib/parsers';
 
 async function parseFormData(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get('file') as File;
   const partNumber = parseInt(formData.get('partNumber') as string) || 1;
   const title = formData.get('title') as string || '';
+  const skipExtraction = formData.get('skipExtraction') === 'true';
 
-  return { file, partNumber, title };
+  return { file, partNumber, title, skipExtraction };
 }
 
 export async function POST(request: NextRequest) {
   let tempFilePath: string | null = null;
 
   try {
-    const { file, partNumber, title } = await parseFormData(request);
+    const { file, partNumber, title, skipExtraction } = await parseFormData(request);
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
@@ -45,8 +46,46 @@ export async function POST(request: NextRequest) {
     const cleanedText = cleanText(rawText);
     const wordCount = countWords(cleanedText);
 
-    // Extract entities using AI
-    const entities = await extractEntities(cleanedText);
+    console.log(`File parsed: ${wordCount} words`);
+
+    // Extract entities using AI with chunking for large files
+    let entities: ExtractedEntities;
+    
+    if (skipExtraction) {
+      console.log('Skipping entity extraction (user requested)');
+      entities = {
+        characters: [],
+        locations: [],
+        events: [],
+        relationships: [],
+        summary: '',
+      };
+    } else {
+      // Chunk the text for large files (6000 words per chunk, safe for 4096 token context)
+      const chunks = chunkText(cleanedText, 6000);
+      console.log(`Processing ${chunks.length} chunk(s)...`);
+
+      // Extract entities from each chunk
+      const allEntities: ExtractedEntities[] = [];
+      for (let i = 0; i < chunks.length; i++) {
+        const progress = Math.round(((i + 1) / chunks.length) * 100);
+        console.log(`[${progress}%] Processing chunk ${i + 1}/${chunks.length}...`);
+        
+        try {
+          const chunkEntities = await extractEntities(chunks[i]);
+          allEntities.push(chunkEntities);
+          console.log(`Chunk ${i + 1} extracted: ${chunkEntities.characters?.length || 0} characters, ${chunkEntities.locations?.length || 0} locations`);
+        } catch (error: any) {
+          console.error(`Failed to process chunk ${i + 1}:`, error.message);
+          // Continue with other chunks instead of failing completely
+        }
+      }
+
+      // Merge and deduplicate entities
+      console.log('Merging entities from all chunks...');
+      entities = mergeEntities(allEntities);
+      console.log(`Final results: ${entities.characters?.length || 0} characters, ${entities.locations?.length || 0} locations, ${entities.events?.length || 0} events, ${entities.relationships?.length || 0} relationships`);
+    }
 
     // Save story part
     const storyPart = await insertStoryPart({

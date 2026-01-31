@@ -10,6 +10,8 @@ import {
   Alert,
   CircularProgress,
   Paper,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import FileUpload from '@/components/FileUpload';
 
@@ -17,6 +19,7 @@ export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [partNumber, setPartNumber] = useState(1);
   const [title, setTitle] = useState('');
+  const [skipExtraction, setSkipExtraction] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<any | null>(null);
@@ -36,6 +39,7 @@ export default function ImportPage() {
       formData.append('file', file);
       formData.append('partNumber', partNumber.toString());
       formData.append('title', title);
+      formData.append('skipExtraction', skipExtraction.toString());
 
       const response = await fetch('/api/import-story', {
         method: 'POST',
@@ -86,6 +90,16 @@ export default function ImportPage() {
             label="Title (Optional)"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={skipExtraction}
+                onChange={(e) => setSkipExtraction(e.target.checked)}
+              />
+            }
+            label="Skip AI extraction (add entities manually later)"
           />
         </Box>
 

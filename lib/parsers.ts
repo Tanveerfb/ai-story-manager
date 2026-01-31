@@ -1,3 +1,118 @@
+// Extracted entities interface
+export interface ExtractedEntities {
+  characters?: Array<{
+    name: string;
+    role?: string;
+    description?: string;
+    personality?: any;
+    physical_traits?: any;
+  }>;
+  locations?: Array<{
+    name: string;
+    description?: string;
+    type?: string;
+  }>;
+  events?: Array<{
+    event_type?: string;
+    description?: string;
+    content?: string;
+  }>;
+  relationships?: Array<{
+    character_1: string;
+    character_2: string;
+    relationship_type?: string;
+    description?: string;
+  }>;
+  summary?: string;
+}
+
+// Type aliases for better type safety
+type Character = NonNullable<ExtractedEntities['characters']>[number];
+type Location = NonNullable<ExtractedEntities['locations']>[number];
+
+// Merge and deduplicate entities from multiple extraction chunks
+export function mergeEntities(entitiesArray: ExtractedEntities[]): ExtractedEntities {
+  const merged: ExtractedEntities = {
+    characters: [],
+    locations: [],
+    events: [],
+    relationships: [],
+    summary: '',
+  };
+
+  const characterMap = new Map<string, Character>();
+  const locationMap = new Map<string, Location>();
+  const relationshipSet = new Set<string>();
+
+  for (const entities of entitiesArray) {
+    // Merge characters (deduplicate by name)
+    if (entities.characters) {
+      for (const char of entities.characters) {
+        const key = char.name.toLowerCase().trim();
+        if (!characterMap.has(key)) {
+          characterMap.set(key, char);
+        } else {
+          // Merge descriptions if richer
+          const existing = characterMap.get(key);
+          if (existing) {
+            if (char.description && char.description.length > (existing.description?.length || 0)) {
+              existing.description = char.description;
+            }
+            if (char.personality) {
+              existing.personality = { ...existing.personality, ...char.personality };
+            }
+            if (char.physical_traits) {
+              existing.physical_traits = { ...existing.physical_traits, ...char.physical_traits };
+            }
+          }
+        }
+      }
+    }
+
+    // Merge locations (deduplicate by name)
+    if (entities.locations) {
+      for (const loc of entities.locations) {
+        const key = loc.name.toLowerCase().trim();
+        if (!locationMap.has(key)) {
+          locationMap.set(key, loc);
+        } else {
+          // Merge descriptions if richer
+          const existing = locationMap.get(key);
+          if (existing && loc.description && loc.description.length > (existing.description?.length || 0)) {
+            existing.description = loc.description;
+          }
+        }
+      }
+    }
+
+    // Merge events (keep all, they're unique)
+    if (entities.events) {
+      merged.events!.push(...entities.events);
+    }
+
+    // Merge relationships (deduplicate by character pair)
+    if (entities.relationships) {
+      for (const rel of entities.relationships) {
+        const key = [rel.character_1, rel.character_2].sort().join('|').toLowerCase();
+        if (!relationshipSet.has(key)) {
+          relationshipSet.add(key);
+          merged.relationships!.push(rel);
+        }
+      }
+    }
+
+    // Combine summaries
+    if (entities.summary) {
+      merged.summary += (merged.summary ? ' ' : '') + entities.summary;
+    }
+  }
+
+  merged.characters = Array.from(characterMap.values());
+  merged.locations = Array.from(locationMap.values());
+
+  return merged;
+}
+
 // Parse conversation format from ChatGPT exports
 export function parseConversation(text: string): Array<{ speaker: string; message: string }> {
   const lines = text.split('\n');
@@ -46,26 +161,49 @@ export function extractSpeaker(line: string): string | null {
   return match ? match[1] : null;
 }
 
-// Chunk text for AI processing
-export function chunkText(text: string, maxChunkSize: number = 8000): string[] {
+// Chunk text for AI processing based on word count
+export function chunkText(text: string, maxWords: number = 6000): string[] {
   const chunks: string[] = [];
-  let currentChunk = '';
-
   const paragraphs = text.split('\n\n');
+  let currentChunk = '';
+  let currentWordCount = 0;
 
   for (const paragraph of paragraphs) {
-    if (currentChunk.length + paragraph.length + 2 > maxChunkSize) {
+    const paragraphWords = countWords(paragraph);
+    
+    // If this single paragraph exceeds maxWords, we need to force split it
+    if (paragraphWords > maxWords) {
+      // Save current chunk if exists
       if (currentChunk) {
         chunks.push(currentChunk.trim());
+        currentChunk = '';
+        currentWordCount = 0;
       }
+      
+      // Force split this large paragraph by words
+      const words = paragraph.split(/\s+/);
+      for (let i = 0; i < words.length; i += maxWords) {
+        chunks.push(words.slice(i, i + maxWords).join(' '));
+      }
+    } else if (currentWordCount + paragraphWords > maxWords && currentChunk) {
+      // Current chunk would exceed limit, start a new chunk
+      chunks.push(currentChunk.trim());
       currentChunk = paragraph;
+      currentWordCount = paragraphWords;
     } else {
+      // Add to current chunk
       currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+      currentWordCount += paragraphWords;
     }
   }
 
   if (currentChunk) {
     chunks.push(currentChunk.trim());
+  }
+
+  // Safety check: if no chunks created somehow, return the text as one chunk
+  if (chunks.length === 0 && text.length > 0) {
+    chunks.push(text);
   }
 
   return chunks;

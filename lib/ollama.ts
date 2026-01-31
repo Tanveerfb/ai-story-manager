@@ -72,6 +72,8 @@ Return your response as valid JSON with the following structure:
       prompt,
       system,
       format: 'json',
+      num_ctx: 4096, // Explicit context limit
+      temperature: 0.3, // Lower temperature for more consistent extraction
     });
 
     // Parse JSON response
@@ -79,7 +81,7 @@ Return your response as valid JSON with the following structure:
     return parsed;
   } catch (error: any) {
     console.error('Entity extraction error:', error.message);
-    // Return empty structure on error
+    // Return empty structure on error instead of throwing
     return {
       characters: [],
       locations: [],
