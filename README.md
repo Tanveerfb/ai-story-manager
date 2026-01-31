@@ -57,7 +57,16 @@ Ollama is a local LLM runtime that runs AI models on your machine.
   curl -fsSL https://ollama.ai/install.sh | sh
   ```
 
-- **Windows**: Download from [ollama.ai](https://ollama.ai/)
+- **Windows**: 
+  1. Download the Windows installer from [ollama.ai](https://ollama.ai/)
+  2. Run the installer (OllamaSetup.exe)
+  3. Ollama will be installed and automatically start as a Windows service
+  4. The service runs on `http://localhost:11434` by default
+  5. **For mobile/network access**: Configure Windows Firewall:
+     - Open Windows Defender Firewall
+     - Click "Advanced settings"
+     - Add a new Inbound Rule for TCP port 11434
+     - Allow connections from your local network (192.168.x.x)
 
 #### Pull the Model
 
@@ -130,6 +139,14 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+**For mobile/network access**, run with the `-H` flag to bind to all network interfaces:
+
+```bash
+npm run dev -- -H 0.0.0.0
+```
+
+Then access from mobile using your PC's IP: `http://192.168.x.x:3000`
 
 ## 📖 Usage Guide
 
@@ -219,6 +236,79 @@ These settings prioritize quality over speed. Generation may take 30-90 seconds 
 - **Self-Hosted Database**: Use Supabase cloud or self-host your database
 - **No Content Filtering**: Local LLM allows for any content without restrictions
 - **Complete Control**: All your data stays under your control
+
+## 📱 Mobile Access Guide
+
+You can access the web application from your mobile device on the same local network.
+
+### Setup for Mobile Access
+
+#### 1. Find Your PC's Local IP Address
+
+**Windows:**
+```bash
+ipconfig
+# Look for "IPv4 Address" under your active network adapter
+# Usually starts with 192.168.x.x or 10.0.x.x
+```
+
+**macOS/Linux:**
+```bash
+ifconfig
+# Look for "inet" under your active network adapter (en0, wlan0, etc.)
+# Or use: hostname -I
+```
+
+#### 2. Configure Ollama for Network Access
+
+Update your `.env.local` file:
+
+```env
+# Change from localhost to your PC's local IP
+OLLAMA_API_URL=http://192.168.1.100:11434  # Replace with YOUR IP
+```
+
+**Windows Users**: Ensure Windows Firewall allows connections to port 11434 (see Ollama installation section above).
+
+**macOS/Linux Users**: Ollama listens on localhost by default. To allow network access:
+```bash
+# Set environment variable before starting Ollama
+export OLLAMA_HOST=0.0.0.0:11434
+ollama serve
+```
+
+#### 3. Run Next.js with Network Binding
+
+```bash
+npm run dev -- -H 0.0.0.0
+```
+
+This allows the web app to be accessed from other devices on your network.
+
+#### 4. Access from Mobile
+
+On your mobile device:
+1. Connect to the **same WiFi network** as your PC
+2. Open browser and navigate to: `http://192.168.1.100:3000` (replace with YOUR PC's IP)
+3. The app should load and work normally
+4. AI generation will use Ollama running on your PC
+
+### Mobile Access Troubleshooting
+
+- **Cannot connect to web app**: 
+  - Verify mobile device is on same WiFi network
+  - Check PC firewall allows port 3000
+  - Try disabling PC firewall temporarily to test
+  
+- **Web app loads but AI generation fails**:
+  - Verify OLLAMA_API_URL in .env.local uses PC's local IP, not localhost
+  - Check Ollama is running: `ollama list`
+  - Verify firewall allows port 11434
+  
+- **Slow mobile performance**:
+  - Normal - AI generation happens on PC, which may take 30-90 seconds
+  - Ensure PC remains active and not in sleep mode
+  - Consider using a smaller model (llama3.1:8b) for faster responses
 
 ## 🐛 Troubleshooting
 
