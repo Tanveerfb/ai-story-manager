@@ -26,6 +26,10 @@ export interface ExtractedEntities {
   summary?: string;
 }
 
+// Type aliases for better type safety
+type Character = NonNullable<ExtractedEntities['characters']>[number];
+type Location = NonNullable<ExtractedEntities['locations']>[number];
+
 // Merge and deduplicate entities from multiple extraction chunks
 export function mergeEntities(entitiesArray: ExtractedEntities[]): ExtractedEntities {
   const merged: ExtractedEntities = {
@@ -36,8 +40,8 @@ export function mergeEntities(entitiesArray: ExtractedEntities[]): ExtractedEnti
     summary: '',
   };
 
-  const characterMap = new Map<string, any>();
-  const locationMap = new Map<string, any>();
+  const characterMap = new Map<string, Character>();
+  const locationMap = new Map<string, Location>();
   const relationshipSet = new Set<string>();
 
   for (const entities of entitiesArray) {
@@ -50,14 +54,16 @@ export function mergeEntities(entitiesArray: ExtractedEntities[]): ExtractedEnti
         } else {
           // Merge descriptions if richer
           const existing = characterMap.get(key);
-          if (char.description && char.description.length > (existing.description?.length || 0)) {
-            existing.description = char.description;
-          }
-          if (char.personality) {
-            existing.personality = { ...existing.personality, ...char.personality };
-          }
-          if (char.physical_traits) {
-            existing.physical_traits = { ...existing.physical_traits, ...char.physical_traits };
+          if (existing) {
+            if (char.description && char.description.length > (existing.description?.length || 0)) {
+              existing.description = char.description;
+            }
+            if (char.personality) {
+              existing.personality = { ...existing.personality, ...char.personality };
+            }
+            if (char.physical_traits) {
+              existing.physical_traits = { ...existing.physical_traits, ...char.physical_traits };
+            }
           }
         }
       }
@@ -72,7 +78,7 @@ export function mergeEntities(entitiesArray: ExtractedEntities[]): ExtractedEnti
         } else {
           // Merge descriptions if richer
           const existing = locationMap.get(key);
-          if (loc.description && loc.description.length > (existing.description?.length || 0)) {
+          if (existing && loc.description && loc.description.length > (existing.description?.length || 0)) {
             existing.description = loc.description;
           }
         }
