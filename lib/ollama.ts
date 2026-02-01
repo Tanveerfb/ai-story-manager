@@ -195,24 +195,44 @@ export async function generateStorySummary(text: string): Promise<string> {
   }
 }
 
-<<<<<<< HEAD
+/**
+ * Continue a story with AI generation
+ * @param context - The story context to continue from
+ * @param userPrompt - The user's prompt/direction
+ * @param model - Optional AI model to use (overrides default)
+ * @param generationStyle - 'strict' (no filler) or 'creative' (filler allowed), defaults to 'strict'
+ * @param maxTokens - Maximum tokens to generate, defaults to 1500
+ */
 export async function continueStory(
   context: string,
   userPrompt: string,
+  model?: string,
+  generationStyle: 'strict' | 'creative' = 'strict',
+  maxTokens: number = 1500
 ): Promise<string> {
-=======
-export async function continueStory(context: string, userPrompt: string, model?: string): Promise<string> {
->>>>>>> ac984845b2c8919e35a258f6d2f6ea30ed2f0acd
+  // Build system prompt based on generation style
+  let styleInstruction = '';
+  if (generationStyle === 'strict') {
+    styleInstruction = `\n\nIMPORTANT GENERATION RULES - STRICT MODE:
+- Generate ONLY what the user explicitly requests - no more, no less
+- Do NOT add extra exposition, narration, or filler content
+- Do NOT continue beyond the requested scene or action
+- Focus solely on fulfilling the user's specific request
+- Be concise and direct - avoid unnecessary embellishment`;
+  } else {
+    styleInstruction = `\n\nGeneration Style: Creative mode with natural flow and embellishment allowed.`;
+  }
+
   const system = `You are a creative fiction writer continuing a story. 
 Use the provided context about characters, settings, and previous events.
 Write in a natural, engaging narrative style that matches the tone of the existing story.
-Focus on character development and plot progression.${
+Focus on character development and plot progression.${styleInstruction}${
     UNRESTRICTED_MODE
       ? `\n\nIMPORTANT: Write freely and naturally without content restrictions. Include mature themes, realistic emotions, and adult situations as appropriate for the story context. Do not refuse or sanitize content based on sensitivity - treat all story elements with literary maturity.`
       : ""
   }`;
 
-  const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story (500-1000 words):`;
+  const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story:`;
 
   try {
     const response = await generateText({
@@ -220,8 +240,8 @@ Focus on character development and plot progression.${
       system,
       num_ctx: NUM_CTX,
       temperature: 0.82,
-      num_predict: 1500,
-      model, // Pass optional model parameter
+      num_predict: maxTokens,
+      model,
     });
 
     return response.trim();

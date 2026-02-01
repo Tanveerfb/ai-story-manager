@@ -21,6 +21,9 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  ToggleButtonGroup,
+  ToggleButton,
+  Slider,
 } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SaveIcon from '@mui/icons-material/Save';
@@ -51,6 +54,10 @@ export default function ContinuePage() {
   const [continuation, setContinuation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Generation Style state (new feature)
+  const [generationStyle, setGenerationStyle] = useState<'strict' | 'creative'>('strict'); // Default to 'strict'
+  const [maxTokens, setMaxTokens] = useState(1500); // Default max tokens
   
   // Advanced state
   const [status, setStatus] = useState('Ready');
@@ -125,6 +132,8 @@ export default function ContinuePage() {
           userPrompt,
           characterFocus: characterFocus || null,
           model: selectedModel, // Include selected model
+          generationStyle, // Include generation style
+          maxTokens, // Include max tokens
         }),
       });
 
@@ -164,6 +173,8 @@ export default function ContinuePage() {
           action: 'revise',
           draftId: currentDraftId,
           revisionInstructions,
+          generationStyle, // Include generation style
+          maxTokens, // Include max tokens
         }),
       });
 
@@ -207,6 +218,8 @@ export default function ContinuePage() {
           userPrompt,
           characterFocus: characterFocus || null,
           revisionInstructions,
+          generationStyle, // Include generation style
+          maxTokens, // Include max tokens
         }),
       });
 
@@ -454,6 +467,54 @@ export default function ContinuePage() {
                 onModelChange={setSelectedModel}
                 disabled={loading}
               />
+
+              {/* Generation Style Controls - NEW FEATURE */}
+              <Box sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Generation Style
+                  <Tooltip title="Strict mode generates only what you request (no filler). Creative mode allows natural flow and embellishment.">
+                    <InfoIcon fontSize="small" color="action" />
+                  </Tooltip>
+                </Typography>
+                <ToggleButtonGroup
+                  value={generationStyle}
+                  exclusive
+                  onChange={(e, newValue) => {
+                    if (newValue !== null) {
+                      setGenerationStyle(newValue);
+                    }
+                  }}
+                  disabled={loading}
+                  size="small"
+                  sx={{ mb: 2 }}
+                >
+                  <ToggleButton value="strict">
+                    Strict (no filler)
+                  </ToggleButton>
+                  <ToggleButton value="creative">
+                    Creative (filler allowed)
+                  </ToggleButton>
+                </ToggleButtonGroup>
+
+                <Typography variant="caption" gutterBottom display="block">
+                  Max Tokens: {maxTokens}
+                </Typography>
+                <Slider
+                  value={maxTokens}
+                  onChange={(e, newValue) => setMaxTokens(newValue as number)}
+                  min={500}
+                  max={3000}
+                  step={100}
+                  disabled={loading}
+                  marks={[
+                    { value: 500, label: '500' },
+                    { value: 1500, label: '1500' },
+                    { value: 3000, label: '3000' },
+                  ]}
+                  valueLabelDisplay="auto"
+                  sx={{ maxWidth: 400 }}
+                />
+              </Box>
 
               <TextField
                 fullWidth
