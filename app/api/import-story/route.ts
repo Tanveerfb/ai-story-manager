@@ -47,10 +47,14 @@ export async function POST(request: NextRequest) {
     const isMarkdown =
       fileName.endsWith(".md") || fileName.endsWith(".markdown");
     const isText = fileName.endsWith(".txt");
+    const isGdoc = fileName.endsWith(".gdoc");
 
-    if (!isDocx && !isMarkdown && !isText) {
+    if (!isDocx && !isMarkdown && !isText && !isGdoc) {
       return NextResponse.json(
-        { error: "Only .docx, .md, .markdown, and .txt files are supported" },
+        {
+          error:
+            "Only .docx, .md, .markdown, .txt, and .gdoc files are supported",
+        },
         { status: 400 },
       );
     }
@@ -58,7 +62,13 @@ export async function POST(request: NextRequest) {
     // Save file temporarily
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const fileExtension = isDocx ? ".docx" : isText ? ".txt" : ".md";
+    const fileExtension = isDocx
+      ? ".docx"
+      : isGdoc
+        ? ".json"
+        : isText
+          ? ".txt"
+          : ".md";
     tempFilePath = join(tmpdir(), `upload-${Date.now()}${fileExtension}`);
     await writeFile(tempFilePath, buffer);
 
@@ -69,6 +79,37 @@ export async function POST(request: NextRequest) {
       // Parse DOCX
       const result = await mammoth.extractRawText({ path: tempFilePath });
       rawText = result.value;
+    } else if (isGdoc) {
+      // Parse Google Doc shortcut file - try to read as JSON or text
+      try {
+        const fileContent = await readFile(tempFilePath, "utf-8");
+        // Try to parse as JSON first (gdoc files are often JSON)
+        try {
+          const gdocData = JSON.parse(fileContent);
+          // If it's a gdoc shortcut, it might have a url property
+          if (gdocData.url) {
+            return NextResponse.json(
+              {
+                error:
+                  ".gdoc files are shortcuts. Please export your Google Doc as .docx, .md, or .txt and upload that instead.",
+              },
+              { status: 400 },
+            );
+          }
+          rawText = fileContent; // Use the raw JSON as text if needed
+        } catch {
+          // Not JSON, treat as plain text
+          rawText = fileContent;
+        }
+      } catch (error: any) {
+        return NextResponse.json(
+          {
+            error:
+              "Failed to read .gdoc file. Please export as .docx, .md, or .txt instead.",
+          },
+          { status: 400 },
+        );
+      }
     } else {
       // Parse Markdown/TXT - just read as text
       rawText = await readFile(tempFilePath, "utf-8");
@@ -95,7 +136,7 @@ export async function POST(request: NextRequest) {
       };
     } else {
       // Chunk the text for large files (5000 words per chunk for detailed extraction)
-      const chunks = chunkText(cleanedText, 5000);
+      const chunks = chunkText(cleanedText, 6000);
       console.log(`Processing ${chunks.length} chunk(s)...`);
 
       // Extract entities from each chunk

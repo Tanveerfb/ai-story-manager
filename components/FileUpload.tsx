@@ -12,7 +12,7 @@ interface FileUploadProps {
 
 export default function FileUpload({
   onFileSelect,
-  accept = ".docx,.md,.markdown,.txt",
+  accept = ".docx,.md,.markdown,.txt,.gdoc",
   maxSize = 52428800, // 50MB
 }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false);
@@ -56,10 +56,10 @@ export default function FileUpload({
     }
 
     // Check if file matches accepted extensions
-    const acceptedExtensions = accept.split(',');
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    const isValidExtension = acceptedExtensions.some(ext => 
-      ext.trim().toLowerCase() === fileExtension
+    const acceptedExtensions = accept.split(",");
+    const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+    const isValidExtension = acceptedExtensions.some(
+      (ext) => ext.trim().toLowerCase() === fileExtension,
     );
 
     if (accept && !isValidExtension) {

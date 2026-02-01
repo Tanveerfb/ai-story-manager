@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Container,
   Typography,
@@ -12,13 +12,13 @@ import {
   Paper,
   FormControlLabel,
   Checkbox,
-} from '@mui/material';
-import FileUpload from '@/components/FileUpload';
+} from "@mui/material";
+import FileUpload from "@/components/FileUpload";
 
 export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [partNumber, setPartNumber] = useState(1);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState("");
   const [skipExtraction, setSkipExtraction] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export default function ImportPage() {
 
   const handleImport = async () => {
     if (!file) {
-      setError('Please select a file');
+      setError("Please select a file");
       return;
     }
 
@@ -36,19 +36,19 @@ export default function ImportPage() {
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('partNumber', partNumber.toString());
-      formData.append('title', title);
-      formData.append('skipExtraction', skipExtraction.toString());
+      formData.append("file", file);
+      formData.append("partNumber", partNumber.toString());
+      formData.append("title", title);
+      formData.append("skipExtraction", skipExtraction.toString());
 
-      const response = await fetch('/api/import-story', {
-        method: 'POST',
+      const response = await fetch("/api/import-story", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Import failed');
+        throw new Error(errorData.error || "Import failed");
       }
 
       const result = await response.json();
@@ -68,8 +68,9 @@ export default function ImportPage() {
           Import Story
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          Upload a .docx, .md, .markdown, or .txt file containing your story. The AI will automatically extract
-          characters, locations, events, and relationships.
+          Upload a .docx, .md, .markdown, .txt, or .gdoc file containing your
+          story. The AI will automatically extract characters, locations,
+          events, and relationships.
         </Typography>
 
         <Box sx={{ mt: 4 }}>
@@ -117,7 +118,7 @@ export default function ImportPage() {
                 Processing...
               </>
             ) : (
-              'Import Story'
+              "Import Story"
             )}
           </Button>
         </Box>
@@ -136,10 +137,14 @@ export default function ImportPage() {
             <Typography variant="h6" gutterBottom>
               Extracted Entities:
             </Typography>
-            <Typography>• Characters: {success.extracted.characters}</Typography>
+            <Typography>
+              • Characters: {success.extracted.characters}
+            </Typography>
             <Typography>• Locations: {success.extracted.locations}</Typography>
             <Typography>• Events: {success.extracted.events}</Typography>
-            <Typography>• Relationships: {success.extracted.relationships}</Typography>
+            <Typography>
+              • Relationships: {success.extracted.relationships}
+            </Typography>
             <Typography>• Themes: {success.extracted.themes}</Typography>
           </Paper>
         )}
