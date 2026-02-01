@@ -35,12 +35,18 @@ import FeedbackPanel from '@/components/continue/FeedbackPanel';
 import HistoryPanel from '@/components/continue/HistoryPanel';
 import BranchingPanel from '@/components/continue/BranchingPanel';
 import SideNotesPanel from '@/components/continue/SideNotesPanel';
+import ModelSelector from '@/components/continue/ModelSelector';
+import EntityManager from '@/components/continue/EntityManager';
+import LocationManager from '@/components/continue/LocationManager';
+import { DEFAULT_AI_MODEL } from '@/lib/constants';
 
 export default function ContinuePage() {
   // Basic state
   const [userPrompt, setUserPrompt] = useState('');
   const [characterFocus, setCharacterFocus] = useState('');
   const [characters, setCharacters] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL); // Use constant for default model
   const [loading, setLoading] = useState(false);
   const [continuation, setContinuation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +65,7 @@ export default function ContinuePage() {
 
   useEffect(() => {
     fetchCharacters();
+    fetchLocations();
     fetchRecentParts();
   }, []);
 
@@ -71,6 +78,18 @@ export default function ContinuePage() {
       }
     } catch (error) {
       console.error('Failed to fetch characters:', error);
+    }
+  };
+
+  const fetchLocations = async () => {
+    try {
+      const response = await fetch('/api/locations');
+      if (response.ok) {
+        const data = await response.json();
+        setLocations(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch locations:', error);
     }
   };
 
@@ -105,6 +124,7 @@ export default function ContinuePage() {
           action: 'generate',
           userPrompt,
           characterFocus: characterFocus || null,
+          model: selectedModel, // Include selected model
         }),
       });
 
@@ -383,18 +403,19 @@ export default function ContinuePage() {
           <AutoAwesomeIcon sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
           <Box>
             <Typography variant="h4" component="h1" gutterBottom>
-              Advanced Story Editor
+              AI-First Story Creation
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Full-featured creative suite for AI-enhanced interactive storytelling
+              Create stories from scratch with AI assistance - build narrative, entities, and locations live
             </Typography>
           </Box>
         </Box>
 
         {/* Info Alert */}
         <Alert severity="info" icon={<InfoIcon />} sx={{ mb: 3 }}>
-          <strong>Pro Tips:</strong> Use [ --- note ] markers for in-context instructions. 
-          The AI respects your creative direction and never waters down scenes.
+          <strong>Welcome to AI-First Authoring:</strong> Start with an empty canvas and let AI help you create. 
+          Use [ --- note ] markers for in-context instructions. Create characters and locations on the fly. 
+          Switch between models to find your perfect creative partner.
         </Alert>
 
         <Grid container spacing={3}>
@@ -426,6 +447,14 @@ export default function ContinuePage() {
               <Typography variant="h6" gutterBottom>
                 Your Prompt
               </Typography>
+
+              {/* Model Selector */}
+              <ModelSelector
+                selectedModel={selectedModel}
+                onModelChange={setSelectedModel}
+                disabled={loading}
+              />
+
               <TextField
                 fullWidth
                 multiline
@@ -597,6 +626,18 @@ Duke confronts the villain..."
 
           {/* Right Column - Sidebar Tools */}
           <Grid item xs={12} lg={4}>
+            {/* Entity Manager - Characters */}
+            <EntityManager
+              characters={characters}
+              onCharactersChange={fetchCharacters}
+            />
+
+            {/* Location Manager */}
+            <LocationManager
+              locations={locations}
+              onLocationsChange={fetchLocations}
+            />
+
             {/* Side Notes & Tags */}
             <SideNotesPanel
               notes={sideNotes}
