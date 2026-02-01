@@ -21,6 +21,9 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  ToggleButtonGroup,
+  ToggleButton,
+  Slider,
 } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SaveIcon from '@mui/icons-material/Save';
@@ -29,6 +32,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InfoIcon from '@mui/icons-material/Info';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 import GenerationProgress from '@/components/continue/GenerationProgress';
 import FeedbackPanel from '@/components/continue/FeedbackPanel';
@@ -51,6 +55,10 @@ export default function ContinuePage() {
   const [continuation, setContinuation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Generation Style state (new feature)
+  const [generationStyle, setGenerationStyle] = useState<'strict' | 'creative'>('strict'); // Default to 'strict'
+  const [maxTokens, setMaxTokens] = useState(1500); // Default max tokens
   
   // Advanced state
   const [status, setStatus] = useState('Ready');
@@ -125,6 +133,8 @@ export default function ContinuePage() {
           userPrompt,
           characterFocus: characterFocus || null,
           model: selectedModel, // Include selected model
+          generationStyle, // Include generation style
+          maxTokens, // Include max tokens
         }),
       });
 
@@ -164,6 +174,8 @@ export default function ContinuePage() {
           action: 'revise',
           draftId: currentDraftId,
           revisionInstructions,
+          generationStyle, // Include generation style
+          maxTokens, // Include max tokens
         }),
       });
 
@@ -207,6 +219,8 @@ export default function ContinuePage() {
           userPrompt,
           characterFocus: characterFocus || null,
           revisionInstructions,
+          generationStyle, // Include generation style
+          maxTokens, // Include max tokens
         }),
       });
 
@@ -302,6 +316,110 @@ export default function ContinuePage() {
       fetchRecentParts();
     } catch (err: any) {
       setError(err.message || 'Failed to insert into story');
+      setStatus('Ready');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExtractEntities = async () => {
+    if (!continuation) return;
+
+    setLoading(true);
+    setError(null);
+    setStatus('Extracting characters and locations...');
+
+    try {
+      // Extract entities from the generated content
+      const extractResponse = await fetch('/api/extract-entities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: continuation }),
+      });
+
+      if (!extractResponse.ok) {
+        throw new Error('Failed to extract entities');
+      }
+
+      const extracted = await extractResponse.json();
+      
+      let addedCharacters = 0;
+      let addedLocations = 0;
+      let skippedCharacters = 0;
+      let skippedLocations = 0;
+
+      // Helper function to check if entity exists (case-insensitive)
+      const entityExists = (list: any[], name: string) => {
+        return list.some(item => item.name.toLowerCase() === name.toLowerCase());
+      };
+
+      // Add new characters
+      if (extracted.characters && extracted.characters.length > 0) {
+        for (const char of extracted.characters) {
+          if (!entityExists(characters, char.name)) {
+            // Add new character
+            const response = await fetch('/api/characters', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(char),
+            });
+
+            if (response.ok) {
+              addedCharacters++;
+            }
+          } else {
+            skippedCharacters++;
+          }
+        }
+      }
+
+      // Add new locations
+      if (extracted.locations && extracted.locations.length > 0) {
+        for (const loc of extracted.locations) {
+          if (!entityExists(locations, loc.name)) {
+            // Add new location
+            const response = await fetch('/api/locations', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(loc),
+            });
+
+            if (response.ok) {
+              addedLocations++;
+            }
+          } else {
+            skippedLocations++;
+          }
+        }
+      }
+
+      // Refresh character and location lists
+      await fetchCharacters();
+      await fetchLocations();
+
+      // Build detailed success message
+      const totalAdded = addedCharacters + addedLocations;
+      const totalSkipped = skippedCharacters + skippedLocations;
+      
+      if (totalAdded > 0) {
+        let message = 'Successfully extracted and added ';
+        const parts = [];
+        if (addedCharacters > 0) parts.push(`${addedCharacters} character${addedCharacters > 1 ? 's' : ''}`);
+        if (addedLocations > 0) parts.push(`${addedLocations} location${addedLocations > 1 ? 's' : ''}`);
+        message += parts.join(' and ');
+        if (totalSkipped > 0) {
+          message += ` (${totalSkipped} already existed)`;
+        }
+        message += '!';
+        setSuccess(message);
+      } else if (totalSkipped > 0) {
+        setSuccess(`Found ${totalSkipped} entities that already exist in your database.`);
+      } else {
+        setSuccess('No new entities found in the generated content.');
+      }
+      setStatus('Ready');
+    } catch (err: any) {
+      setError(err.message || 'Failed to extract entities');
       setStatus('Ready');
     } finally {
       setLoading(false);
@@ -455,6 +573,54 @@ export default function ContinuePage() {
                 disabled={loading}
               />
 
+              {/* Generation Style Controls - NEW FEATURE */}
+              <Box sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Generation Style
+                  <Tooltip title="Strict mode generates only what you request (no filler). Creative mode allows natural flow and embellishment.">
+                    <InfoIcon fontSize="small" color="action" />
+                  </Tooltip>
+                </Typography>
+                <ToggleButtonGroup
+                  value={generationStyle}
+                  exclusive
+                  onChange={(e, newValue) => {
+                    if (newValue !== null) {
+                      setGenerationStyle(newValue);
+                    }
+                  }}
+                  disabled={loading}
+                  size="small"
+                  sx={{ mb: 2 }}
+                >
+                  <ToggleButton value="strict">
+                    Strict (no filler)
+                  </ToggleButton>
+                  <ToggleButton value="creative">
+                    Creative (filler allowed)
+                  </ToggleButton>
+                </ToggleButtonGroup>
+
+                <Typography variant="caption" gutterBottom display="block">
+                  Max Tokens: {maxTokens}
+                </Typography>
+                <Slider
+                  value={maxTokens}
+                  onChange={(e, newValue) => setMaxTokens(newValue as number)}
+                  min={500}
+                  max={3000}
+                  step={100}
+                  disabled={loading}
+                  marks={[
+                    { value: 500, label: '500' },
+                    { value: 1500, label: '1500' },
+                    { value: 3000, label: '3000' },
+                  ]}
+                  valueLabelDisplay="auto"
+                  sx={{ maxWidth: 400 }}
+                />
+              </Box>
+
               <TextField
                 fullWidth
                 multiline
@@ -568,7 +734,17 @@ Duke confronts the villain..."
               <Paper sx={{ p: 3, mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                   <Typography variant="h6">Generated Continuation</Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<PersonAddIcon />}
+                      onClick={handleExtractEntities}
+                      disabled={loading}
+                      size="small"
+                      color="secondary"
+                    >
+                      Extract Entities
+                    </Button>
                     <Button
                       variant="outlined"
                       startIcon={<SaveIcon />}

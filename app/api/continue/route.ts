@@ -4,6 +4,10 @@ import { getStoryParts, getCharacters } from '@/lib/supabase';
 import { buildStoryContext } from '@/lib/contextBuilder';
 import { supabase } from '@/lib/supabase';
 
+// Default generation settings
+const DEFAULT_GENERATION_STYLE: 'strict' | 'creative' = 'strict';
+const DEFAULT_MAX_TOKENS = 1500;
+
 // Helper to parse in-context markers [ --- ]
 function parseContextMarkers(prompt: string): { cleanPrompt: string; contextNotes: string[] } {
   const markerRegex = /\[\s*---\s*([^\]]+)\]/g;
@@ -63,16 +67,18 @@ export async function POST(request: NextRequest) {
       sideNotes,
       sceneType,
       generatedContent, // Add this for pre-generated content
-      model // Add model parameter for AI model selection
+      model, // Add model parameter for AI model selection
+      generationStyle, // Add generation style parameter ('strict' or 'creative')
+      maxTokens // Add max tokens parameter for generation control
     } = await request.json();
 
     // Handle different actions
     switch (action) {
       case 'generate':
-        return await handleGenerate(userPrompt, characterFocus, revisionInstructions, model);
+        return await handleGenerate(userPrompt, characterFocus, revisionInstructions, model, generationStyle, maxTokens);
       
       case 'revise':
-        return await handleRevise(draftId, revisionInstructions, model);
+        return await handleRevise(draftId, revisionInstructions, model, generationStyle, maxTokens);
       
       case 'save-draft':
         return await handleSaveDraft(
@@ -89,7 +95,7 @@ export async function POST(request: NextRequest) {
         return await handleGetHistory(draftId);
       
       case 'branch':
-        return await handleBranch(draftId, branchName, userPrompt, characterFocus, sideNotes, model);
+        return await handleBranch(draftId, branchName, userPrompt, characterFocus, sideNotes, model, generationStyle, maxTokens);
       
       case 'list-drafts':
         return await handleListDrafts();
@@ -99,7 +105,7 @@ export async function POST(request: NextRequest) {
       
       default:
         // Default to generate if no action specified
-        return await handleGenerate(userPrompt, characterFocus, revisionInstructions, model);
+        return await handleGenerate(userPrompt, characterFocus, revisionInstructions, model, generationStyle, maxTokens);
     }
   } catch (error: any) {
     console.error('Continue API error:', error);
@@ -115,7 +121,9 @@ async function generateContinuation(
   userPrompt: string,
   characterFocus: string | null,
   revisionInstructions: string | null,
-  model?: string
+  model?: string,
+  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS
 ): Promise<{ continuation: string; contextNotes: string[] }> {
   if (!userPrompt) {
     throw new Error('User prompt is required');
@@ -152,8 +160,8 @@ async function generateContinuation(
     contextNotes
   );
 
-  // Generate continuation with optional model - pass only the enhanced prompt, not the context again
-  const continuation = await continueStory('', enhancedPrompt, model);
+  // Generate continuation with optional model, generation style, and max tokens
+  const continuation = await continueStory('', enhancedPrompt, model, generationStyle, maxTokens);
 
   return {
     continuation,
@@ -166,10 +174,12 @@ async function handleGenerate(
   userPrompt: string,
   characterFocus: string | null,
   revisionInstructions: string | null,
-  model?: string
+  model?: string,
+  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS
 ) {
   try {
-    const result = await generateContinuation(userPrompt, characterFocus, revisionInstructions, model);
+    const result = await generateContinuation(userPrompt, characterFocus, revisionInstructions, model, generationStyle, maxTokens);
     return NextResponse.json({
       ...result,
       timestamp: new Date().toISOString()
@@ -183,7 +193,13 @@ async function handleGenerate(
 }
 
 // Revise existing draft with new instructions
-async function handleRevise(draftId: string, revisionInstructions: string, model?: string) {
+async function handleRevise(
+  draftId: string, 
+  revisionInstructions: string, 
+  model?: string,
+  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS
+) {
   if (!draftId || !revisionInstructions) {
     return NextResponse.json(
       { error: 'Draft ID and revision instructions are required' },
@@ -214,13 +230,15 @@ async function handleRevise(draftId: string, revisionInstructions: string, model
     generated_content: draft.generated_content
   });
 
-  // Generate revised version with optional model
+  // Generate revised version with optional model, generation style, and max tokens
   try {
     const result = await generateContinuation(
       draft.user_prompt,
       draft.character_focus,
       revisionInstructions,
-      model
+      model,
+      generationStyle,
+      maxTokens
     );
     
     // Update draft with new content
@@ -330,7 +348,9 @@ async function handleBranch(
   userPrompt: string,
   characterFocus: string | null,
   sideNotes: string | null,
-  model?: string
+  model?: string,
+  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS
 ) {
   if (!parentDraftId || !branchName || !userPrompt) {
     return NextResponse.json(
@@ -339,10 +359,10 @@ async function handleBranch(
     );
   }
 
-  // Generate content for the branch with optional model
+  // Generate content for the branch with optional model, generation style, and max tokens
   let continuation: string;
   try {
-    const result = await generateContinuation(userPrompt, characterFocus, null, model);
+    const result = await generateContinuation(userPrompt, characterFocus, null, model, generationStyle, maxTokens);
     continuation = result.continuation;
   } catch (error: any) {
     return NextResponse.json(

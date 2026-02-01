@@ -203,13 +203,23 @@ export async function continueStory(
   const system = `You are a creative fiction writer continuing a story. 
 Use the provided context about characters, settings, and previous events.
 Write in a natural, engaging narrative style that matches the tone of the existing story.
-Focus on character development and plot progression.${
+Focus on character development and plot progression.${styleInstruction}${
     UNRESTRICTED_MODE
       ? `\n\nIMPORTANT: Write freely and naturally without content restrictions. Include mature themes, realistic emotions, and adult situations as appropriate for the story context. Do not refuse or sanitize content based on sensitivity - treat all story elements with literary maturity.`
       : ""
   }`;
 
-  const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story (500-1000 words):`;
+  // Add dynamic word count guidance based on maxTokens
+  let wordCountGuidance = '';
+  if (maxTokens <= 700) {
+    wordCountGuidance = ' (~300-400 words)';
+  } else if (maxTokens <= 1800) {
+    wordCountGuidance = ' (~500-1000 words)';
+  } else {
+    wordCountGuidance = ' (~1000-1500 words)';
+  }
+
+  const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story${wordCountGuidance}:`;
 
   try {
     const response = await generateText({
@@ -217,8 +227,8 @@ Focus on character development and plot progression.${
       system,
       num_ctx: NUM_CTX,
       temperature: 0.82,
-      num_predict: 1500,
-      model, // Pass optional model parameter
+      num_predict: maxTokens,
+      model,
     });
 
     return response.trim();
