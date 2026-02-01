@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { groupBySimilarity } from '@/lib/fuzzyMatch';
+import { groupBySimilarity, calculateSimilarity } from '@/lib/fuzzyMatch';
 
 /**
  * GET - Get fuzzy match suggestions for locations that might be duplicates
@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
 
         for (let i = 0; i < group.length; i++) {
           for (let j = i + 1; j < group.length; j++) {
-            const { calculateSimilarity } = require('@/lib/fuzzyMatch');
             totalSimilarity += calculateSimilarity(group[i].name, group[j].name);
             comparisons++;
           }

@@ -440,7 +440,7 @@ export default function LocationsMergePage() {
                               {location.name}
                             </Typography>
                             <Chip
-                              label={`Used ${location.usageCount || 0} time${location.usageCount !== 1 ? 's' : ''}`}
+                              label={`Used ${location.usageCount || 0} time${(location.usageCount || 0) === 1 ? '' : 's'}`}
                               size="small"
                               color={location.usageCount === 0 ? 'error' : 'warning'}
                               sx={{ mt: 1 }}

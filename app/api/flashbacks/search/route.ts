@@ -34,6 +34,18 @@ export async function GET(request: NextRequest) {
 
     if (eventsError) throw eventsError;
 
+    // Fetch all characters and locations once to avoid N+1 queries
+    const { data: allCharacters } = await supabase
+      .from('characters')
+      .select('id, name');
+
+    const { data: allLocations } = await supabase
+      .from('locations')
+      .select('id, name');
+
+    const charactersById = new Map(allCharacters?.map(c => [c.id, c.name]) || []);
+    const locationsById = new Map(allLocations?.map(l => [l.id, l.name]) || []);
+
     // Filter events by character/location if specified
     if (events) {
       for (const event of events) {
@@ -41,13 +53,8 @@ export async function GET(request: NextRequest) {
 
         // Check character filter
         if (characterName && event.character_id) {
-          const { data: char } = await supabase
-            .from('characters')
-            .select('name')
-            .eq('id', event.character_id)
-            .single();
-
-          if (!char || char.name !== characterName) {
+          const charName = charactersById.get(event.character_id);
+          if (charName !== characterName) {
             include = false;
           }
         } else if (characterName) {
@@ -56,13 +63,8 @@ export async function GET(request: NextRequest) {
 
         // Check location filter
         if (locationName && event.location_id) {
-          const { data: loc } = await supabase
-            .from('locations')
-            .select('name')
-            .eq('id', event.location_id)
-            .single();
-
-          if (!loc || loc.name !== locationName) {
+          const locName = locationsById.get(event.location_id);
+          if (locName !== locationName) {
             include = false;
           }
         } else if (locationName) {
