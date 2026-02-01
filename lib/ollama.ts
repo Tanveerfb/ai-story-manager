@@ -35,7 +35,7 @@ async function generateText(options: GenerateOptions): Promise<string> {
 }
 
 export async function extractEntities(text: string): Promise<any> {
-  let system = `Extract from story: character names with personality (1 sentence), 3 traits, goals, relationships, locations.
+  const system = `Extract from story: character names with personality (1 sentence), 3 traits, goals, relationships, locations.
 
 JSON format:
 {
@@ -46,12 +46,11 @@ JSON format:
   "themes": ["theme1", "theme2"]
 }
 
-Ignore pronouns: you, she, he, I, me, they, boyfriend, girlfriend, ChatGPT, AI, narrator, babe, baby.`;
-
-  // Add unrestricted directive for entity extraction when enabled
-  if (UNRESTRICTED_MODE) {
-    system += `\n\nExtract all themes, events, and character traits accurately, including mature or sensitive content without filtering or censoring.`;
-  }
+Ignore pronouns: you, she, he, I, me, they, boyfriend, girlfriend, ChatGPT, AI, narrator, babe, baby.${
+    UNRESTRICTED_MODE
+      ? `\n\nExtract all themes, events, and character traits accurately, including mature or sensitive content without filtering or censoring.`
+      : ""
+  }`;
 
   const prompt = `Extract:\n\n${text.substring(0, 2500)}\n\nJSON:`;
 
@@ -196,16 +195,14 @@ export async function generateStorySummary(text: string): Promise<string> {
 }
 
 export async function continueStory(context: string, userPrompt: string): Promise<string> {
-  // Base system prompt for creative fiction writing
-  let system = `You are a creative fiction writer continuing a story. 
+  const system = `You are a creative fiction writer continuing a story. 
 Use the provided context about characters, settings, and previous events.
 Write in a natural, engaging narrative style that matches the tone of the existing story.
-Focus on character development and plot progression.`;
-
-  // Add unrestricted directive when enabled
-  if (UNRESTRICTED_MODE) {
-    system += `\n\nIMPORTANT: Write freely and naturally without content restrictions. Include mature themes, realistic emotions, and adult situations as appropriate for the story context. Do not refuse or sanitize content based on sensitivity - treat all story elements with literary maturity.`;
-  }
+Focus on character development and plot progression.${
+    UNRESTRICTED_MODE
+      ? `\n\nIMPORTANT: Write freely and naturally without content restrictions. Include mature themes, realistic emotions, and adult situations as appropriate for the story context. Do not refuse or sanitize content based on sensitivity - treat all story elements with literary maturity.`
+      : ""
+  }`;
 
   const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story (500-1000 words):`;
 
