@@ -15,11 +15,12 @@ interface GenerateOptions {
   num_ctx?: number;
   temperature?: number;
   num_predict?: number;
+  model?: string; // Optional model override
 }
 
 async function generateText(options: GenerateOptions): Promise<string> {
   const response = await ollama.generate({
-    model: MODEL,
+    model: options.model || MODEL, // Use provided model or default
     prompt: options.prompt,
     system: options.system || "",
     format: options.format,
@@ -194,7 +195,7 @@ export async function generateStorySummary(text: string): Promise<string> {
   }
 }
 
-export async function continueStory(context: string, userPrompt: string): Promise<string> {
+export async function continueStory(context: string, userPrompt: string, model?: string): Promise<string> {
   const system = `You are a creative fiction writer continuing a story. 
 Use the provided context about characters, settings, and previous events.
 Write in a natural, engaging narrative style that matches the tone of the existing story.
@@ -213,6 +214,7 @@ Focus on character development and plot progression.${
       num_ctx: NUM_CTX,
       temperature: 0.82,
       num_predict: 1500,
+      model, // Pass optional model parameter
     });
 
     return response.trim();

@@ -62,16 +62,17 @@ export async function POST(request: NextRequest) {
       tags,
       sideNotes,
       sceneType,
-      generatedContent // Add this for pre-generated content
+      generatedContent, // Add this for pre-generated content
+      model // Add model parameter for AI model selection
     } = await request.json();
 
     // Handle different actions
     switch (action) {
       case 'generate':
-        return await handleGenerate(userPrompt, characterFocus, revisionInstructions);
+        return await handleGenerate(userPrompt, characterFocus, revisionInstructions, model);
       
       case 'revise':
-        return await handleRevise(draftId, revisionInstructions);
+        return await handleRevise(draftId, revisionInstructions, model);
       
       case 'save-draft':
         return await handleSaveDraft(
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
         return await handleGetHistory(draftId);
       
       case 'branch':
-        return await handleBranch(draftId, branchName, userPrompt, characterFocus, sideNotes);
+        return await handleBranch(draftId, branchName, userPrompt, characterFocus, sideNotes, model);
       
       case 'list-drafts':
         return await handleListDrafts();
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
       
       default:
         // Default to generate if no action specified
-        return await handleGenerate(userPrompt, characterFocus, revisionInstructions);
+        return await handleGenerate(userPrompt, characterFocus, revisionInstructions, model);
     }
   } catch (error: any) {
     console.error('Continue API error:', error);
@@ -113,7 +114,8 @@ export async function POST(request: NextRequest) {
 async function generateContinuation(
   userPrompt: string,
   characterFocus: string | null,
-  revisionInstructions: string | null
+  revisionInstructions: string | null,
+  model?: string
 ): Promise<{ continuation: string; contextNotes: string[] }> {
   if (!userPrompt) {
     throw new Error('User prompt is required');
@@ -150,8 +152,8 @@ async function generateContinuation(
     contextNotes
   );
 
-  // Generate continuation - pass only the enhanced prompt, not the context again
-  const continuation = await continueStory('', enhancedPrompt);
+  // Generate continuation with optional model - pass only the enhanced prompt, not the context again
+  const continuation = await continueStory('', enhancedPrompt, model);
 
   return {
     continuation,
@@ -163,10 +165,11 @@ async function generateContinuation(
 async function handleGenerate(
   userPrompt: string,
   characterFocus: string | null,
-  revisionInstructions: string | null
+  revisionInstructions: string | null,
+  model?: string
 ) {
   try {
-    const result = await generateContinuation(userPrompt, characterFocus, revisionInstructions);
+    const result = await generateContinuation(userPrompt, characterFocus, revisionInstructions, model);
     return NextResponse.json({
       ...result,
       timestamp: new Date().toISOString()
@@ -180,7 +183,7 @@ async function handleGenerate(
 }
 
 // Revise existing draft with new instructions
-async function handleRevise(draftId: string, revisionInstructions: string) {
+async function handleRevise(draftId: string, revisionInstructions: string, model?: string) {
   if (!draftId || !revisionInstructions) {
     return NextResponse.json(
       { error: 'Draft ID and revision instructions are required' },
@@ -211,12 +214,13 @@ async function handleRevise(draftId: string, revisionInstructions: string) {
     generated_content: draft.generated_content
   });
 
-  // Generate revised version
+  // Generate revised version with optional model
   try {
     const result = await generateContinuation(
       draft.user_prompt,
       draft.character_focus,
-      revisionInstructions
+      revisionInstructions,
+      model
     );
     
     // Update draft with new content
@@ -325,7 +329,8 @@ async function handleBranch(
   branchName: string,
   userPrompt: string,
   characterFocus: string | null,
-  sideNotes: string | null
+  sideNotes: string | null,
+  model?: string
 ) {
   if (!parentDraftId || !branchName || !userPrompt) {
     return NextResponse.json(
@@ -334,10 +339,10 @@ async function handleBranch(
     );
   }
 
-  // Generate content for the branch
+  // Generate content for the branch with optional model
   let continuation: string;
   try {
-    const result = await generateContinuation(userPrompt, characterFocus, null);
+    const result = await generateContinuation(userPrompt, characterFocus, null, model);
     continuation = result.continuation;
   } catch (error: any) {
     return NextResponse.json(
