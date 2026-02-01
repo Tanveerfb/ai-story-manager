@@ -156,8 +156,10 @@ export default function ContinuePage() {
       setContinuation(result.continuation);
       setStatus('Revision complete');
       
-      // Refresh history
-      await fetchHistory(currentDraftId);
+      // Refresh history if draft exists
+      if (currentDraftId) {
+        await fetchHistory(currentDraftId);
+      }
     } catch (err: any) {
       setError(err.message);
       setStatus('Ready');
@@ -220,6 +222,7 @@ export default function ContinuePage() {
           action: 'save-draft',
           userPrompt,
           characterFocus: characterFocus || null,
+          generatedContent: continuation, // Include the edited content
           tags,
           sideNotes,
           sceneType,
@@ -362,7 +365,12 @@ export default function ContinuePage() {
 
   const promptTemplates = [
     { label: 'Continue from cliffhanger', prompt: 'Continue from the cliffhanger, building tension' },
-    { label: "Describe character's reaction", prompt: `Describe ${characterFocus || 'the character'}'s emotional reaction to recent events` },
+    { 
+      label: "Describe character's reaction", 
+      prompt: characterFocus 
+        ? `Describe ${characterFocus}'s emotional reaction to recent events` 
+        : "Describe the main character's emotional reaction to recent events"
+    },
     { label: 'Add dialogue scene', prompt: 'Write a dialogue-heavy scene that reveals character motivations' },
     { label: 'Describe setting', prompt: 'Provide rich, atmospheric description of the current setting' },
     { label: 'Plot twist', prompt: 'Introduce an unexpected plot development that changes everything' },

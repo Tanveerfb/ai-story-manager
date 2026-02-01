@@ -80,8 +80,9 @@ export default function HistoryPanel({ history, onRestore }: HistoryPanelProps) 
                 secondary={
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Prompt:</strong> {entry.user_prompt.substring(0, 100)}
-                      {entry.user_prompt.length > 100 && '...'}
+                      <strong>Prompt:</strong> {entry.user_prompt ? (
+                        entry.user_prompt.substring(0, 100) + (entry.user_prompt.length > 100 ? '...' : '')
+                      ) : 'No prompt'}
                     </Typography>
                     {entry.revision_instructions && (
                       <Chip 
@@ -93,7 +94,9 @@ export default function HistoryPanel({ history, onRestore }: HistoryPanelProps) 
                       />
                     )}
                     <Typography variant="body2" color="text.secondary">
-                      {entry.generated_content.substring(0, 150)}...
+                      {entry.generated_content ? (
+                        entry.generated_content.substring(0, 150) + '...'
+                      ) : 'No content'}
                     </Typography>
                   </Box>
                 }

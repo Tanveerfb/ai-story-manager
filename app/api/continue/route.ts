@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
       branchName,
       tags,
       sideNotes,
-      sceneType
+      sceneType,
+      generatedContent // Add this for pre-generated content
     } = await request.json();
 
     // Handle different actions
@@ -73,7 +74,15 @@ export async function POST(request: NextRequest) {
         return await handleRevise(draftId, revisionInstructions);
       
       case 'save-draft':
-        return await handleSaveDraft(userPrompt, characterFocus, revisionInstructions, tags, sideNotes, sceneType);
+        return await handleSaveDraft(
+          userPrompt, 
+          characterFocus, 
+          revisionInstructions, 
+          tags, 
+          sideNotes, 
+          sceneType,
+          generatedContent
+        );
       
       case 'get-history':
         return await handleGetHistory(draftId);
@@ -100,17 +109,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Generate new continuation
-async function handleGenerate(
+// Generate new continuation - returns data object instead of NextResponse
+async function generateContinuation(
   userPrompt: string,
   characterFocus: string | null,
   revisionInstructions: string | null
-) {
+): Promise<{ continuation: string; contextNotes: string[] }> {
   if (!userPrompt) {
-    return NextResponse.json(
-      { error: 'User prompt is required' },
-      { status: 400 }
-    );
+    throw new Error('User prompt is required');
   }
 
   // Parse context markers from prompt
@@ -144,14 +150,33 @@ async function handleGenerate(
     contextNotes
   );
 
-  // Generate continuation
-  const continuation = await continueStory(context, enhancedPrompt);
+  // Generate continuation - pass only the enhanced prompt, not the context again
+  const continuation = await continueStory('', enhancedPrompt);
 
-  return NextResponse.json({
+  return {
     continuation,
-    contextNotes,
-    timestamp: new Date().toISOString()
-  });
+    contextNotes
+  };
+}
+
+// Generate new continuation - HTTP handler
+async function handleGenerate(
+  userPrompt: string,
+  characterFocus: string | null,
+  revisionInstructions: string | null
+) {
+  try {
+    const result = await generateContinuation(userPrompt, characterFocus, revisionInstructions);
+    return NextResponse.json({
+      ...result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Generation failed' },
+      { status: 400 }
+    );
+  }
 }
 
 // Revise existing draft with new instructions
@@ -187,31 +212,33 @@ async function handleRevise(draftId: string, revisionInstructions: string) {
   });
 
   // Generate revised version
-  const result = await handleGenerate(
-    draft.user_prompt,
-    draft.character_focus,
-    revisionInstructions
-  );
-
-  if (result.status === 200) {
-    const body = await result.json();
+  try {
+    const result = await generateContinuation(
+      draft.user_prompt,
+      draft.character_focus,
+      revisionInstructions
+    );
     
     // Update draft with new content
     await supabase
       .from('continuation_drafts')
       .update({
-        generated_content: body.continuation,
+        generated_content: result.continuation,
         revision_instructions: revisionInstructions
       })
       .eq('id', draftId);
 
     return NextResponse.json({
-      ...body,
-      draftId
+      ...result,
+      draftId,
+      timestamp: new Date().toISOString()
     });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Revision failed' },
+      { status: 500 }
+    );
   }
-
-  return result;
 }
 
 // Save as draft
@@ -221,16 +248,23 @@ async function handleSaveDraft(
   revisionInstructions: string | null,
   tags: string[] | null,
   sideNotes: string | null,
-  sceneType: string | null
+  sceneType: string | null,
+  generatedContent?: string // Accept pre-generated content
 ) {
-  // First generate the content
-  const generateResult = await handleGenerate(userPrompt, characterFocus, revisionInstructions);
+  let continuation = generatedContent;
   
-  if (generateResult.status !== 200) {
-    return generateResult;
+  // Only generate if content not provided
+  if (!continuation) {
+    try {
+      const result = await generateContinuation(userPrompt, characterFocus, revisionInstructions);
+      continuation = result.continuation;
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error.message || 'Generation failed' },
+        { status: 500 }
+      );
+    }
   }
-
-  const { continuation } = await generateResult.json();
 
   // Save to drafts table
   const { data: draft, error } = await supabase
@@ -301,13 +335,16 @@ async function handleBranch(
   }
 
   // Generate content for the branch
-  const generateResult = await handleGenerate(userPrompt, characterFocus, null);
-  
-  if (generateResult.status !== 200) {
-    return generateResult;
+  let continuation: string;
+  try {
+    const result = await generateContinuation(userPrompt, characterFocus, null);
+    continuation = result.continuation;
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Generation failed' },
+      { status: 500 }
+    );
   }
-
-  const { continuation } = await generateResult.json();
 
   // Save branch
   const { data: branch, error } = await supabase
