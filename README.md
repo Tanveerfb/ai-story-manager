@@ -182,28 +182,43 @@ When you launch the application, you'll land directly on the **Continue Story** 
    - Larger models (70B) provide better quality but are slower
    - Smaller models (8B) are faster for quick iterations
 
-2. **Create Characters**
+2. **Choose Generation Style** (NEW)
+   - **Strict (no filler)** - Default mode. AI generates only what you explicitly request
+     - No extra exposition, narration, or embellishment
+     - Perfect for precise, controlled generation
+     - Ideal when you want exactly what you asked for
+   - **Creative (filler allowed)** - Natural flow with embellishment
+     - AI adds natural exposition and narrative flow
+     - More expansive, literary style
+     - Better for organic storytelling
+   - **Max Tokens Slider** - Control output length (500-3000 tokens)
+     - Default: 1500 tokens
+     - Lower values for concise output
+     - Higher values for detailed, expansive scenes
+
+3. **Create Characters**
    - Click the **Add** button in the Characters panel
    - Fill in character details: name, role, personality, traits, description
    - Characters are automatically available for story context
 
-3. **Create Locations**
+4. **Create Locations**
    - Click the **Add** button in the Locations panel
    - Define location name, type, description, and atmosphere
    - Locations enrich your story's setting and context
 
-4. **Write Your First Prompt**
+5. **Write Your First Prompt**
    - Enter what you want to happen in the story
    - Use `[ --- note ]` markers for inline AI instructions
    - Example: `[ --- Make this scene tense ] The detective enters the dark warehouse...`
    - Optionally select a character to focus the narrative
 
-5. **Generate Story Content**
+6. **Generate Story Content**
    - Click **Generate** to create your story continuation
    - AI uses context from characters, locations, and previous parts
+   - Respects your chosen generation style (Strict or Creative)
    - Wait for generation (30-90 seconds depending on model)
 
-6. **Refine and Iterate**
+7. **Refine and Iterate**
    - Review the generated content
    - Use the feedback panel to revise: "Make the dialogue more natural"
    - Edit the text directly in the editor
@@ -216,6 +231,21 @@ Use `[ --- note ]` anywhere in your prompt to guide the AI:
 - `[ --- Write this from Emma's perspective ]`
 - `[ --- Make this scene intense and emotional ]`
 - `[ --- Include detailed description of the setting ]`
+
+#### Generation Style Control
+Fine-tune how AI generates content:
+- **Strict Mode**: Get exactly what you request, no extra content
+  - Use when you need precise control
+  - Prevents AI from adding unwanted exposition
+  - Perfect for filling specific gaps in your narrative
+- **Creative Mode**: Let AI enhance and embellish naturally
+  - Use for free-flowing, organic storytelling
+  - AI adds atmospheric details and transitions
+  - Better for exploratory writing sessions
+- **Adjust Max Tokens**: Control the length of generated content
+  - 500 tokens: Brief, concise responses
+  - 1500 tokens: Standard length (default)
+  - 3000 tokens: Extended, detailed scenes
 
 #### Model Switching
 Switch models mid-story to find the perfect voice:
