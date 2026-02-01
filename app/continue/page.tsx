@@ -32,6 +32,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InfoIcon from '@mui/icons-material/Info';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 import GenerationProgress from '@/components/continue/GenerationProgress';
 import FeedbackPanel from '@/components/continue/FeedbackPanel';
@@ -315,6 +316,100 @@ export default function ContinuePage() {
       fetchRecentParts();
     } catch (err: any) {
       setError(err.message || 'Failed to insert into story');
+      setStatus('Ready');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExtractEntities = async () => {
+    if (!continuation) return;
+
+    setLoading(true);
+    setError(null);
+    setStatus('Extracting characters and locations...');
+
+    try {
+      // Extract entities from the generated content
+      const extractResponse = await fetch('/api/extract-entities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: continuation }),
+      });
+
+      if (!extractResponse.ok) {
+        throw new Error('Failed to extract entities');
+      }
+
+      const extracted = await extractResponse.json();
+      
+      let addedCount = 0;
+      let updatedCount = 0;
+
+      // Add new characters
+      if (extracted.characters && extracted.characters.length > 0) {
+        for (const char of extracted.characters) {
+          // Check if character already exists
+          const existing = characters.find(c => 
+            c.name.toLowerCase() === char.name.toLowerCase()
+          );
+
+          if (!existing) {
+            // Add new character
+            const response = await fetch('/api/characters', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(char),
+            });
+
+            if (response.ok) {
+              addedCount++;
+            }
+          } else {
+            updatedCount++;
+          }
+        }
+      }
+
+      // Add new locations
+      if (extracted.locations && extracted.locations.length > 0) {
+        for (const loc of extracted.locations) {
+          // Check if location already exists
+          const existing = locations.find(l => 
+            l.name.toLowerCase() === loc.name.toLowerCase()
+          );
+
+          if (!existing) {
+            // Add new location
+            const response = await fetch('/api/locations', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(loc),
+            });
+
+            if (response.ok) {
+              addedCount++;
+            }
+          } else {
+            updatedCount++;
+          }
+        }
+      }
+
+      // Refresh character and location lists
+      await fetchCharacters();
+      await fetchLocations();
+
+      if (addedCount > 0) {
+        setSuccess(`Successfully extracted and added ${addedCount} new entities! (${updatedCount} already existed)`);
+      } else if (updatedCount > 0) {
+        setSuccess(`Found ${updatedCount} entities that already exist in your database.`);
+      } else {
+        setSuccess('No new entities found in the generated content.');
+      }
+      setStatus('Ready');
+    } catch (err: any) {
+      setError(err.message || 'Failed to extract entities');
       setStatus('Ready');
     } finally {
       setLoading(false);
@@ -629,7 +724,17 @@ Duke confronts the villain..."
               <Paper sx={{ p: 3, mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                   <Typography variant="h6">Generated Continuation</Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<PersonAddIcon />}
+                      onClick={handleExtractEntities}
+                      disabled={loading}
+                      size="small"
+                      color="secondary"
+                    >
+                      Extract Entities
+                    </Button>
                     <Button
                       variant="outlined"
                       startIcon={<SaveIcon />}

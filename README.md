@@ -222,6 +222,11 @@ When you launch the application, you'll land directly on the **Continue Story** 
    - Review the generated content
    - Use the feedback panel to revise: "Make the dialogue more natural"
    - Edit the text directly in the editor
+   - **Extract Entities** (NEW) - Automatically pull characters and locations from generated content
+     - Click "Extract Entities" button after generation
+     - AI analyzes the text and extracts character names, locations
+     - New entities are automatically added to your Characters and Locations lists
+     - Existing entities are skipped to avoid duplicates
    - Save as draft or insert into your story
 
 ### Advanced Features
@@ -246,6 +251,17 @@ Fine-tune how AI generates content:
   - 500 tokens: Brief, concise responses
   - 1500 tokens: Standard length (default)
   - 3000 tokens: Extended, detailed scenes
+
+#### Automatic Entity Extraction
+Streamline your workflow by automatically extracting entities:
+- **Extract Entities Button**: Click after generating content
+  - AI analyzes generated text for characters and locations
+  - New entities are automatically added to your databases
+  - Existing entities are detected and skipped
+  - Get instant feedback on what was added
+- **Smart Detection**: Filters out pronouns and generic terms
+- **Seamless Integration**: Extracted entities immediately available in dropdowns
+- **No Manual Entry**: Save time by letting AI do the extraction
 
 #### Model Switching
 Switch models mid-story to find the perfect voice:
