@@ -24,6 +24,7 @@ export default function ContinuePage() {
   const [loading, setLoading] = useState(false);
   const [continuation, setContinuation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCharacters();
@@ -79,22 +80,40 @@ export default function ContinuePage() {
   const handleSave = async () => {
     if (!continuation) return;
 
+    setLoading(true);
+    setError(null);
+
     try {
-      const response = await fetch('/api/continue-story', {
+      // Get the next part number
+      const partsResponse = await fetch('/api/story-parts');
+      const parts = await partsResponse.json();
+      const nextPartNumber = parts.length > 0 
+        ? Math.max(...parts.map((p: any) => p.part_number)) + 1 
+        : 1;
+
+      // Save as a new story part
+      const response = await fetch('/api/story-parts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userPrompt,
-          characterFocus,
-          saveAsNewPart: true,
+          part_number: nextPartNumber,
+          title: `Continuation - Part ${nextPartNumber}`,
+          content: continuation,
+          word_count: continuation.split(/\s+/).length,
         }),
       });
 
-      if (response.ok) {
-        alert('Story continuation saved!');
+      if (!response.ok) {
+        throw new Error('Failed to save continuation');
       }
-    } catch (err) {
-      alert('Failed to save continuation');
+
+      setSuccess('Story continuation saved successfully!');
+      setContinuation(null);
+      setUserPrompt('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to save continuation');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -170,17 +189,39 @@ export default function ContinuePage() {
           <Paper sx={{ mt: 4, p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
               <Typography variant="h6">Generated Continuation</Typography>
-              <Button variant="outlined" onClick={handleSave}>
+              <Button 
+                variant="contained" 
+                onClick={handleSave}
+                disabled={loading}
+              >
                 Save as New Part
               </Button>
             </Box>
-            <Typography
-              variant="body1"
-              sx={{ whiteSpace: 'pre-wrap', fontFamily: 'Georgia, serif' }}
-            >
-              {continuation}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              You can edit the generated text below before saving:
             </Typography>
+            <TextField
+              fullWidth
+              multiline
+              minRows={10}
+              value={continuation}
+              onChange={(e) => setContinuation(e.target.value)}
+              variant="outlined"
+              sx={{
+                '& .MuiInputBase-root': {
+                  fontFamily: 'Georgia, serif',
+                  fontSize: '1rem',
+                  lineHeight: 1.8,
+                },
+              }}
+            />
           </Paper>
+        )}
+
+        {success && (
+          <Alert severity="success" sx={{ mt: 3 }}>
+            {success}
+          </Alert>
         )}
       </Box>
     </Container>

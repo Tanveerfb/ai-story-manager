@@ -26,6 +26,8 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import MergeTypeIcon from '@mui/icons-material/MergeType';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
+import MovieFilterIcon from '@mui/icons-material/MovieFilter';
 import { useRouter } from 'next/navigation';
 import { useThemeMode } from './ThemeProvider';
 
@@ -38,8 +40,11 @@ const menuItems = [
   { text: 'Story Viewer', icon: <MenuBookIcon />, path: '/story' },
   { text: 'Continue Story', icon: <CreateIcon />, path: '/continue' },
   { text: 'Characters', icon: <PeopleIcon />, path: '/characters' },
+  { text: 'Missing Names', icon: <LinkOffIcon />, path: '/characters/unlinked' },
   { text: 'Merge Characters', icon: <MergeTypeIcon />, path: '/characters/merge' },
   { text: 'Locations', icon: <PlaceIcon />, path: '/locations' },
+  { text: 'Locations Merge', icon: <MergeTypeIcon />, path: '/locations/merge' },
+  { text: 'Flashbacks', icon: <MovieFilterIcon />, path: '/flashbacks' },
   { text: 'Timeline', icon: <TimelineIcon />, path: '/timeline' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];
