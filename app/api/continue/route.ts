@@ -1,24 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { continueStory } from '@/lib/ollama';
-import { getStoryParts, getCharacters } from '@/lib/supabase';
-import { buildStoryContext } from '@/lib/contextBuilder';
-import { supabase } from '@/lib/supabase';
+import { NextRequest, NextResponse } from "next/server";
+import { continueStory } from "@/lib/ollama";
+import { getStoryParts, getCharacters } from "@/lib/supabase";
+import { buildStoryContext } from "@/lib/contextBuilder";
+import { supabase } from "@/lib/supabase";
 
 // Default generation settings
-const DEFAULT_GENERATION_STYLE: 'strict' | 'creative' = 'strict';
+const DEFAULT_GENERATION_STYLE: "strict" | "creative" = "strict";
 const DEFAULT_MAX_TOKENS = 1500;
 
 // Helper to parse in-context markers [ --- ]
-function parseContextMarkers(prompt: string): { cleanPrompt: string; contextNotes: string[] } {
+function parseContextMarkers(prompt: string): {
+  cleanPrompt: string;
+  contextNotes: string[];
+} {
   const markerRegex = /\[\s*---\s*([^\]]+)\]/g;
   const contextNotes: string[] = [];
   let match;
-  
+
   while ((match = markerRegex.exec(prompt)) !== null) {
     contextNotes.push(match[1].trim());
   }
-  
-  const cleanPrompt = prompt.replace(markerRegex, '').trim();
+
+  const cleanPrompt = prompt.replace(markerRegex, "").trim();
   return { cleanPrompt, contextNotes };
 }
 
@@ -28,38 +31,38 @@ function buildEnhancedPrompt(
   userPrompt: string,
   characterFocus: string | null,
   revisionInstructions: string | null,
-  contextNotes: string[]
+  contextNotes: string[],
 ): string {
-  let prompt = context + '\n\n';
-  
+  let prompt = context + "\n\n";
+
   if (characterFocus) {
     prompt += `=== FOCUS CHARACTER ===\n${characterFocus}\n\n`;
   }
-  
+
   if (contextNotes.length > 0) {
     prompt += `=== AUTHOR'S CONTEXT NOTES ===\n`;
     contextNotes.forEach((note, idx) => {
       prompt += `${idx + 1}. ${note}\n`;
     });
-    prompt += '\n';
+    prompt += "\n";
   }
-  
+
   if (revisionInstructions) {
     prompt += `=== REVISION INSTRUCTIONS ===\n${revisionInstructions}\n\n`;
   }
-  
+
   prompt += `=== USER REQUEST ===\n${userPrompt}\n\n`;
-  
+
   return prompt;
 }
 
 // POST /api/continue - Generate story continuation
 export async function POST(request: NextRequest) {
   try {
-    const { 
+    const {
       action,
-      userPrompt, 
-      characterFocus, 
+      userPrompt,
+      characterFocus,
       revisionInstructions,
       draftId,
       branchName,
@@ -69,49 +72,78 @@ export async function POST(request: NextRequest) {
       generatedContent, // Add this for pre-generated content
       model, // Add model parameter for AI model selection
       generationStyle, // Add generation style parameter ('strict' or 'creative')
-      maxTokens // Add max tokens parameter for generation control
+      maxTokens, // Add max tokens parameter for generation control
     } = await request.json();
 
     // Handle different actions
     switch (action) {
-      case 'generate':
-        return await handleGenerate(userPrompt, characterFocus, revisionInstructions, model, generationStyle, maxTokens);
-      
-      case 'revise':
-        return await handleRevise(draftId, revisionInstructions, model, generationStyle, maxTokens);
-      
-      case 'save-draft':
-        return await handleSaveDraft(
-          userPrompt, 
-          characterFocus, 
-          revisionInstructions, 
-          tags, 
-          sideNotes, 
-          sceneType,
-          generatedContent
+      case "generate":
+        return await handleGenerate(
+          userPrompt,
+          characterFocus,
+          revisionInstructions,
+          model,
+          generationStyle,
+          maxTokens,
         );
-      
-      case 'get-history':
+
+      case "revise":
+        return await handleRevise(
+          draftId,
+          revisionInstructions,
+          model,
+          generationStyle,
+          maxTokens,
+        );
+
+      case "save-draft":
+        return await handleSaveDraft(
+          userPrompt,
+          characterFocus,
+          revisionInstructions,
+          tags,
+          sideNotes,
+          sceneType,
+          generatedContent,
+        );
+
+      case "get-history":
         return await handleGetHistory(draftId);
-      
-      case 'branch':
-        return await handleBranch(draftId, branchName, userPrompt, characterFocus, sideNotes, model, generationStyle, maxTokens);
-      
-      case 'list-drafts':
+
+      case "branch":
+        return await handleBranch(
+          draftId,
+          branchName,
+          userPrompt,
+          characterFocus,
+          sideNotes,
+          model,
+          generationStyle,
+          maxTokens,
+        );
+
+      case "list-drafts":
         return await handleListDrafts();
-      
-      case 'delete-draft':
+
+      case "delete-draft":
         return await handleDeleteDraft(draftId);
-      
+
       default:
         // Default to generate if no action specified
-        return await handleGenerate(userPrompt, characterFocus, revisionInstructions, model, generationStyle, maxTokens);
+        return await handleGenerate(
+          userPrompt,
+          characterFocus,
+          revisionInstructions,
+          model,
+          generationStyle,
+          maxTokens,
+        );
     }
   } catch (error: any) {
-    console.error('Continue API error:', error);
+    console.error("Continue API error:", error);
     return NextResponse.json(
-      { error: error.message || 'Operation failed' },
-      { status: 500 }
+      { error: error.message || "Operation failed" },
+      { status: 500 },
     );
   }
 }
@@ -122,11 +154,11 @@ async function generateContinuation(
   characterFocus: string | null,
   revisionInstructions: string | null,
   model?: string,
-  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
-  maxTokens: number = DEFAULT_MAX_TOKENS
+  generationStyle: "strict" | "creative" = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS,
 ): Promise<{ continuation: string; contextNotes: string[] }> {
   if (!userPrompt) {
-    throw new Error('User prompt is required');
+    throw new Error("User prompt is required");
   }
 
   // Parse context markers from prompt
@@ -141,14 +173,14 @@ async function generateContinuation(
 
   // Fetch relationships
   const { data: relationships } = await supabase
-    .from('relationships')
-    .select('*');
+    .from("relationships")
+    .select("*");
 
   // Build context
   const context = buildStoryContext(
     recentParts,
     characters,
-    relationships || []
+    relationships || [],
   );
 
   // Build enhanced prompt with all features
@@ -157,15 +189,21 @@ async function generateContinuation(
     cleanPrompt,
     characterFocus,
     revisionInstructions,
-    contextNotes
+    contextNotes,
   );
 
   // Generate continuation with optional model, generation style, and max tokens
-  const continuation = await continueStory('', enhancedPrompt, model, generationStyle, maxTokens);
+  const continuation = await continueStory(
+    "",
+    enhancedPrompt,
+    model,
+    generationStyle,
+    maxTokens,
+  );
 
   return {
     continuation,
-    contextNotes
+    contextNotes,
   };
 }
 
@@ -175,59 +213,63 @@ async function handleGenerate(
   characterFocus: string | null,
   revisionInstructions: string | null,
   model?: string,
-  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
-  maxTokens: number = DEFAULT_MAX_TOKENS
+  generationStyle: "strict" | "creative" = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS,
 ) {
   try {
-    const result = await generateContinuation(userPrompt, characterFocus, revisionInstructions, model, generationStyle, maxTokens);
+    const result = await generateContinuation(
+      userPrompt,
+      characterFocus,
+      revisionInstructions,
+      model,
+      generationStyle,
+      maxTokens,
+    );
     return NextResponse.json({
       ...result,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || 'Generation failed' },
-      { status: 400 }
+      { error: error.message || "Generation failed" },
+      { status: 400 },
     );
   }
 }
 
 // Revise existing draft with new instructions
 async function handleRevise(
-  draftId: string, 
-  revisionInstructions: string, 
+  draftId: string,
+  revisionInstructions: string,
   model?: string,
-  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
-  maxTokens: number = DEFAULT_MAX_TOKENS
+  generationStyle: "strict" | "creative" = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS,
 ) {
   if (!draftId || !revisionInstructions) {
     return NextResponse.json(
-      { error: 'Draft ID and revision instructions are required' },
-      { status: 400 }
+      { error: "Draft ID and revision instructions are required" },
+      { status: 400 },
     );
   }
 
   // Get the existing draft
   const { data: draft, error } = await supabase
-    .from('continuation_drafts')
-    .select('*')
-    .eq('id', draftId)
+    .from("continuation_drafts")
+    .select("*")
+    .eq("id", draftId)
     .single();
 
   if (error || !draft) {
-    return NextResponse.json(
-      { error: 'Draft not found' },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Draft not found" }, { status: 404 });
   }
 
   // Save current version to history
-  await supabase.from('continuation_history').insert({
+  await supabase.from("continuation_history").insert({
     draft_id: draftId,
     user_prompt: draft.user_prompt,
     character_focus: draft.character_focus,
     revision_instructions: draft.revision_instructions,
-    generated_content: draft.generated_content
+    generated_content: draft.generated_content,
   });
 
   // Generate revised version with optional model, generation style, and max tokens
@@ -238,27 +280,27 @@ async function handleRevise(
       revisionInstructions,
       model,
       generationStyle,
-      maxTokens
+      maxTokens,
     );
-    
+
     // Update draft with new content
     await supabase
-      .from('continuation_drafts')
+      .from("continuation_drafts")
       .update({
         generated_content: result.continuation,
-        revision_instructions: revisionInstructions
+        revision_instructions: revisionInstructions,
       })
-      .eq('id', draftId);
+      .eq("id", draftId);
 
     return NextResponse.json({
       ...result,
       draftId,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || 'Revision failed' },
-      { status: 500 }
+      { error: error.message || "Revision failed" },
+      { status: 500 },
     );
   }
 }
@@ -271,26 +313,33 @@ async function handleSaveDraft(
   tags: string[] | null,
   sideNotes: string | null,
   sceneType: string | null,
-  generatedContent?: string // Accept pre-generated content
+  generatedContent?: string, // Accept pre-generated content
 ) {
   let continuation = generatedContent;
-  
+
   // Only generate if content not provided
   if (!continuation) {
     try {
-      const result = await generateContinuation(userPrompt, characterFocus, revisionInstructions);
+      const result = await generateContinuation(
+        userPrompt,
+        characterFocus,
+        revisionInstructions,
+        undefined,
+        DEFAULT_GENERATION_STYLE,
+        DEFAULT_MAX_TOKENS,
+      );
       continuation = result.continuation;
     } catch (error: any) {
       return NextResponse.json(
-        { error: error.message || 'Generation failed' },
-        { status: 500 }
+        { error: error.message || "Generation failed" },
+        { status: 500 },
       );
     }
   }
 
   // Save to drafts table
   const { data: draft, error } = await supabase
-    .from('continuation_drafts')
+    .from("continuation_drafts")
     .insert({
       user_prompt: userPrompt,
       character_focus: characterFocus,
@@ -298,21 +347,22 @@ async function handleSaveDraft(
       revision_instructions: revisionInstructions,
       tags: tags || [],
       side_notes: sideNotes,
-      scene_type: sceneType
+      scene_type: sceneType,
     })
     .select()
     .single();
 
   if (error) {
+    console.error("Failed to save draft:", error);
     return NextResponse.json(
-      { error: 'Failed to save draft' },
-      { status: 500 }
+      { error: `Failed to save draft: ${error.message}` },
+      { status: 500 },
     );
   }
 
   return NextResponse.json({
     draft,
-    continuation
+    continuation,
   });
 }
 
@@ -320,21 +370,21 @@ async function handleSaveDraft(
 async function handleGetHistory(draftId: string) {
   if (!draftId) {
     return NextResponse.json(
-      { error: 'Draft ID is required' },
-      { status: 400 }
+      { error: "Draft ID is required" },
+      { status: 400 },
     );
   }
 
   const { data: history, error } = await supabase
-    .from('continuation_history')
-    .select('*')
-    .eq('draft_id', draftId)
-    .order('created_at', { ascending: false });
+    .from("continuation_history")
+    .select("*")
+    .eq("draft_id", draftId)
+    .order("created_at", { ascending: false });
 
   if (error) {
     return NextResponse.json(
-      { error: 'Failed to fetch history' },
-      { status: 500 }
+      { error: "Failed to fetch history" },
+      { status: 500 },
     );
   }
 
@@ -349,67 +399,74 @@ async function handleBranch(
   characterFocus: string | null,
   sideNotes: string | null,
   model?: string,
-  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
-  maxTokens: number = DEFAULT_MAX_TOKENS
+  generationStyle: "strict" | "creative" = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS,
 ) {
   if (!parentDraftId || !branchName || !userPrompt) {
     return NextResponse.json(
-      { error: 'Parent draft ID, branch name, and prompt are required' },
-      { status: 400 }
+      { error: "Parent draft ID, branch name, and prompt are required" },
+      { status: 400 },
     );
   }
 
   // Generate content for the branch with optional model, generation style, and max tokens
   let continuation: string;
   try {
-    const result = await generateContinuation(userPrompt, characterFocus, null, model, generationStyle, maxTokens);
+    const result = await generateContinuation(
+      userPrompt,
+      characterFocus,
+      null,
+      model,
+      generationStyle,
+      maxTokens,
+    );
     continuation = result.continuation;
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || 'Generation failed' },
-      { status: 500 }
+      { error: error.message || "Generation failed" },
+      { status: 500 },
     );
   }
 
   // Save branch
   const { data: branch, error } = await supabase
-    .from('continuation_branches')
+    .from("continuation_branches")
     .insert({
       parent_draft_id: parentDraftId,
       branch_name: branchName,
       user_prompt: userPrompt,
       character_focus: characterFocus,
       generated_content: continuation,
-      side_notes: sideNotes
+      side_notes: sideNotes,
     })
     .select()
     .single();
 
   if (error) {
     return NextResponse.json(
-      { error: 'Failed to create branch' },
-      { status: 500 }
+      { error: "Failed to create branch" },
+      { status: 500 },
     );
   }
 
   return NextResponse.json({
     branch,
-    continuation
+    continuation,
   });
 }
 
 // List all drafts
 async function handleListDrafts() {
   const { data: drafts, error } = await supabase
-    .from('continuation_drafts')
-    .select('*')
-    .order('created_at', { ascending: false })
+    .from("continuation_drafts")
+    .select("*")
+    .order("created_at", { ascending: false })
     .limit(50);
 
   if (error) {
     return NextResponse.json(
-      { error: 'Failed to fetch drafts' },
-      { status: 500 }
+      { error: "Failed to fetch drafts" },
+      { status: 500 },
     );
   }
 
@@ -420,20 +477,20 @@ async function handleListDrafts() {
 async function handleDeleteDraft(draftId: string) {
   if (!draftId) {
     return NextResponse.json(
-      { error: 'Draft ID is required' },
-      { status: 400 }
+      { error: "Draft ID is required" },
+      { status: 400 },
     );
   }
 
   const { error } = await supabase
-    .from('continuation_drafts')
+    .from("continuation_drafts")
     .delete()
-    .eq('id', draftId);
+    .eq("id", draftId);
 
   if (error) {
     return NextResponse.json(
-      { error: 'Failed to delete draft' },
-      { status: 500 }
+      { error: "Failed to delete draft" },
+      { status: 500 },
     );
   }
 
@@ -448,12 +505,12 @@ export async function GET() {
 // DELETE /api/continue - Delete draft
 export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const draftId = searchParams.get('id');
-  
+  const draftId = searchParams.get("id");
+
   if (!draftId) {
     return NextResponse.json(
-      { error: 'Draft ID is required' },
-      { status: 400 }
+      { error: "Draft ID is required" },
+      { status: 400 },
     );
   }
 

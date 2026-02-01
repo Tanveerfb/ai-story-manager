@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Container,
   Typography,
@@ -24,30 +24,31 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Slider,
-} from '@mui/material';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import SaveIcon from '@mui/icons-material/Save';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import ClearIcon from '@mui/icons-material/Clear';
-import AddIcon from '@mui/icons-material/Add';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import InfoIcon from '@mui/icons-material/Info';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
+  CircularProgress,
+} from "@mui/material";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import SaveIcon from "@mui/icons-material/Save";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import ClearIcon from "@mui/icons-material/Clear";
+import AddIcon from "@mui/icons-material/Add";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import InfoIcon from "@mui/icons-material/Info";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 
-import GenerationProgress from '@/components/continue/GenerationProgress';
-import FeedbackPanel from '@/components/continue/FeedbackPanel';
-import HistoryPanel from '@/components/continue/HistoryPanel';
-import BranchingPanel from '@/components/continue/BranchingPanel';
-import SideNotesPanel from '@/components/continue/SideNotesPanel';
-import ModelSelector from '@/components/continue/ModelSelector';
-import EntityManager from '@/components/continue/EntityManager';
-import LocationManager from '@/components/continue/LocationManager';
-import { DEFAULT_AI_MODEL } from '@/lib/constants';
+import GenerationProgress from "@/components/continue/GenerationProgress";
+import FeedbackPanel from "@/components/continue/FeedbackPanel";
+import HistoryPanel from "@/components/continue/HistoryPanel";
+import BranchingPanel from "@/components/continue/BranchingPanel";
+import SideNotesPanel from "@/components/continue/SideNotesPanel";
+import ModelSelector from "@/components/continue/ModelSelector";
+import EntityManager from "@/components/continue/EntityManager";
+import LocationManager from "@/components/continue/LocationManager";
+import { DEFAULT_AI_MODEL } from "@/lib/constants";
 
 export default function ContinuePage() {
   // Basic state
-  const [userPrompt, setUserPrompt] = useState('');
-  const [characterFocus, setCharacterFocus] = useState('');
+  const [userPrompt, setUserPrompt] = useState("");
+  const [characterFocus, setCharacterFocus] = useState("");
   const [characters, setCharacters] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL); // Use constant for default model
@@ -55,81 +56,106 @@ export default function ContinuePage() {
   const [continuation, setContinuation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   // Generation Style state (new feature)
-  const [generationStyle, setGenerationStyle] = useState<'strict' | 'creative'>('strict'); // Default to 'strict'
+  const [generationStyle, setGenerationStyle] = useState<"strict" | "creative">(
+    "strict",
+  ); // Default to 'strict'
   const [maxTokens, setMaxTokens] = useState(1500); // Default max tokens
-  
+
   // Advanced state
-  const [status, setStatus] = useState('Ready');
+  const [status, setStatus] = useState("Ready");
   const [contextNotes, setContextNotes] = useState<string[]>([]);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
-  const [sideNotes, setSideNotes] = useState('');
+  const [sideNotes, setSideNotes] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [sceneType, setSceneType] = useState('');
+  const [sceneType, setSceneType] = useState("");
   const [showPreviousContext, setShowPreviousContext] = useState(true);
   const [recentParts, setRecentParts] = useState<any[]>([]);
+
+  // Recent events summary state
+  const [recentEventsSummary, setRecentEventsSummary] = useState<string | null>(
+    null,
+  );
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   useEffect(() => {
     fetchCharacters();
     fetchLocations();
     fetchRecentParts();
+    fetchRecentEventsSummary();
   }, []);
 
   const fetchCharacters = async () => {
     try {
-      const response = await fetch('/api/characters');
+      const response = await fetch("/api/characters");
       if (response.ok) {
         const data = await response.json();
         setCharacters(data);
       }
     } catch (error) {
-      console.error('Failed to fetch characters:', error);
+      console.error("Failed to fetch characters:", error);
     }
   };
 
   const fetchLocations = async () => {
     try {
-      const response = await fetch('/api/locations');
+      const response = await fetch("/api/locations");
       if (response.ok) {
         const data = await response.json();
         setLocations(data);
       }
     } catch (error) {
-      console.error('Failed to fetch locations:', error);
+      console.error("Failed to fetch locations:", error);
     }
   };
 
   const fetchRecentParts = async () => {
     try {
-      const response = await fetch('/api/story-parts');
+      const response = await fetch("/api/story-parts");
       if (response.ok) {
         const data = await response.json();
         setRecentParts(data.slice(-3));
       }
     } catch (error) {
-      console.error('Failed to fetch recent parts:', error);
+      console.error("Failed to fetch recent parts:", error);
+    }
+  };
+
+  const fetchRecentEventsSummary = async () => {
+    setSummaryLoading(true);
+    try {
+      const response = await fetch("/api/story-parts?action=summarize&limit=3");
+      if (response.ok) {
+        const data = await response.json();
+        setRecentEventsSummary(data.summary);
+      }
+    } catch (error) {
+      console.error("Failed to fetch summary:", error);
+      setRecentEventsSummary("Unable to generate summary at this time.");
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
   const handleGenerate = async () => {
     if (!userPrompt.trim()) {
-      setError('Please enter a prompt');
+      setError("Please enter a prompt");
       return;
     }
 
     setLoading(true);
     setError(null);
     setContinuation(null);
-    setStatus('Generating story continuation...');
+    setStatus("Generating story continuation...");
 
     try {
-      const response = await fetch('/api/continue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'generate',
+          action: "generate",
           userPrompt,
           characterFocus: characterFocus || null,
           model: selectedModel, // Include selected model
@@ -140,16 +166,16 @@ export default function ContinuePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Generation failed');
+        throw new Error(errorData.error || "Generation failed");
       }
 
       const result = await response.json();
       setContinuation(result.continuation);
       setContextNotes(result.contextNotes || []);
-      setStatus('Generation complete');
+      setStatus("Generation complete");
     } catch (err: any) {
       setError(err.message);
-      setStatus('Ready');
+      setStatus("Ready");
     } finally {
       setLoading(false);
     }
@@ -164,14 +190,14 @@ export default function ContinuePage() {
 
     setLoading(true);
     setError(null);
-    setStatus('Revising based on your feedback...');
+    setStatus("Revising based on your feedback...");
 
     try {
-      const response = await fetch('/api/continue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'revise',
+          action: "revise",
           draftId: currentDraftId,
           revisionInstructions,
           generationStyle, // Include generation style
@@ -181,41 +207,43 @@ export default function ContinuePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Revision failed');
+        throw new Error(errorData.error || "Revision failed");
       }
 
       const result = await response.json();
       setContinuation(result.continuation);
-      setStatus('Revision complete');
-      
+      setStatus("Revision complete");
+
       // Refresh history if draft exists
       if (currentDraftId) {
         await fetchHistory(currentDraftId);
       }
     } catch (err: any) {
       setError(err.message);
-      setStatus('Ready');
+      setStatus("Ready");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGenerateWithInstructions = async (revisionInstructions: string) => {
+  const handleGenerateWithInstructions = async (
+    revisionInstructions: string,
+  ) => {
     if (!userPrompt.trim()) {
-      setError('Please enter a prompt first');
+      setError("Please enter a prompt first");
       return;
     }
 
     setLoading(true);
     setError(null);
-    setStatus('Generating with your instructions...');
+    setStatus("Generating with your instructions...");
 
     try {
-      const response = await fetch('/api/continue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'generate',
+          action: "generate",
           userPrompt,
           characterFocus: characterFocus || null,
           revisionInstructions,
@@ -226,16 +254,16 @@ export default function ContinuePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Generation failed');
+        throw new Error(errorData.error || "Generation failed");
       }
 
       const result = await response.json();
       setContinuation(result.continuation);
       setContextNotes(result.contextNotes || []);
-      setStatus('Generation complete');
+      setStatus("Generation complete");
     } catch (err: any) {
       setError(err.message);
-      setStatus('Ready');
+      setStatus("Ready");
     } finally {
       setLoading(false);
     }
@@ -246,14 +274,14 @@ export default function ContinuePage() {
 
     setLoading(true);
     setError(null);
-    setStatus('Saving draft...');
+    setStatus("Saving draft...");
 
     try {
-      const response = await fetch('/api/continue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'save-draft',
+          action: "save-draft",
           userPrompt,
           characterFocus: characterFocus || null,
           generatedContent: continuation, // Include the edited content
@@ -264,16 +292,16 @@ export default function ContinuePage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save draft');
+        throw new Error("Failed to save draft");
       }
 
       const result = await response.json();
       setCurrentDraftId(result.draft.id);
-      setSuccess('Draft saved successfully!');
-      setStatus('Ready');
+      setSuccess("Draft saved successfully!");
+      setStatus("Ready");
     } catch (err: any) {
-      setError(err.message || 'Failed to save draft');
-      setStatus('Ready');
+      setError(err.message || "Failed to save draft");
+      setStatus("Ready");
     } finally {
       setLoading(false);
     }
@@ -284,20 +312,21 @@ export default function ContinuePage() {
 
     setLoading(true);
     setError(null);
-    setStatus('Inserting into story...');
+    setStatus("Inserting into story...");
 
     try {
       // Get the next part number
-      const partsResponse = await fetch('/api/story-parts');
+      const partsResponse = await fetch("/api/story-parts");
       const parts = await partsResponse.json();
-      const nextPartNumber = parts.length > 0 
-        ? Math.max(...parts.map((p: any) => p.part_number)) + 1 
-        : 1;
+      const nextPartNumber =
+        parts.length > 0
+          ? Math.max(...parts.map((p: any) => p.part_number)) + 1
+          : 1;
 
       // Save as a new story part
-      const response = await fetch('/api/story-parts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/story-parts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           part_number: nextPartNumber,
           title: `Continuation - Part ${nextPartNumber}`,
@@ -307,16 +336,16 @@ export default function ContinuePage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to insert into story');
+        throw new Error("Failed to insert into story");
       }
 
-      setSuccess('Story continuation inserted successfully!');
+      setSuccess("Story continuation inserted successfully!");
       handleClear();
-      setStatus('Ready');
+      setStatus("Ready");
       fetchRecentParts();
     } catch (err: any) {
-      setError(err.message || 'Failed to insert into story');
-      setStatus('Ready');
+      setError(err.message || "Failed to insert into story");
+      setStatus("Ready");
     } finally {
       setLoading(false);
     }
@@ -327,22 +356,22 @@ export default function ContinuePage() {
 
     setLoading(true);
     setError(null);
-    setStatus('Extracting characters and locations...');
+    setStatus("Extracting characters and locations...");
 
     try {
       // Extract entities from the generated content
-      const extractResponse = await fetch('/api/extract-entities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const extractResponse = await fetch("/api/extract-entities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: continuation }),
       });
 
       if (!extractResponse.ok) {
-        throw new Error('Failed to extract entities');
+        throw new Error("Failed to extract entities");
       }
 
       const extracted = await extractResponse.json();
-      
+
       let addedCharacters = 0;
       let addedLocations = 0;
       let skippedCharacters = 0;
@@ -350,7 +379,9 @@ export default function ContinuePage() {
 
       // Helper function to check if entity exists (case-insensitive)
       const entityExists = (list: any[], name: string) => {
-        return list.some(item => item.name.toLowerCase() === name.toLowerCase());
+        return list.some(
+          (item) => item.name.toLowerCase() === name.toLowerCase(),
+        );
       };
 
       // Add new characters
@@ -358,9 +389,9 @@ export default function ContinuePage() {
         for (const char of extracted.characters) {
           if (!entityExists(characters, char.name)) {
             // Add new character
-            const response = await fetch('/api/characters', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+            const response = await fetch("/api/characters", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify(char),
             });
 
@@ -378,9 +409,9 @@ export default function ContinuePage() {
         for (const loc of extracted.locations) {
           if (!entityExists(locations, loc.name)) {
             // Add new location
-            const response = await fetch('/api/locations', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+            const response = await fetch("/api/locations", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify(loc),
             });
 
@@ -400,27 +431,35 @@ export default function ContinuePage() {
       // Build detailed success message
       const totalAdded = addedCharacters + addedLocations;
       const totalSkipped = skippedCharacters + skippedLocations;
-      
+
       if (totalAdded > 0) {
-        let message = 'Successfully extracted and added ';
+        let message = "Successfully extracted and added ";
         const parts = [];
-        if (addedCharacters > 0) parts.push(`${addedCharacters} character${addedCharacters > 1 ? 's' : ''}`);
-        if (addedLocations > 0) parts.push(`${addedLocations} location${addedLocations > 1 ? 's' : ''}`);
-        message += parts.join(' and ');
+        if (addedCharacters > 0)
+          parts.push(
+            `${addedCharacters} character${addedCharacters > 1 ? "s" : ""}`,
+          );
+        if (addedLocations > 0)
+          parts.push(
+            `${addedLocations} location${addedLocations > 1 ? "s" : ""}`,
+          );
+        message += parts.join(" and ");
         if (totalSkipped > 0) {
           message += ` (${totalSkipped} already existed)`;
         }
-        message += '!';
+        message += "!";
         setSuccess(message);
       } else if (totalSkipped > 0) {
-        setSuccess(`Found ${totalSkipped} entities that already exist in your database.`);
+        setSuccess(
+          `Found ${totalSkipped} entities that already exist in your database.`,
+        );
       } else {
-        setSuccess('No new entities found in the generated content.');
+        setSuccess("No new entities found in the generated content.");
       }
-      setStatus('Ready');
+      setStatus("Ready");
     } catch (err: any) {
-      setError(err.message || 'Failed to extract entities');
-      setStatus('Ready');
+      setError(err.message || "Failed to extract entities");
+      setStatus("Ready");
     } finally {
       setLoading(false);
     }
@@ -439,11 +478,11 @@ export default function ContinuePage() {
 
   const fetchHistory = async (draftId: string) => {
     try {
-      const response = await fetch('/api/continue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'get-history',
+          action: "get-history",
           draftId,
         }),
       });
@@ -453,7 +492,7 @@ export default function ContinuePage() {
         setHistory(result.history || []);
       }
     } catch (error) {
-      console.error('Failed to fetch history:', error);
+      console.error("Failed to fetch history:", error);
     }
   };
 
@@ -462,22 +501,26 @@ export default function ContinuePage() {
     setUserPrompt(entry.user_prompt);
   };
 
-  const handleCreateBranch = async (branchName: string, branchPrompt: string, branchNotes: string) => {
+  const handleCreateBranch = async (
+    branchName: string,
+    branchPrompt: string,
+    branchNotes: string,
+  ) => {
     if (!currentDraftId) {
-      setError('Please save a draft first before creating branches');
+      setError("Please save a draft first before creating branches");
       return;
     }
 
     setLoading(true);
     setError(null);
-    setStatus('Creating branch...');
+    setStatus("Creating branch...");
 
     try {
-      const response = await fetch('/api/continue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'branch',
+          action: "branch",
           draftId: currentDraftId,
           branchName,
           userPrompt: branchPrompt,
@@ -487,54 +530,107 @@ export default function ContinuePage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create branch');
+        throw new Error("Failed to create branch");
       }
 
       const result = await response.json();
       setSuccess(`Branch "${branchName}" created successfully!`);
-      setStatus('Ready');
+      setStatus("Ready");
     } catch (err: any) {
-      setError(err.message || 'Failed to create branch');
-      setStatus('Ready');
+      setError(err.message || "Failed to create branch");
+      setStatus("Ready");
     } finally {
       setLoading(false);
     }
   };
 
   const promptTemplates = [
-    { label: 'Continue from cliffhanger', prompt: 'Continue from the cliffhanger, building tension' },
-    { 
-      label: "Describe character's reaction", 
-      prompt: characterFocus 
-        ? `Describe ${characterFocus}'s emotional reaction to recent events` 
-        : "Describe the main character's emotional reaction to recent events"
+    {
+      label: "Continue from cliffhanger",
+      prompt: "Continue from the cliffhanger, building tension",
     },
-    { label: 'Add dialogue scene', prompt: 'Write a dialogue-heavy scene that reveals character motivations' },
-    { label: 'Describe setting', prompt: 'Provide rich, atmospheric description of the current setting' },
-    { label: 'Plot twist', prompt: 'Introduce an unexpected plot development that changes everything' },
+    {
+      label: "Describe character's reaction",
+      prompt: characterFocus
+        ? `Describe ${characterFocus}'s emotional reaction to recent events`
+        : "Describe the main character's emotional reaction to recent events",
+    },
+    {
+      label: "Add dialogue scene",
+      prompt: "Write a dialogue-heavy scene that reveals character motivations",
+    },
+    {
+      label: "Describe setting",
+      prompt: "Provide rich, atmospheric description of the current setting",
+    },
+    {
+      label: "Plot twist",
+      prompt:
+        "Introduce an unexpected plot development that changes everything",
+    },
   ];
 
   return (
     <Container maxWidth="xl">
       <Box sx={{ my: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <AutoAwesomeIcon sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+          <AutoAwesomeIcon
+            sx={{ fontSize: 40, mr: 2, color: "primary.main" }}
+          />
           <Box>
             <Typography variant="h4" component="h1" gutterBottom>
               AI-First Story Creation
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Create stories from scratch with AI assistance - build narrative, entities, and locations live
+              Create stories from scratch with AI assistance - build narrative,
+              entities, and locations live
             </Typography>
           </Box>
         </Box>
 
         {/* Info Alert */}
         <Alert severity="info" icon={<InfoIcon />} sx={{ mb: 3 }}>
-          <strong>Welcome to AI-First Authoring:</strong> Start with an empty canvas and let AI help you create. 
-          Use [ --- note ] markers for in-context instructions. Create characters and locations on the fly. 
+          <strong>Welcome to AI-First Authoring:</strong> Start with an empty
+          canvas and let AI help you create. Use [ --- note ] markers for
+          in-context instructions. Create characters and locations on the fly.
           Switch between models to find your perfect creative partner.
         </Alert>
+
+        {/* Recent Events Summary */}
+        {summaryLoading ? (
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <CircularProgress size={24} />
+              <Typography variant="body1" color="text.secondary">
+                Generating summary of recent events...
+              </Typography>
+            </Box>
+          </Paper>
+        ) : (
+          recentEventsSummary && (
+            <Paper
+              sx={{
+                p: 3,
+                mb: 3,
+                bgcolor: "background.default",
+                border: "1px solid",
+                borderColor: "divider",
+              }}
+            >
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              >
+                <AutoAwesomeIcon fontSize="small" color="primary" />
+                Recent Events Summary
+              </Typography>
+              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                {recentEventsSummary}
+              </Typography>
+            </Paper>
+          )
+        )}
 
         <Grid container spacing={3}>
           {/* Left Column - Main Editor */}
@@ -549,10 +645,14 @@ export default function ContinuePage() {
                   {recentParts.map((part) => (
                     <Box key={part.id} sx={{ mb: 2 }}>
                       <Typography variant="subtitle2" color="primary">
-                        Part {part.part_number}: {part.title || 'Untitled'}
+                        Part {part.part_number}: {part.title || "Untitled"}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        {part.summary || part.content.substring(0, 200) + '...'}
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 1 }}
+                      >
+                        {part.summary || part.content.substring(0, 200) + "..."}
                       </Typography>
                     </Box>
                   ))}
@@ -575,7 +675,11 @@ export default function ContinuePage() {
 
               {/* Generation Style Controls - NEW FEATURE */}
               <Box sx={{ mt: 2, mb: 2 }}>
-                <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  gutterBottom
+                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                >
                   Generation Style
                   <Tooltip title="Strict mode generates only what you request (no filler). Creative mode allows natural flow and embellishment.">
                     <InfoIcon fontSize="small" color="action" />
@@ -593,9 +697,7 @@ export default function ContinuePage() {
                   size="small"
                   sx={{ mb: 2 }}
                 >
-                  <ToggleButton value="strict">
-                    Strict (no filler)
-                  </ToggleButton>
+                  <ToggleButton value="strict">Strict (no filler)</ToggleButton>
                   <ToggleButton value="creative">
                     Creative (filler allowed)
                   </ToggleButton>
@@ -612,9 +714,9 @@ export default function ContinuePage() {
                   step={100}
                   disabled={loading}
                   marks={[
-                    { value: 500, label: '500' },
-                    { value: 1500, label: '1500' },
-                    { value: 3000, label: '3000' },
+                    { value: 500, label: "500" },
+                    { value: 1500, label: "1500" },
+                    { value: 3000, label: "3000" },
                   ]}
                   valueLabelDisplay="auto"
                   sx={{ maxWidth: 400 }}
@@ -635,7 +737,7 @@ Duke confronts the villain..."
                 disabled={loading}
               />
 
-              <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
                 <FormControl sx={{ minWidth: 200 }}>
                   <InputLabel>Play as Character</InputLabel>
                   <Select
@@ -691,10 +793,14 @@ Duke confronts the villain..."
 
               {/* Prompt Templates */}
               <Box sx={{ mt: 2 }}>
-                <Typography variant="caption" color="text.secondary" gutterBottom>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  gutterBottom
+                >
                   Quick Templates:
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 1 }}>
                   {promptTemplates.map((template, idx) => (
                     <Chip
                       key={idx}
@@ -718,13 +824,21 @@ Duke confronts the villain..."
 
             {/* Errors and Success Messages */}
             {error && (
-              <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+              <Alert
+                severity="error"
+                sx={{ mb: 3 }}
+                onClose={() => setError(null)}
+              >
                 {error}
               </Alert>
             )}
 
             {success && (
-              <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
+              <Alert
+                severity="success"
+                sx={{ mb: 3 }}
+                onClose={() => setSuccess(null)}
+              >
                 {success}
               </Alert>
             )}
@@ -732,9 +846,17 @@ Duke confronts the villain..."
             {/* Generated Output */}
             {continuation && (
               <Paper sx={{ p: 3, mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mb: 2,
+                    flexWrap: "wrap",
+                    gap: 1,
+                  }}
+                >
                   <Typography variant="h6">Generated Continuation</Typography>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                     <Button
                       variant="outlined"
                       startIcon={<PersonAddIcon />}
@@ -768,7 +890,11 @@ Duke confronts the villain..."
 
                 <Divider sx={{ mb: 2 }} />
 
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
                   Edit the text below as needed:
                 </Typography>
 
@@ -781,9 +907,9 @@ Duke confronts the villain..."
                   variant="outlined"
                   disabled={loading}
                   sx={{
-                    '& .MuiInputBase-root': {
-                      fontFamily: 'Georgia, serif',
-                      fontSize: '1rem',
+                    "& .MuiInputBase-root": {
+                      fontFamily: "Georgia, serif",
+                      fontSize: "1rem",
                       lineHeight: 1.8,
                     },
                   }}

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Container,
   Typography,
@@ -12,15 +12,22 @@ import {
   FormControl,
   InputLabel,
   Button,
-} from '@mui/material';
-import CharacterCard from '@/components/CharacterCard';
-import { useRouter } from 'next/navigation';
+  Alert,
+  CircularProgress,
+} from "@mui/material";
+import CharacterCard from "@/components/CharacterCard";
+import { useRouter } from "next/navigation";
 
 export default function CharactersPage() {
   const [characters, setCharacters] = useState<any[]>([]);
   const [filteredCharacters, setFilteredCharacters] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [extracting, setExtracting] = useState(false);
+  const [message, setMessage] = useState<{
+    type: "success" | "error" | "warning";
+    text: string;
+  } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -32,7 +39,7 @@ export default function CharactersPage() {
 
     if (searchTerm) {
       filtered = filtered.filter((char) =>
-        char.name.toLowerCase().includes(searchTerm.toLowerCase())
+        char.name.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -45,25 +52,92 @@ export default function CharactersPage() {
 
   const fetchCharacters = async () => {
     try {
-      const response = await fetch('/api/characters');
+      const response = await fetch("/api/characters");
       if (response.ok) {
         const data = await response.json();
         setCharacters(data);
         setFilteredCharacters(data);
       }
     } catch (error) {
-      console.error('Failed to fetch characters:', error);
+      console.error("Failed to fetch characters:", error);
+    }
+  };
+
+  const handleExtractFromStory = async () => {
+    setExtracting(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/characters?action=extract", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to extract characters");
+      }
+
+      const result = await response.json();
+
+      console.log("Extraction result:", result);
+
+      let message = `Successfully extracted ${result.newCharacters} new character(s) and updated ${result.updatedCharacters} existing character(s)!`;
+
+      if (result.extractedNames && result.extractedNames.length > 0) {
+        message += ` Found: ${result.extractedNames.join(", ")}`;
+      }
+
+      if (result.message) {
+        message = result.message;
+      }
+
+      setMessage({
+        type: result.totalExtracted === 0 ? "warning" : "success",
+        text: message,
+      });
+
+      // Refresh the characters list
+      await fetchCharacters();
+    } catch (error: any) {
+      setMessage({ type: "error", text: error.message });
+    } finally {
+      setExtracting(false);
     }
   };
 
   return (
     <Container maxWidth="lg">
       <Box sx={{ my: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            mb: 3,
+            alignItems: "center",
+          }}
+        >
           <Typography variant="h4" component="h1">
             Characters
           </Typography>
+          <Button
+            variant="contained"
+            onClick={handleExtractFromStory}
+            disabled={extracting}
+            startIcon={extracting ? <CircularProgress size={20} /> : null}
+          >
+            {extracting ? "Extracting..." : "Extract from Story Parts"}
+          </Button>
         </Box>
+
+        {message && (
+          <Alert
+            severity={message.type}
+            sx={{ mb: 2 }}
+            onClose={() => setMessage(null)}
+          >
+            {message.text}
+          </Alert>
+        )}
 
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} md={8}>

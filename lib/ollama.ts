@@ -36,18 +36,19 @@ async function generateText(options: GenerateOptions): Promise<string> {
 }
 
 export async function extractEntities(text: string): Promise<any> {
-  const system = `Extract from story: character names with personality (1 sentence), 3 traits, goals, relationships, locations.
+  const system = `Extract characters, relationships, and locations from the story text.
 
-JSON format:
+IMPORTANT: Return ONLY valid JSON in this EXACT format:
 {
-  "characters": [{"name": "Name", "personality": "brief", "traits": ["t1","t2","t3"], "goals": "brief", "description": "appearance"}],
-  "relationships": [{"character_1": "N1", "character_2": "N2", "type": "romantic/friendship/rivalry/family", "dynamic": "brief"}],
+  "characters": [{"name": "Name", "personality": "brief", "traits": ["trait1","trait2","trait3"], "goals": "brief", "description": "appearance"}],
+  "relationships": [{"character_1": "Name1", "character_2": "Name2", "type": "romantic/friendship/rivalry/family", "dynamic": "brief"}],
   "locations": [{"name": "Place", "description": "brief", "atmosphere": "mood"}],
   "events": [{"description": "what happened", "emotional_impact": "impact"}],
   "themes": ["theme1", "theme2"]
 }
 
-Ignore pronouns: you, she, he, I, me, they, boyfriend, girlfriend, ChatGPT, AI, narrator, babe, baby.${
+Do NOT use "character_traits" - use "characters".
+Ignore generic pronouns: you, she, he, I, me, they, boyfriend, girlfriend, narrator, babe, baby.${
     UNRESTRICTED_MODE
       ? `\n\nExtract all themes, events, and character traits accurately, including mature or sensitive content without filtering or censoring.`
       : ""
@@ -65,7 +66,20 @@ Ignore pronouns: you, she, he, I, me, they, boyfriend, girlfriend, ChatGPT, AI, 
       num_predict: 500,
     });
 
+    console.log("🤖 Raw AI response:", response.substring(0, 500));
+
     const parsed = JSON.parse(response);
+
+    // Handle case where AI returns 'character_traits' instead of 'characters'
+    if (!parsed.characters && parsed.character_traits) {
+      parsed.characters = parsed.character_traits;
+    }
+
+    console.log("📊 Parsed entities before filtering:", {
+      characters: parsed.characters?.length || 0,
+      locations: parsed.locations?.length || 0,
+      relationships: parsed.relationships?.length || 0,
+    });
 
     const EXCLUDE = [
       "you",
@@ -199,7 +213,15 @@ export async function continueStory(
   context: string,
   userPrompt: string,
   model?: string,
+  generationStyle: "strict" | "creative" = "strict",
+  maxTokens: number = 1500,
 ): Promise<string> {
+  // Build style instruction based on generation style
+  const styleInstruction =
+    generationStyle === "creative"
+      ? "\n\nEmbrace creativity, explore bold narrative choices, and take risks with character development and plot twists."
+      : "\n\nStay consistent with established character personalities and plot direction.";
+
   const system = `You are a creative fiction writer continuing a story. 
 Use the provided context about characters, settings, and previous events.
 Write in a natural, engaging narrative style that matches the tone of the existing story.
@@ -210,13 +232,13 @@ Focus on character development and plot progression.${styleInstruction}${
   }`;
 
   // Add dynamic word count guidance based on maxTokens
-  let wordCountGuidance = '';
+  let wordCountGuidance = "";
   if (maxTokens <= 700) {
-    wordCountGuidance = ' (~300-400 words)';
+    wordCountGuidance = " (~300-400 words)";
   } else if (maxTokens <= 1800) {
-    wordCountGuidance = ' (~500-1000 words)';
+    wordCountGuidance = " (~500-1000 words)";
   } else {
-    wordCountGuidance = ' (~1000-1500 words)';
+    wordCountGuidance = " (~1000-1500 words)";
   }
 
   const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story${wordCountGuidance}:`;
