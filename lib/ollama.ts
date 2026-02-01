@@ -195,14 +195,11 @@ export async function generateStorySummary(text: string): Promise<string> {
   }
 }
 
-<<<<<<< HEAD
 export async function continueStory(
   context: string,
   userPrompt: string,
+  model?: string,
 ): Promise<string> {
-=======
-export async function continueStory(context: string, userPrompt: string, model?: string): Promise<string> {
->>>>>>> ac984845b2c8919e35a258f6d2f6ea30ed2f0acd
   const system = `You are a creative fiction writer continuing a story. 
 Use the provided context about characters, settings, and previous events.
 Write in a natural, engaging narrative style that matches the tone of the existing story.
