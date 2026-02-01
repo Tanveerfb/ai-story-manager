@@ -235,7 +235,7 @@ async function processFile(
         const saved = await insertTheme({
           story_part_id: storyPart.id,
           theme: theme,
-          description: null,
+          description: undefined,
         });
         savedThemes.push(saved);
       } catch (error: any) {

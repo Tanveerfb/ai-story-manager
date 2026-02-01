@@ -188,3 +188,28 @@ export async function generateStorySummary(text: string): Promise<string> {
     return "Summary generation failed.";
   }
 }
+
+export async function continueStory(context: string, userPrompt: string): Promise<string> {
+  const system = `You are a creative fiction writer continuing a story. 
+Use the provided context about characters, settings, and previous events.
+Write in a natural, engaging narrative style that matches the tone of the existing story.
+Focus on character development and plot progression.`;
+
+  const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story (500-1000 words):`;
+
+  try {
+    const response = await generateText({
+      prompt,
+      system,
+      num_ctx: NUM_CTX,
+      temperature: 0.82,
+      num_predict: 1500,
+    });
+
+    return response.trim();
+  } catch (error: any) {
+    console.error("Story continuation error:", error.message);
+    throw new Error("Failed to generate story continuation");
+  }
+}
+

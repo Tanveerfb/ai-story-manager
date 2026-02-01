@@ -298,7 +298,7 @@ export async function POST(request: NextRequest) {
         const saved = await insertTheme({
           story_part_id: storyPart.id,
           theme: theme,
-          description: null,
+          description: undefined,
         });
         savedThemes.push(saved);
         console.log(`✓ Saved theme: ${theme}`);
