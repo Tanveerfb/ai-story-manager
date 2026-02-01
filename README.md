@@ -1,26 +1,33 @@
-# AI Story Manager
+# AI-First Authoring Suite
 
-A comprehensive story management web application that allows importing existing story content from DOCX files, automatically extracts characters/locations/events using local AI, stores everything in a structured database, and enables AI-powered story continuation with full context awareness.
+An AI-first story creation web application that empowers you to build narratives from scratch with AI assistance. Create stories, characters, and locations interactively with multiple uncensored AI models, live entity management, and advanced story continuation tools.
 
 ## 🌟 Features
 
-- **DOCX Import**: Upload story files and automatically parse content
-- **AI Entity Extraction**: Automatically extract characters, locations, events, and relationships using Ollama
-- **Story Viewer**: Browse all story parts with search and filtering
-- **AI Story Continuation**: Continue your story with full context awareness
-- **Character Management**: View and manage character profiles, traits, and relationships
-- **Location Management**: Track all locations mentioned in your stories
-- **Timeline View**: Visualize story events chronologically
+### Core AI-First Workflow
+- **Start from Scratch**: No imports needed - create stories directly with AI guidance
+- **Multiple AI Models**: Switch between uncensored models (WizardLM, Llama 3, Dolphin) for creative flexibility
+- **Live Entity Creation**: Build characters and locations on-the-fly as your story develops
+- **Interactive Story Continuation**: AI-powered narrative generation with full context awareness
+- **In-Context Instructions**: Use `[ --- note ]` markers to guide AI behavior inline
+- **Iterative Revision**: Provide feedback and refine generated content without editing raw text
+
+### Advanced Features
+- **Character Manager**: Create, edit, and manage character profiles with traits and personalities
+- **Location Manager**: Build your story world with detailed location descriptions
+- **Model Selector**: Choose from multiple AI models optimized for creative fiction
+- **Story Branching**: Explore alternative scenarios without losing progress
+- **Draft Management**: Save, version, and restore story continuations
+- **Tags & Notes**: Organize scenes with tags and private author notes
 - **Dark/Light Mode**: Toggle between dark and light themes
-- **Quality-Focused AI**: Optimized for best AI output quality using llama3.1:70b
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 15 (App Router), Material UI, React, TypeScript
+- **Frontend**: Next.js 16 (App Router), Material UI, React, TypeScript
 - **Backend**: Next.js API Routes (Node.js)
 - **Database**: Supabase (PostgreSQL)
-- **AI**: Local LLM via Ollama (llama3.1:70b)
-- **File Processing**: mammoth (DOCX parsing)
+- **AI**: Local LLM via Ollama (multiple uncensored models supported)
+- **File Processing**: mammoth (DOCX parsing - legacy feature)
 
 ## 📋 Prerequisites
 
@@ -69,15 +76,24 @@ Ollama is a local LLM runtime that runs AI models on your machine.
      - Add a new Inbound Rule for TCP port 11434
      - Allow connections from your local network (192.168.x.x)
 
-#### Pull the Model
+#### Pull Recommended Models
+
+For the best AI-first authoring experience, install one or more uncensored models:
 
 ```bash
-# Pull the llama3.1:70b model (recommended for quality)
+# Recommended: Large, high-quality model
 ollama pull llama3.1:70b
 
-# Or use a smaller model for faster inference
+# Fast and efficient
 ollama pull llama3.1:8b
+
+# Uncensored creative models
+ollama pull wizardlm-uncensored
+ollama pull dolphin-llama3
+ollama pull llama3-uncensored
 ```
+
+**Note**: The application supports model switching, so you can install multiple models and choose the best one for each scene.
 
 #### Start Ollama Server
 
@@ -154,52 +170,105 @@ Then access from mobile using your PC's IP: `http://192.168.x.x:3000`
 
 ## 📖 Usage Guide
 
-### Importing Stories
+### Getting Started with AI-First Story Creation
 
-1. Navigate to **Import Story** from the sidebar
-2. Upload a `.docx` file containing your story
-3. Set the part number and optional title
-4. Click **Import Story**
-5. Wait for the AI to extract entities (this may take 30-90 seconds)
-6. Review extracted characters, locations, events, and relationships
+When you launch the application, you'll land directly on the **Continue Story** page - your central creative workspace.
 
-### Viewing Stories
+### Creating Your First Story
 
+1. **Select Your AI Model**
+   - Click the "AI Model" dropdown at the top
+   - Choose from available models (Llama 3.1, WizardLM-uncensored, Dolphin, etc.)
+   - Larger models (70B) provide better quality but are slower
+   - Smaller models (8B) are faster for quick iterations
+
+2. **Create Characters**
+   - Click the **Add** button in the Characters panel
+   - Fill in character details: name, role, personality, traits, description
+   - Characters are automatically available for story context
+
+3. **Create Locations**
+   - Click the **Add** button in the Locations panel
+   - Define location name, type, description, and atmosphere
+   - Locations enrich your story's setting and context
+
+4. **Write Your First Prompt**
+   - Enter what you want to happen in the story
+   - Use `[ --- note ]` markers for inline AI instructions
+   - Example: `[ --- Make this scene tense ] The detective enters the dark warehouse...`
+   - Optionally select a character to focus the narrative
+
+5. **Generate Story Content**
+   - Click **Generate** to create your story continuation
+   - AI uses context from characters, locations, and previous parts
+   - Wait for generation (30-90 seconds depending on model)
+
+6. **Refine and Iterate**
+   - Review the generated content
+   - Use the feedback panel to revise: "Make the dialogue more natural"
+   - Edit the text directly in the editor
+   - Save as draft or insert into your story
+
+### Advanced Features
+
+#### In-Context Markers
+Use `[ --- note ]` anywhere in your prompt to guide the AI:
+- `[ --- Write this from Emma's perspective ]`
+- `[ --- Make this scene intense and emotional ]`
+- `[ --- Include detailed description of the setting ]`
+
+#### Model Switching
+Switch models mid-story to find the perfect voice:
+- Use larger models for important scenes
+- Use faster models for quick drafts
+- Each model has unique creative characteristics
+
+#### Story Branching
+- Save your current draft
+- Click **Create Branch** to explore alternative scenarios
+- Return to main story or continue the branch
+- Never lose progress when experimenting
+
+#### Tags and Notes
+- Tag scenes: Draft, Climax, Character Development, etc.
+- Add private notes about creative decisions
+- Classify scene type: Action, Dialogue, Description
+
+### Managing Your Story
+
+#### View Story Parts
 1. Navigate to **Story Viewer** from the sidebar
-2. Browse all imported story parts
-3. Use the search bar to find specific content
-4. Expand any part to view full content and summary
+2. Browse all story parts in order
+3. Search and filter content
+4. Each generated continuation can be inserted as a new part
 
-### Continuing Stories
-
-1. Navigate to **Continue Story** from the sidebar
-2. Enter a prompt describing what should happen next
-3. Optionally select a character to focus on
-4. Click **Generate Continuation**
-5. Wait for the AI to generate content (30-90 seconds)
-6. Review and optionally save as a new story part
-
-### Managing Characters
-
+#### Character Management
 1. Navigate to **Characters** from the sidebar
-2. Browse all extracted characters
-3. Filter by role (main, side, minor)
-4. Click on a character to view full details
-5. View personality traits, physical traits, and relationships
+2. View all characters with details
+3. Edit or delete characters as needed
+4. Characters created live are immediately available
 
-### Viewing Locations
-
+#### Location Management
 1. Navigate to **Locations** from the sidebar
-2. Browse all locations from your stories
-3. Filter by type (indoor, outdoor, etc.)
+2. Browse and manage all locations
+3. Edit descriptions and atmosphere
+4. Locations enrich AI-generated context
 
-### Timeline
+## ⚙️ AI Configuration
 
-1. Navigate to **Timeline** from the sidebar
-2. View all story events chronologically
-3. Filter by event type (dialogue, action, revelation)
+### Supported Models
 
-## ⚙️ AI Quality Settings
+The AI-First Authoring Suite supports multiple uncensored models optimized for creative fiction:
+
+| Model | Size | Best For | Speed |
+|-------|------|----------|-------|
+| Llama 3.1 (70B) | 70B | High-quality detailed narratives | Slow |
+| Llama 3.1 (8B) | 8B | Quick iterations and drafts | Fast |
+| WizardLM Uncensored | 13B | Creative fiction without filters | Medium |
+| Dolphin Llama 3 | 8B | Balanced versatility | Fast |
+| Llama 3 Uncensored | 8B | Community uncensored model | Fast |
+
+### AI Quality Settings
 
 The application is configured for maximum quality output:
 
@@ -214,36 +283,47 @@ These settings prioritize quality over speed. Generation may take 30-90 seconds 
 
 ## 🏗️ Architecture
 
+### Core Workflow
+The AI-First Authoring Suite focuses on interactive story creation:
+1. **Continue Story Page** - Central workspace (default landing page)
+2. **Entity Managers** - Live character and location creation
+3. **AI Generation** - Model-aware story continuation with context
+4. **Draft System** - Save, branch, and version your work
+
 ### Database Schema
 
 - **story_parts**: Stores story content with metadata
-- **characters**: Character profiles and attributes
-- **character_traits**: Detailed character traits
-- **locations**: Story locations
-- **events**: Story events linked to characters and locations
+- **characters**: Character profiles and attributes (created live or via API)
+- **locations**: Story locations (created live or via API)
+- **continuation_drafts**: Saved drafts with tags and notes
+- **continuation_history**: Version history for iterative revision
+- **continuation_branches**: Alternative story scenarios
 - **relationships**: Character relationships
-- **story_context**: Additional context information
+- **events**: Story events linked to characters and locations
 
 ### API Routes
 
-- `POST /api/import-story`: Import and process DOCX files
-- `POST /api/continue-story`: Generate story continuations
-- `POST /api/extract-entities`: Extract entities from text
-- `GET/POST/PUT /api/characters`: Manage characters
-- `GET/POST/PUT /api/locations`: Manage locations
-- `GET /api/events`: Fetch story events
+#### Core AI-First Routes
+- `GET /api/models`: List available Ollama models
+- `POST /api/continue`: Generate/revise story continuations (supports model selection)
+- `GET/POST/PUT/DELETE /api/characters`: Manage characters (live CRUD)
+- `GET/POST/PUT/DELETE /api/locations`: Manage locations (live CRUD)
 - `GET/POST/DELETE /api/story-parts`: Manage story parts
+
+#### Legacy Routes (for existing content)
+- `POST /api/import-story`: Import and process DOCX files (hidden from UI)
+- `POST /api/extract-entities`: Extract entities from text
 
 ## 🔒 Privacy & Security
 
 - **Local AI**: All AI processing happens locally via Ollama - no data sent to third parties
 - **Self-Hosted Database**: Use Supabase cloud or self-host your database
-- **Unrestricted Content Mode (Optional)**: Enable unrestricted story generation for mature/adult fiction
+- **Multiple Models**: Switch between uncensored models for unrestricted creative freedom
 - **Complete Control**: All your data stays under your control
 
 ### Unrestricted Content Mode
 
-By default, Ollama/Llama models may include built-in content moderation that can refuse to generate certain mature or sensitive content. To enable unrestricted story generation:
+The application supports uncensored AI models by default. To enable unrestricted mode for all models:
 
 1. Add the following to your `.env.local` file:
 

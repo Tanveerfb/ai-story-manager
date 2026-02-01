@@ -33,18 +33,16 @@ import { useThemeMode } from './ThemeProvider';
 
 const drawerWidth = 240;
 
+/**
+ * AI-First Authoring Suite Navigation Menu
+ * Simplified menu focused on story creation workflow
+ * Import-related items are hidden to enforce AI-first creation from scratch
+ */
 const menuItems = [
-  { text: 'Dashboard', icon: <HomeIcon />, path: '/' },
-  { text: 'Import Story', icon: <UploadFileIcon />, path: '/import' },
-  { text: 'Batch Import', icon: <UploadFileIcon />, path: '/import/batch' },
-  { text: 'Story Viewer', icon: <MenuBookIcon />, path: '/story' },
   { text: 'Continue Story', icon: <CreateIcon />, path: '/continue' },
   { text: 'Characters', icon: <PeopleIcon />, path: '/characters' },
-  { text: 'Missing Names', icon: <LinkOffIcon />, path: '/characters/unlinked' },
-  { text: 'Merge Characters', icon: <MergeTypeIcon />, path: '/characters/merge' },
   { text: 'Locations', icon: <PlaceIcon />, path: '/locations' },
-  { text: 'Locations Merge', icon: <MergeTypeIcon />, path: '/locations/merge' },
-  { text: 'Flashbacks', icon: <MovieFilterIcon />, path: '/flashbacks' },
+  { text: 'Story Viewer', icon: <MenuBookIcon />, path: '/story' },
   { text: 'Timeline', icon: <TimelineIcon />, path: '/timeline' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];
@@ -67,7 +65,7 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
     <div>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
-          AI Story Manager
+          AI Authoring Suite
         </Typography>
       </Toolbar>
       <List>
@@ -103,7 +101,7 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Story Management
+            AI-First Story Creation
           </Typography>
           <IconButton onClick={toggleTheme} color="inherit">
             {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}

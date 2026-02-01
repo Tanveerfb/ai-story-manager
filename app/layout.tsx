@@ -4,8 +4,8 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import Navigation from '@/components/Navigation';
 
 export const metadata: Metadata = {
-  title: 'AI Story Manager',
-  description: 'Manage and continue your stories with AI assistance',
+  title: 'AI-First Authoring Suite',
+  description: 'Create stories from scratch with AI assistance - interactive narrative creation and entity management',
 };
 
 export default function RootLayout({
