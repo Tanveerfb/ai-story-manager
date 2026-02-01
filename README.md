@@ -52,12 +52,13 @@ Ollama is a local LLM runtime that runs AI models on your machine.
 
 #### Install Ollama
 
-- **macOS/Linux**: 
+- **macOS/Linux**:
+
   ```bash
   curl -fsSL https://ollama.ai/install.sh | sh
   ```
 
-- **Windows**: 
+- **Windows**:
   1. Download the Windows installer from [ollama.ai](https://ollama.ai/)
   2. Run the installer (OllamaSetup.exe)
   3. Ollama will be installed and automatically start as a Windows service
@@ -132,7 +133,7 @@ AI_TOP_P=0.92
 AI_TOP_K=50
 AI_MAX_TOKENS=1500
 AI_REPEAT_PENALTY=1.1
-AI_NUM_CTX=8192
+AI_NUM_CTX=4096
 ```
 
 ### 6. Run the Development Server
@@ -245,6 +246,7 @@ These settings prioritize quality over speed. Generation may take 30-90 seconds 
 By default, Ollama/Llama models may include built-in content moderation that can refuse to generate certain mature or sensitive content. To enable unrestricted story generation:
 
 1. Add the following to your `.env.local` file:
+
    ```env
    OLLAMA_UNRESTRICTED_MODE=true
    ```
@@ -254,11 +256,13 @@ By default, Ollama/Llama models may include built-in content moderation that can
 **⚠️ WARNING**: Enabling unrestricted mode removes content restrictions for story generation. This is intended for mature/adult fiction writing. You take full responsibility for all generated content. Use responsibly and in accordance with applicable laws.
 
 **Note**: Some model refusals may still occur due to:
+
 - Hard-coded filters in specific model variants
 - Ollama server-level filtering (rare)
 - Model fine-tuning that includes content restrictions
 
 If you continue to experience unwanted content refusals with unrestricted mode enabled, consider:
+
 - Using a different Llama model variant (e.g., community models without restrictions)
 - Checking Ollama server configuration
 - Using alternative models designed for creative fiction writing
@@ -272,6 +276,7 @@ You can access the web application from your mobile device on the same local net
 #### 1. Find Your PC's Local IP Address
 
 **Windows:**
+
 ```bash
 ipconfig
 # Look for "IPv4 Address" under your active network adapter
@@ -279,6 +284,7 @@ ipconfig
 ```
 
 **macOS/Linux:**
+
 ```bash
 ifconfig
 # Look for "inet" under your active network adapter (en0, wlan0, etc.)
@@ -299,6 +305,7 @@ OLLAMA_API_URL=http://192.168.x.x:11434  # Replace x.x with your actual IP (e.g.
 **Windows Users**: Ensure Windows Firewall allows connections to port 11434 (see Ollama installation section above).
 
 **macOS/Linux Users**: Ollama listens on localhost by default. To allow network access:
+
 ```bash
 # Set environment variable before starting Ollama
 export OLLAMA_HOST=0.0.0.0:11434
@@ -316,6 +323,7 @@ This allows the web app to be accessed from other devices on your network.
 #### 4. Access from Mobile
 
 On your mobile device:
+
 1. Connect to the **same WiFi network** as your PC
 2. Open browser and navigate to: `http://192.168.x.x:3000` (replace x.x with your PC's actual IP, e.g., `http://192.168.1.100:3000`)
 3. The app should load and work normally
@@ -323,18 +331,16 @@ On your mobile device:
 
 ### Mobile Access Troubleshooting
 
-- **Cannot connect to web app**: 
+- **Cannot connect to web app**:
   - Verify mobile device is on same WiFi network
   - Check if PC firewall allows incoming connections on port 3000
   - **Windows**: Add inbound rule for TCP port 3000 in Windows Firewall (similar to Ollama setup)
   - **macOS**: System Settings > Network > Firewall > Options > Allow port 3000
   - **Linux**: Configure iptables/ufw to allow port 3000: `sudo ufw allow 3000/tcp`
-  
 - **Web app loads but AI generation fails**:
   - Verify OLLAMA_API_URL in .env.local uses PC's local IP, not localhost
   - Check Ollama is running: `ollama list`
   - Verify firewall allows port 11434 (add inbound rule if needed)
-  
 - **Slow mobile performance**:
   - Normal - AI generation happens on PC, which may take 30-90 seconds
   - Ensure PC remains active and not in sleep mode

@@ -5,7 +5,7 @@ const ollama = new Ollama({
 });
 
 const MODEL = process.env.OLLAMA_MODEL || "llama3.1-force-gpu";
-const NUM_CTX = parseInt(process.env.AI_NUM_CTX || "2048", 10);
+const NUM_CTX = parseInt(process.env.AI_NUM_CTX || "3072", 10);
 const UNRESTRICTED_MODE = process.env.OLLAMA_UNRESTRICTED_MODE === "true";
 
 interface GenerateOptions {
@@ -59,7 +59,7 @@ Ignore pronouns: you, she, he, I, me, they, boyfriend, girlfriend, ChatGPT, AI, 
       prompt,
       system,
       format: "json",
-      num_ctx: 2048,
+      num_ctx: 3072,
       temperature: 0.3,
       num_predict: 500,
     });
@@ -182,7 +182,7 @@ export async function generateStorySummary(text: string): Promise<string> {
     const response = await generateText({
       prompt,
       system,
-      num_ctx: 2048,
+      num_ctx: 3072,
       temperature: 0.5,
       num_predict: 250,
     });
@@ -194,7 +194,10 @@ export async function generateStorySummary(text: string): Promise<string> {
   }
 }
 
-export async function continueStory(context: string, userPrompt: string): Promise<string> {
+export async function continueStory(
+  context: string,
+  userPrompt: string,
+): Promise<string> {
   const system = `You are a creative fiction writer continuing a story. 
 Use the provided context about characters, settings, and previous events.
 Write in a natural, engaging narrative style that matches the tone of the existing story.
@@ -221,4 +224,3 @@ Focus on character development and plot progression.${
     throw new Error("Failed to generate story continuation");
   }
 }
-

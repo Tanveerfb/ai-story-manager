@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       };
     } else {
       // Chunk the text for large files (5000 words per chunk for detailed extraction)
-      const chunks = chunkText(cleanedText, 6000);
+      const chunks = chunkText(cleanedText, 8000);
       console.log(`Processing ${chunks.length} chunk(s)...`);
 
       // Extract entities from each chunk
