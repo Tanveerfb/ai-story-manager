@@ -232,7 +232,17 @@ Focus on character development and plot progression.${styleInstruction}${
       : ""
   }`;
 
-  const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story:`;
+  // Add dynamic word count guidance based on maxTokens
+  let wordCountGuidance = '';
+  if (maxTokens <= 700) {
+    wordCountGuidance = ' (~300-400 words)';
+  } else if (maxTokens <= 1800) {
+    wordCountGuidance = ' (~500-1000 words)';
+  } else {
+    wordCountGuidance = ' (~1000-1500 words)';
+  }
+
+  const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story${wordCountGuidance}:`;
 
   try {
     const response = await generateText({

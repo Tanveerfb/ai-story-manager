@@ -343,18 +343,20 @@ export default function ContinuePage() {
 
       const extracted = await extractResponse.json();
       
-      let addedCount = 0;
-      let updatedCount = 0;
+      let addedCharacters = 0;
+      let addedLocations = 0;
+      let skippedCharacters = 0;
+      let skippedLocations = 0;
+
+      // Helper function to check if entity exists (case-insensitive)
+      const entityExists = (list: any[], name: string) => {
+        return list.some(item => item.name.toLowerCase() === name.toLowerCase());
+      };
 
       // Add new characters
       if (extracted.characters && extracted.characters.length > 0) {
         for (const char of extracted.characters) {
-          // Check if character already exists
-          const existing = characters.find(c => 
-            c.name.toLowerCase() === char.name.toLowerCase()
-          );
-
-          if (!existing) {
+          if (!entityExists(characters, char.name)) {
             // Add new character
             const response = await fetch('/api/characters', {
               method: 'POST',
@@ -363,10 +365,10 @@ export default function ContinuePage() {
             });
 
             if (response.ok) {
-              addedCount++;
+              addedCharacters++;
             }
           } else {
-            updatedCount++;
+            skippedCharacters++;
           }
         }
       }
@@ -374,12 +376,7 @@ export default function ContinuePage() {
       // Add new locations
       if (extracted.locations && extracted.locations.length > 0) {
         for (const loc of extracted.locations) {
-          // Check if location already exists
-          const existing = locations.find(l => 
-            l.name.toLowerCase() === loc.name.toLowerCase()
-          );
-
-          if (!existing) {
+          if (!entityExists(locations, loc.name)) {
             // Add new location
             const response = await fetch('/api/locations', {
               method: 'POST',
@@ -388,10 +385,10 @@ export default function ContinuePage() {
             });
 
             if (response.ok) {
-              addedCount++;
+              addedLocations++;
             }
           } else {
-            updatedCount++;
+            skippedLocations++;
           }
         }
       }
@@ -400,10 +397,23 @@ export default function ContinuePage() {
       await fetchCharacters();
       await fetchLocations();
 
-      if (addedCount > 0) {
-        setSuccess(`Successfully extracted and added ${addedCount} new entities! (${updatedCount} already existed)`);
-      } else if (updatedCount > 0) {
-        setSuccess(`Found ${updatedCount} entities that already exist in your database.`);
+      // Build detailed success message
+      const totalAdded = addedCharacters + addedLocations;
+      const totalSkipped = skippedCharacters + skippedLocations;
+      
+      if (totalAdded > 0) {
+        let message = 'Successfully extracted and added ';
+        const parts = [];
+        if (addedCharacters > 0) parts.push(`${addedCharacters} character${addedCharacters > 1 ? 's' : ''}`);
+        if (addedLocations > 0) parts.push(`${addedLocations} location${addedLocations > 1 ? 's' : ''}`);
+        message += parts.join(' and ');
+        if (totalSkipped > 0) {
+          message += ` (${totalSkipped} already existed)`;
+        }
+        message += '!';
+        setSuccess(message);
+      } else if (totalSkipped > 0) {
+        setSuccess(`Found ${totalSkipped} entities that already exist in your database.`);
       } else {
         setSuccess('No new entities found in the generated content.');
       }

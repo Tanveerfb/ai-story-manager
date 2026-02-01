@@ -4,6 +4,10 @@ import { getStoryParts, getCharacters } from '@/lib/supabase';
 import { buildStoryContext } from '@/lib/contextBuilder';
 import { supabase } from '@/lib/supabase';
 
+// Default generation settings
+const DEFAULT_GENERATION_STYLE: 'strict' | 'creative' = 'strict';
+const DEFAULT_MAX_TOKENS = 1500;
+
 // Helper to parse in-context markers [ --- ]
 function parseContextMarkers(prompt: string): { cleanPrompt: string; contextNotes: string[] } {
   const markerRegex = /\[\s*---\s*([^\]]+)\]/g;
@@ -118,8 +122,8 @@ async function generateContinuation(
   characterFocus: string | null,
   revisionInstructions: string | null,
   model?: string,
-  generationStyle: 'strict' | 'creative' = 'strict',
-  maxTokens: number = 1500
+  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS
 ): Promise<{ continuation: string; contextNotes: string[] }> {
   if (!userPrompt) {
     throw new Error('User prompt is required');
@@ -171,8 +175,8 @@ async function handleGenerate(
   characterFocus: string | null,
   revisionInstructions: string | null,
   model?: string,
-  generationStyle: 'strict' | 'creative' = 'strict',
-  maxTokens: number = 1500
+  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS
 ) {
   try {
     const result = await generateContinuation(userPrompt, characterFocus, revisionInstructions, model, generationStyle, maxTokens);
@@ -193,8 +197,8 @@ async function handleRevise(
   draftId: string, 
   revisionInstructions: string, 
   model?: string,
-  generationStyle: 'strict' | 'creative' = 'strict',
-  maxTokens: number = 1500
+  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS
 ) {
   if (!draftId || !revisionInstructions) {
     return NextResponse.json(
@@ -345,8 +349,8 @@ async function handleBranch(
   characterFocus: string | null,
   sideNotes: string | null,
   model?: string,
-  generationStyle: 'strict' | 'creative' = 'strict',
-  maxTokens: number = 1500
+  generationStyle: 'strict' | 'creative' = DEFAULT_GENERATION_STYLE,
+  maxTokens: number = DEFAULT_MAX_TOKENS
 ) {
   if (!parentDraftId || !branchName || !userPrompt) {
     return NextResponse.json(
