@@ -33,6 +33,10 @@ interface ModelSelectorProps {
 /**
  * Available uncensored models for creative fiction writing
  * These models are optimized for unrestricted content generation
+ * 
+ * NOTE: Keep this list updated as new models become available in Ollama.
+ * Check https://ollama.ai/library for the latest models.
+ * Consider installing models before adding them to this list.
  */
 const AVAILABLE_MODELS: Model[] = [
   {

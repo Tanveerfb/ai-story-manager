@@ -38,6 +38,7 @@ import SideNotesPanel from '@/components/continue/SideNotesPanel';
 import ModelSelector from '@/components/continue/ModelSelector';
 import EntityManager from '@/components/continue/EntityManager';
 import LocationManager from '@/components/continue/LocationManager';
+import { DEFAULT_AI_MODEL } from '@/lib/constants';
 
 export default function ContinuePage() {
   // Basic state
@@ -45,7 +46,7 @@ export default function ContinuePage() {
   const [characterFocus, setCharacterFocus] = useState('');
   const [characters, setCharacters] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
-  const [selectedModel, setSelectedModel] = useState('llama3.1:70b'); // Default model
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL); // Use constant for default model
   const [loading, setLoading] = useState(false);
   const [continuation, setContinuation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
