@@ -53,3 +53,28 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Location ID is required' }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from('locations')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, message: 'Location deleted successfully' });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Failed to delete location' },
+      { status: 500 }
+    );
+  }
+}

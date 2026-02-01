@@ -160,6 +160,15 @@ export async function POST(request: NextRequest) {
       console.error("Failed to update relationships (character_2_id):", rel2Error);
     }
 
+    // Record merge in history
+    await supabase.from("merge_history").insert({
+      entity_type: "character",
+      primary_entity_id: primaryCharacterId,
+      primary_entity_name: primaryCharacter.name,
+      merged_entity_ids: duplicateCharacterIds,
+      merged_entity_names: duplicateCharacters.map((c) => c.name),
+    });
+
     // Delete duplicate characters
     const { error: deleteError } = await supabase
       .from("characters")
