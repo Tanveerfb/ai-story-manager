@@ -63,7 +63,7 @@ export default function SideNotesPanel({
   return (
     <Paper sx={{ p: 3, mt: 3 }}>
       <Typography variant="h6" gutterBottom>
-        Author's Notes & Tags
+        Author&apos;s Notes & Tags
       </Typography>
       
       <Box sx={{ mb: 3 }}>
