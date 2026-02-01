@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Container,
   Typography,
@@ -25,9 +25,9 @@ import {
   ListItem,
   ListItemText,
   IconButton,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import MergeTypeIcon from '@mui/icons-material/MergeType';
+} from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import MergeTypeIcon from "@mui/icons-material/MergeType";
 
 interface Location {
   id: string;
@@ -47,7 +47,7 @@ export default function LocationsMergePage() {
   const [tabValue, setTabValue] = useState(0);
   const [locations, setLocations] = useState<Location[]>([]);
   const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [primaryId, setPrimaryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,6 +56,8 @@ export default function LocationsMergePage() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [suggestedGroups, setSuggestedGroups] = useState<LocationGroup[]>([]);
   const [unusedLocations, setUnusedLocations] = useState<Location[]>([]);
+  const [selectedUnusedIds, setSelectedUnusedIds] = useState<string[]>([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -66,7 +68,7 @@ export default function LocationsMergePage() {
 
     if (searchTerm) {
       filtered = filtered.filter((loc) =>
-        loc.name.toLowerCase().includes(searchTerm.toLowerCase())
+        loc.name.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -77,9 +79,9 @@ export default function LocationsMergePage() {
     setLoading(true);
     try {
       const [locationsRes, suggestionsRes, unusedRes] = await Promise.all([
-        fetch('/api/locations'),
-        fetch('/api/locations/suggestions'),
-        fetch('/api/locations/unused'),
+        fetch("/api/locations"),
+        fetch("/api/locations/suggestions"),
+        fetch("/api/locations/unused"),
       ]);
 
       if (locationsRes.ok) {
@@ -98,8 +100,8 @@ export default function LocationsMergePage() {
         setUnusedLocations(data);
       }
     } catch (error) {
-      console.error('Failed to fetch data:', error);
-      setError('Failed to load locations');
+      console.error("Failed to fetch data:", error);
+      setError("Failed to load locations");
     } finally {
       setLoading(false);
     }
@@ -126,12 +128,12 @@ export default function LocationsMergePage() {
 
   const handleMergeClick = () => {
     if (selectedIds.length < 2) {
-      setError('Please select at least 2 locations to merge');
+      setError("Please select at least 2 locations to merge");
       return;
     }
 
     if (!primaryId) {
-      setError('Please set a primary location');
+      setError("Please set a primary location");
       return;
     }
 
@@ -147,9 +149,9 @@ export default function LocationsMergePage() {
     try {
       const duplicateIds = selectedIds.filter((id) => id !== primaryId);
 
-      const response = await fetch('/api/locations/merge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/locations/merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           primaryLocationId: primaryId,
           duplicateLocationIds: duplicateIds,
@@ -158,7 +160,7 @@ export default function LocationsMergePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Merge failed');
+        throw new Error(errorData.error || "Merge failed");
       }
 
       const result = await response.json();
@@ -175,7 +177,7 @@ export default function LocationsMergePage() {
   };
 
   const handleDeleteLocation = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this location?')) return;
+    if (!confirm("Are you sure you want to delete this location?")) return;
 
     setLoading(true);
     setError(null);
@@ -183,15 +185,15 @@ export default function LocationsMergePage() {
 
     try {
       const response = await fetch(`/api/locations?id=${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Delete failed');
+        throw new Error(errorData.error || "Delete failed");
       }
 
-      setSuccess('Location deleted successfully');
+      setSuccess("Location deleted successfully");
       await fetchData();
     } catch (err: any) {
       setError(err.message);
@@ -207,9 +209,62 @@ export default function LocationsMergePage() {
     setTabValue(0); // Switch to main tab
   };
 
+  const toggleUnusedSelection = (id: string) => {
+    setSelectedUnusedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((selectedId) => selectedId !== id)
+        : [...prev, id],
+    );
+  };
+
+  const toggleAllUnused = () => {
+    if (selectedUnusedIds.length === unusedLocations.length) {
+      setSelectedUnusedIds([]);
+    } else {
+      setSelectedUnusedIds(unusedLocations.map((loc) => loc.id));
+    }
+  };
+
+  const handleBulkDeleteClick = () => {
+    if (selectedUnusedIds.length === 0) {
+      setError("Please select at least one location to delete");
+      return;
+    }
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    setBulkDeleteDialogOpen(false);
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch("/api/locations/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedUnusedIds }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Bulk delete failed");
+      }
+
+      const result = await response.json();
+      setSuccess(`Successfully deleted ${result.deletedCount} location(s)`);
+      setSelectedUnusedIds([]);
+      await fetchData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const primaryLocation = locations.find((l) => l.id === primaryId);
   const duplicateLocations = locations.filter(
-    (l) => selectedIds.includes(l.id) && l.id !== primaryId
+    (l) => selectedIds.includes(l.id) && l.id !== primaryId,
   );
 
   const canMerge = selectedIds.length >= 2 && primaryId !== null;
@@ -221,10 +276,15 @@ export default function LocationsMergePage() {
           Locations Merge & Review
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          Merge duplicate locations, review unused locations, and clean up your location database.
+          Merge duplicate locations, review unused locations, and clean up your
+          location database.
         </Typography>
 
-        <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)} sx={{ mb: 3 }}>
+        <Tabs
+          value={tabValue}
+          onChange={(e, newValue) => setTabValue(newValue)}
+          sx={{ mb: 3 }}
+        >
           <Tab label="All Locations" />
           <Tab label="Suggested Merges" />
           <Tab label={`Unused (${unusedLocations.length})`} />
@@ -259,7 +319,7 @@ export default function LocationsMergePage() {
                   <Typography variant="h6" gutterBottom>
                     Selected Locations ({selectedIds.length})
                   </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                     {selectedIds.map((id) => {
                       const loc = locations.find((l) => l.id === id);
                       return loc ? (
@@ -267,7 +327,7 @@ export default function LocationsMergePage() {
                           key={id}
                           label={loc.name}
                           onDelete={() => toggleSelection(id)}
-                          color={id === primaryId ? 'primary' : 'default'}
+                          color={id === primaryId ? "primary" : "default"}
                         />
                       ) : null;
                     })}
@@ -290,13 +350,13 @@ export default function LocationsMergePage() {
                     Merging...
                   </>
                 ) : (
-                  'Merge Selected Locations'
+                  "Merge Selected Locations"
                 )}
               </Button>
             </Box>
 
             {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
                 <CircularProgress />
               </Box>
             ) : filteredLocations.length === 0 ? (
@@ -313,17 +373,23 @@ export default function LocationsMergePage() {
                     <Grid item xs={12} sm={6} md={4} key={location.id}>
                       <Card
                         sx={{
-                          cursor: 'pointer',
+                          cursor: "pointer",
                           border: isPrimary
-                            ? '3px solid #1976d2'
+                            ? "3px solid #1976d2"
                             : isSelected
-                            ? '2px solid #1976d2'
-                            : '1px solid transparent',
-                          '&:hover': { boxShadow: 6 },
+                              ? "2px solid #1976d2"
+                              : "1px solid transparent",
+                          "&:hover": { boxShadow: 6 },
                         }}
                       >
                         <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              mb: 2,
+                            }}
+                          >
                             <Checkbox
                               checked={isSelected}
                               onChange={() => toggleSelection(location.id)}
@@ -333,7 +399,11 @@ export default function LocationsMergePage() {
                                 {location.name}
                               </Typography>
                               {location.type && (
-                                <Chip label={location.type} size="small" sx={{ mt: 1 }} />
+                                <Chip
+                                  label={location.type}
+                                  size="small"
+                                  sx={{ mt: 1 }}
+                                />
                               )}
                               {isPrimary && (
                                 <Chip
@@ -354,9 +424,13 @@ export default function LocationsMergePage() {
                           </Box>
 
                           {location.description && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ mb: 1 }}
+                            >
                               {location.description.slice(0, 100)}
-                              {location.description.length > 100 ? '...' : ''}
+                              {location.description.length > 100 ? "..." : ""}
                             </Typography>
                           )}
 
@@ -398,7 +472,10 @@ export default function LocationsMergePage() {
                         <List>
                           {group.locations.map((loc) => (
                             <ListItem key={loc.id}>
-                              <ListItemText primary={loc.name} secondary={loc.description} />
+                              <ListItemText
+                                primary={loc.name}
+                                secondary={loc.description}
+                              />
                             </ListItem>
                           ))}
                         </List>
@@ -423,47 +500,119 @@ export default function LocationsMergePage() {
             {unusedLocations.length === 0 ? (
               <Alert severity="success">All locations are in use!</Alert>
             ) : (
-              <Grid container spacing={3}>
-                {unusedLocations.map((location) => (
-                  <Grid item xs={12} sm={6} md={4} key={location.id}>
-                    <Card>
-                      <CardContent>
-                        <Box
+              <>
+                <Box sx={{ mb: 3 }}>
+                  <Paper sx={{ p: 2, mb: 2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                      >
+                        <Checkbox
+                          checked={
+                            selectedUnusedIds.length === unusedLocations.length
+                          }
+                          indeterminate={
+                            selectedUnusedIds.length > 0 &&
+                            selectedUnusedIds.length < unusedLocations.length
+                          }
+                          onChange={toggleAllUnused}
+                        />
+                        <Typography variant="h6">
+                          {selectedUnusedIds.length === 0
+                            ? "Select locations to delete"
+                            : `${selectedUnusedIds.length} location(s) selected`}
+                        </Typography>
+                      </Box>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        onClick={handleBulkDeleteClick}
+                        disabled={selectedUnusedIds.length === 0 || loading}
+                        startIcon={<DeleteIcon />}
+                      >
+                        {loading
+                          ? "Deleting..."
+                          : `Delete Selected (${selectedUnusedIds.length})`}
+                      </Button>
+                    </Box>
+                  </Paper>
+                </Box>
+
+                <Grid container spacing={3}>
+                  {unusedLocations.map((location) => {
+                    const isSelected = selectedUnusedIds.includes(location.id);
+
+                    return (
+                      <Grid item xs={12} sm={6} md={4} key={location.id}>
+                        <Card
                           sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
+                            border: isSelected
+                              ? "2px solid #d32f2f"
+                              : "1px solid transparent",
+                            "&:hover": { boxShadow: 6 },
                           }}
                         >
-                          <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="h6" component="div">
-                              {location.name}
-                            </Typography>
-                            <Chip
-                              label={`Used ${location.usageCount || 0} time${(location.usageCount || 0) === 1 ? '' : 's'}`}
-                              size="small"
-                              color={location.usageCount === 0 ? 'error' : 'warning'}
-                              sx={{ mt: 1 }}
-                            />
-                          </Box>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteLocation(location.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
-                        {location.description && (
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            {location.description}
-                          </Typography>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
+                          <CardContent>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                mb: 1,
+                              }}
+                            >
+                              <Checkbox
+                                checked={isSelected}
+                                onChange={() =>
+                                  toggleUnusedSelection(location.id)
+                                }
+                              />
+                              <Box sx={{ flexGrow: 1 }}>
+                                <Typography variant="h6" component="div">
+                                  {location.name}
+                                </Typography>
+                                <Chip
+                                  label={`Used ${location.usageCount || 0} time${(location.usageCount || 0) === 1 ? "" : "s"}`}
+                                  size="small"
+                                  color={
+                                    location.usageCount === 0
+                                      ? "error"
+                                      : "warning"
+                                  }
+                                  sx={{ mt: 1 }}
+                                />
+                              </Box>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() =>
+                                  handleDeleteLocation(location.id)
+                                }
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Box>
+                            {location.description && (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ mt: 1 }}
+                              >
+                                {location.description}
+                              </Typography>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </>
             )}
           </Box>
         )}
@@ -479,20 +628,23 @@ export default function LocationsMergePage() {
         <DialogTitle>Confirm Location Merge</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            This action cannot be undone. The duplicate locations will be permanently deleted.
+            This action cannot be undone. The duplicate locations will be
+            permanently deleted.
           </Alert>
 
           {primaryLocation && (
-            <Paper sx={{ p: 2, mb: 2, bgcolor: 'success.light' }}>
+            <Paper sx={{ p: 2, mb: 2, bgcolor: "success.light" }}>
               <Typography variant="subtitle1" fontWeight="bold">
                 Primary Location (KEEP)
               </Typography>
               <Typography variant="h6">{primaryLocation.name}</Typography>
-              <Typography variant="body2">Type: {primaryLocation.type}</Typography>
+              <Typography variant="body2">
+                Type: {primaryLocation.type}
+              </Typography>
             </Paper>
           )}
 
-          <Paper sx={{ p: 2, bgcolor: 'error.light' }}>
+          <Paper sx={{ p: 2, bgcolor: "error.light" }}>
             <Typography variant="subtitle1" fontWeight="bold">
               Locations to Delete ({duplicateLocations.length})
             </Typography>
@@ -505,8 +657,54 @@ export default function LocationsMergePage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleConfirmMerge} color="primary" variant="contained">
+          <Button
+            onClick={handleConfirmMerge}
+            color="primary"
+            variant="contained"
+          >
             Confirm Merge
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <Dialog
+        open={bulkDeleteDialogOpen}
+        onClose={() => setBulkDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Confirm Bulk Delete</DialogTitle>
+        <DialogContent>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            This action cannot be undone. {selectedUnusedIds.length} location(s)
+            will be permanently deleted.
+          </Alert>
+
+          <Paper sx={{ p: 2, bgcolor: "error.light" }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              Locations to Delete ({selectedUnusedIds.length})
+            </Typography>
+            <Box sx={{ maxHeight: 300, overflowY: "auto" }}>
+              {unusedLocations
+                .filter((loc) => selectedUnusedIds.includes(loc.id))
+                .map((loc) => (
+                  <Typography key={loc.id} variant="body2">
+                    • {loc.name} (used {loc.usageCount || 0} time
+                    {(loc.usageCount || 0) === 1 ? "" : "s"})
+                  </Typography>
+                ))}
+            </Box>
+          </Paper>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkDeleteDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleConfirmBulkDelete}
+            color="error"
+            variant="contained"
+          >
+            Delete {selectedUnusedIds.length} Location(s)
           </Button>
         </DialogActions>
       </Dialog>
