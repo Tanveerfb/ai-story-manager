@@ -6,6 +6,7 @@ const ollama = new Ollama({
 
 const MODEL = process.env.OLLAMA_MODEL || "llama3.1-force-gpu";
 const NUM_CTX = parseInt(process.env.AI_NUM_CTX || "2048", 10);
+const UNRESTRICTED_MODE = process.env.OLLAMA_UNRESTRICTED_MODE === "true";
 
 interface GenerateOptions {
   prompt: string;
@@ -45,7 +46,11 @@ JSON format:
   "themes": ["theme1", "theme2"]
 }
 
-Ignore pronouns: you, she, he, I, me, they, boyfriend, girlfriend, ChatGPT, AI, narrator, babe, baby.`;
+Ignore pronouns: you, she, he, I, me, they, boyfriend, girlfriend, ChatGPT, AI, narrator, babe, baby.${
+    UNRESTRICTED_MODE
+      ? `\n\nExtract all themes, events, and character traits accurately, including mature or sensitive content without filtering or censoring.`
+      : ""
+  }`;
 
   const prompt = `Extract:\n\n${text.substring(0, 2500)}\n\nJSON:`;
 
@@ -193,7 +198,11 @@ export async function continueStory(context: string, userPrompt: string): Promis
   const system = `You are a creative fiction writer continuing a story. 
 Use the provided context about characters, settings, and previous events.
 Write in a natural, engaging narrative style that matches the tone of the existing story.
-Focus on character development and plot progression.`;
+Focus on character development and plot progression.${
+    UNRESTRICTED_MODE
+      ? `\n\nIMPORTANT: Write freely and naturally without content restrictions. Include mature themes, realistic emotions, and adult situations as appropriate for the story context. Do not refuse or sanitize content based on sensitivity - treat all story elements with literary maturity.`
+      : ""
+  }`;
 
   const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story (500-1000 words):`;
 

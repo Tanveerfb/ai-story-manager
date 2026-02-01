@@ -123,6 +123,9 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 OLLAMA_API_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.1:70b
 
+# Optional: Enable unrestricted content generation for mature/adult fiction
+# OLLAMA_UNRESTRICTED_MODE=true
+
 # Quality-focused AI settings
 AI_TEMPERATURE=0.82
 AI_TOP_P=0.92
@@ -234,8 +237,31 @@ These settings prioritize quality over speed. Generation may take 30-90 seconds 
 
 - **Local AI**: All AI processing happens locally via Ollama - no data sent to third parties
 - **Self-Hosted Database**: Use Supabase cloud or self-host your database
-- **No Content Filtering**: Local LLM allows for any content without restrictions
+- **Unrestricted Content Mode (Optional)**: Enable unrestricted story generation for mature/adult fiction
 - **Complete Control**: All your data stays under your control
+
+### Unrestricted Content Mode
+
+By default, Ollama/Llama models may include built-in content moderation that can refuse to generate certain mature or sensitive content. To enable unrestricted story generation:
+
+1. Add the following to your `.env.local` file:
+   ```env
+   OLLAMA_UNRESTRICTED_MODE=true
+   ```
+
+2. Restart your development server
+
+**⚠️ WARNING**: Enabling unrestricted mode removes content restrictions for story generation. This is intended for mature/adult fiction writing. You take full responsibility for all generated content. Use responsibly and in accordance with applicable laws.
+
+**Note**: Some model refusals may still occur due to:
+- Hard-coded filters in specific model variants
+- Ollama server-level filtering (rare)
+- Model fine-tuning that includes content restrictions
+
+If you continue to experience unwanted content refusals with unrestricted mode enabled, consider:
+- Using a different Llama model variant (e.g., community models without restrictions)
+- Checking Ollama server configuration
+- Using alternative models designed for creative fiction writing
 
 ## 📱 Mobile Access Guide
 
