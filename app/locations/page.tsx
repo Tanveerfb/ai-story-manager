@@ -106,16 +106,22 @@ export default function LocationsPage() {
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
+      <Box sx={{ my: { xs: 2, sm: 4 } }}>
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
-            mb: 3,
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: 1,
+            mb: 3,
           }}
         >
-          <Typography variant="h4" component="h1">
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
+          >
             Locations
           </Typography>
           <Button

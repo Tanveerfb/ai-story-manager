@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 
 // Default generation settings
 const DEFAULT_GENERATION_STYLE: "strict" | "creative" = "strict";
-const DEFAULT_MAX_TOKENS = 1500;
+const DEFAULT_MAX_TOKENS = 600;
 
 // Helper to parse in-context markers [ --- ]
 function parseContextMarkers(prompt: string): {
@@ -25,35 +25,33 @@ function parseContextMarkers(prompt: string): {
   return { cleanPrompt, contextNotes };
 }
 
-// Build enhanced prompt with context markers and revision instructions
-function buildEnhancedPrompt(
-  context: string,
+// Build the user instruction block — context is passed separately to the AI
+function buildUserInstruction(
   userPrompt: string,
   characterFocus: string | null,
   revisionInstructions: string | null,
   contextNotes: string[],
 ): string {
-  let prompt = context + "\n\n";
-
-  if (characterFocus) {
-    prompt += `=== FOCUS CHARACTER ===\n${characterFocus}\n\n`;
-  }
+  let instruction = "";
 
   if (contextNotes.length > 0) {
-    prompt += `=== AUTHOR'S CONTEXT NOTES ===\n`;
+    instruction += `AUTHOR'S SIDE NOTES:\n`;
     contextNotes.forEach((note, idx) => {
-      prompt += `${idx + 1}. ${note}\n`;
+      instruction += `${idx + 1}. ${note}\n`;
     });
-    prompt += "\n";
+    instruction += "\n";
+  }
+
+  if (characterFocus) {
+    instruction += `FOCUS CHARACTER: ${characterFocus}\n\n`;
   }
 
   if (revisionInstructions) {
-    prompt += `=== REVISION INSTRUCTIONS ===\n${revisionInstructions}\n\n`;
+    instruction += `REVISION: ${revisionInstructions}\n\n`;
   }
 
-  prompt += `=== USER REQUEST ===\n${userPrompt}\n\n`;
-
-  return prompt;
+  instruction += userPrompt;
+  return instruction.trim();
 }
 
 // POST /api/continue - Generate story continuation
@@ -164,11 +162,33 @@ async function generateContinuation(
   // Parse context markers from prompt
   const { cleanPrompt, contextNotes } = parseContextMarkers(userPrompt);
 
-  // Fetch recent story parts (last 3)
+  // Fetch ALL story parts — smart selection based on count
   const allParts = await getStoryParts();
-  const recentParts = allParts.slice(-3);
 
-  // Fetch all characters
+  // Fetch AI story memory (condensed summary of older parts)
+  const { data: memoryRow } = await supabase
+    .from("story_memory")
+    .select("content, part_count")
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  // Build parts for context:
+  // - If memory exists: use memory + last 2 full parts
+  // - If no memory and <= 6 parts: include all
+  // - If no memory and > 6 parts: include last 5 full parts
+  let contextParts: typeof allParts;
+  let memoryPrefix = "";
+
+  if (memoryRow?.content) {
+    const memorizedCount = memoryRow.part_count || 0;
+    contextParts = allParts.slice(-2); // last 2 full parts
+    memoryPrefix = `=== STORY SO FAR (condensed memory of parts 1–${memorizedCount}) ===\n${memoryRow.content}\n\n`;
+  } else {
+    contextParts = allParts.length <= 6 ? allParts : allParts.slice(-5);
+  }
+
+  // Fetch all characters with full profiles
   const characters = await getCharacters();
 
   // Fetch relationships
@@ -176,29 +196,77 @@ async function generateContinuation(
     .from("relationships")
     .select("*");
 
-  // Build context
-  const context = buildStoryContext(
-    recentParts,
-    characters,
-    relationships || [],
-  );
+  // Build context — story parts + characters + relationships
+  const storyContext =
+    memoryPrefix +
+    buildStoryContext(contextParts, characters, relationships || []);
 
-  // Build enhanced prompt with all features
-  const enhancedPrompt = buildEnhancedPrompt(
-    context,
+  // Build the user instruction — only the authoring direction, no context duplication
+  const userInstruction = buildUserInstruction(
     cleanPrompt,
     characterFocus,
     revisionInstructions,
     contextNotes,
   );
 
-  // Generate continuation with optional model, generation style, and max tokens
+  // Build POV profile if user is playing as a character
+  let playAsCharacterProfile: string | null = null;
+  let otherCharacterProfiles: string | null = null;
+
+  if (characterFocus && characters.length > 0) {
+    const playedChar = characters.find(
+      (c: any) => c.name.toLowerCase() === characterFocus.toLowerCase(),
+    );
+
+    if (playedChar) {
+      const lines: string[] = [];
+      lines.push(
+        `Name: ${playedChar.name} (${playedChar.role || "character"})`,
+      );
+      if (playedChar.description)
+        lines.push(`Appearance: ${playedChar.description}`);
+      if (playedChar.personality)
+        lines.push(`Personality: ${playedChar.personality}`);
+      if (playedChar.behavior_notes)
+        lines.push(`Behavior/Reactions: ${playedChar.behavior_notes}`);
+      if (playedChar.speech_patterns)
+        lines.push(`Speech Style: ${playedChar.speech_patterns}`);
+      if (playedChar.fears) lines.push(`Fears: ${playedChar.fears}`);
+      if (playedChar.motivations)
+        lines.push(`Motivations: ${playedChar.motivations}`);
+      if (playedChar.background)
+        lines.push(`Background: ${playedChar.background}`);
+      playAsCharacterProfile = lines.join("\n");
+    }
+
+    // Other characters — used by AI to portray them accurately
+    const others = characters.filter(
+      (c: any) => c.name.toLowerCase() !== characterFocus.toLowerCase(),
+    );
+
+    if (others.length > 0) {
+      otherCharacterProfiles = others
+        .map((c: any) => {
+          const parts: string[] = [`${c.name}:`];
+          if (c.personality) parts.push(`  Personality: ${c.personality}`);
+          if (c.behavior_notes) parts.push(`  Behavior: ${c.behavior_notes}`);
+          if (c.speech_patterns) parts.push(`  Speech: ${c.speech_patterns}`);
+          return parts.join("\n");
+        })
+        .join("\n\n");
+    }
+  }
+
+  // Generate continuation — pass context and user instruction SEPARATELY
+  // so ollama.ts can correctly detect opening scene vs continuation
   const continuation = await continueStory(
-    "",
-    enhancedPrompt,
+    storyContext,
+    userInstruction,
     model,
     generationStyle,
     maxTokens,
+    playAsCharacterProfile,
+    otherCharacterProfiles,
   );
 
   return {

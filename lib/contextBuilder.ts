@@ -6,6 +6,11 @@ interface Character {
   personality?: any;
   physical_traits?: any;
   background?: string;
+  behavior_notes?: string;
+  speech_patterns?: string;
+  fears?: string;
+  motivations?: string;
+  arc_notes?: string;
 }
 
 interface Relationship {
@@ -26,15 +31,15 @@ interface StoryPart {
 export function buildStoryContext(
   recentParts: StoryPart[],
   characters: Character[],
-  relationships: Relationship[]
+  relationships: Relationship[],
 ): string {
-  let context = '';
+  let context = "";
 
   // Add recent story parts
   if (recentParts.length > 0) {
-    context += '=== RECENT STORY ===\n\n';
+    context += "=== RECENT STORY ===\n\n";
     for (const part of recentParts) {
-      context += `Part ${part.part_number}${part.title ? ': ' + part.title : ''}\n`;
+      context += `Part ${part.part_number}${part.title ? ": " + part.title : ""}\n`;
       if (part.summary) {
         context += `Summary: ${part.summary}\n`;
       }
@@ -44,16 +49,16 @@ export function buildStoryContext(
 
   // Add characters
   if (characters.length > 0) {
-    context += '=== CHARACTERS ===\n\n';
+    context += "=== CHARACTERS ===\n\n";
     context += formatCharactersForPrompt(characters);
-    context += '\n';
+    context += "\n";
   }
 
   // Add relationships
   if (relationships.length > 0) {
-    context += '=== RELATIONSHIPS ===\n\n';
+    context += "=== RELATIONSHIPS ===\n\n";
     context += formatRelationshipsForPrompt(relationships, characters);
-    context += '\n';
+    context += "\n";
   }
 
   return context;
@@ -67,57 +72,74 @@ export function formatCharactersForPrompt(characters: Character[]): string {
         charStr += `  Description: ${char.description}\n`;
       }
       if (char.personality) {
-        const personality = typeof char.personality === 'string' 
-          ? char.personality 
-          : JSON.stringify(char.personality);
+        const personality =
+          typeof char.personality === "string"
+            ? char.personality
+            : JSON.stringify(char.personality);
         charStr += `  Personality: ${personality}\n`;
       }
       if (char.physical_traits) {
-        const physical = typeof char.physical_traits === 'string'
-          ? char.physical_traits
-          : JSON.stringify(char.physical_traits);
+        const physical =
+          typeof char.physical_traits === "string"
+            ? char.physical_traits
+            : JSON.stringify(char.physical_traits);
         charStr += `  Physical: ${physical}\n`;
       }
       if (char.background) {
         charStr += `  Background: ${char.background}\n`;
       }
+      if (char.behavior_notes) {
+        charStr += `  Behavior/Reactions: ${char.behavior_notes}\n`;
+      }
+      if (char.speech_patterns) {
+        charStr += `  Speech Style: ${char.speech_patterns}\n`;
+      }
+      if (char.fears) {
+        charStr += `  Fears: ${char.fears}\n`;
+      }
+      if (char.motivations) {
+        charStr += `  Motivations: ${char.motivations}\n`;
+      }
+      if (char.arc_notes) {
+        charStr += `  Story Arc: ${char.arc_notes}\n`;
+      }
       return charStr;
     })
-    .join('\n');
+    .join("\n");
 }
 
 export function formatRelationshipsForPrompt(
   relationships: Relationship[],
-  characters: Character[]
+  characters: Character[],
 ): string {
   const charMap = new Map(characters.map((c) => [c.id, c.name]));
-  
+
   return relationships
     .map((rel) => {
-      const char1Name = charMap.get(rel.character_1_id) || 'Unknown';
-      const char2Name = charMap.get(rel.character_2_id) || 'Unknown';
+      const char1Name = charMap.get(rel.character_1_id) || "Unknown";
+      const char2Name = charMap.get(rel.character_2_id) || "Unknown";
       let relStr = `${char1Name} <-> ${char2Name}: ${rel.relationship_type}`;
       if (rel.description) {
         relStr += `\n  ${rel.description}`;
       }
       return relStr;
     })
-    .join('\n\n');
+    .join("\n\n");
 }
 
 export function buildContinuationPrompt(
   userPrompt: string,
   context: string,
-  focusCharacter?: string
+  focusCharacter?: string,
 ): string {
-  let prompt = context + '\n';
-  
+  let prompt = context + "\n";
+
   if (focusCharacter) {
     prompt += `=== FOCUS CHARACTER ===\n${focusCharacter}\n\n`;
   }
-  
+
   prompt += `=== USER REQUEST ===\n${userPrompt}\n\n`;
   prompt += `Continue the story naturally, maintaining character consistency and respecting the established context:`;
-  
+
   return prompt;
 }

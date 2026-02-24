@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Container,
   Typography,
@@ -14,12 +14,12 @@ import {
   Chip,
   Card,
   CardContent,
-} from '@mui/material';
+} from "@mui/material";
 
 export default function TimelinePage() {
   const [events, setEvents] = useState<any[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<any[]>([]);
-  const [eventTypeFilter, setEventTypeFilter] = useState('');
+  const [eventTypeFilter, setEventTypeFilter] = useState("");
 
   useEffect(() => {
     fetchEvents();
@@ -29,7 +29,9 @@ export default function TimelinePage() {
     let filtered = events;
 
     if (eventTypeFilter) {
-      filtered = filtered.filter((event) => event.event_type === eventTypeFilter);
+      filtered = filtered.filter(
+        (event) => event.event_type === eventTypeFilter,
+      );
     }
 
     setFilteredEvents(filtered);
@@ -37,34 +39,41 @@ export default function TimelinePage() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('/api/events');
+      const response = await fetch("/api/events");
       if (response.ok) {
         const data = await response.json();
         setEvents(data);
         setFilteredEvents(data);
       }
     } catch (error) {
-      console.error('Failed to fetch events:', error);
+      console.error("Failed to fetch events:", error);
     }
   };
 
-  const getEventColor = (type: string): 'primary' | 'secondary' | 'error' | 'default' => {
+  const getEventColor = (
+    type: string,
+  ): "primary" | "secondary" | "error" | "default" => {
     switch (type) {
-      case 'dialogue':
-        return 'primary';
-      case 'action':
-        return 'secondary';
-      case 'revelation':
-        return 'error';
+      case "dialogue":
+        return "primary";
+      case "action":
+        return "secondary";
+      case "revelation":
+        return "error";
       default:
-        return 'default';
+        return "default";
     }
   };
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+      <Box sx={{ my: { xs: 2, sm: 4 } }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{ fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
+        >
           Events Timeline
         </Typography>
 
@@ -87,7 +96,7 @@ export default function TimelinePage() {
         </Grid>
 
         {filteredEvents.length === 0 ? (
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Paper sx={{ p: 3, textAlign: "center" }}>
             <Typography color="text.secondary">
               No events found. Import a story to extract events.
             </Typography>
@@ -98,7 +107,14 @@ export default function TimelinePage() {
               <Grid item xs={12} key={event.id}>
                 <Card>
                   <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
+                        mb: 2,
+                      }}
+                    >
                       <Chip
                         label={event.event_type}
                         size="small"
@@ -114,11 +130,15 @@ export default function TimelinePage() {
                       {event.description}
                     </Typography>
                     {event.content && (
-                      <Typography variant="body2" color="text.secondary" paragraph>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        paragraph
+                      >
                         {event.content}
                       </Typography>
                     )}
-                    <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                    <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
                       {event.characters && (
                         <Typography variant="caption">
                           Character: {event.characters.name}

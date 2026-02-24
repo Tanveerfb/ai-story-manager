@@ -12,7 +12,13 @@ import {
   Chip,
   Avatar,
   Grid,
+  Button,
+  CircularProgress,
+  TextField,
+  Collapse,
+  Alert,
 } from "@mui/material";
+import BrushIcon from "@mui/icons-material/Brush";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -34,6 +40,35 @@ export default function CharacterDetailPage() {
   const [character, setCharacter] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
+
+  // Portrait generation
+  const [portraitLoading, setPortraitLoading] = useState(false);
+  const [portraitError, setPortraitError] = useState<string | null>(null);
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [showCustomPrompt, setShowCustomPrompt] = useState(false);
+
+  const handleGeneratePortrait = async () => {
+    if (!character) return;
+    setPortraitLoading(true);
+    setPortraitError(null);
+    try {
+      const res = await fetch("/api/generate-portrait", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          characterId: character.id,
+          customPrompt: customPrompt.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setCharacter((prev: any) => ({ ...prev, avatar_url: data.portrait }));
+    } catch (err: any) {
+      setPortraitError(err.message || "Failed to generate portrait");
+    } finally {
+      setPortraitLoading(false);
+    }
+  };
 
   useEffect(() => {
     const id = params.id as string;
@@ -78,20 +113,29 @@ export default function CharacterDetailPage() {
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Grid container spacing={3}>
-            <Grid item>
-              <Avatar
-                src={character.avatar_url}
-                alt={character.name}
-                sx={{ width: 120, height: 120 }}
-              >
-                {character.name[0]}
-              </Avatar>
+      <Box sx={{ my: { xs: 2, sm: 4 } }}>
+        <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+          <Grid container spacing={2}>
+            <Grid item xs="auto">
+              <Box sx={{ position: "relative", display: "inline-block" }}>
+                <Avatar
+                  src={character.avatar_url}
+                  alt={character.name}
+                  sx={{
+                    width: { xs: 100, sm: 160 },
+                    height: { xs: 100, sm: 160 },
+                  }}
+                >
+                  {character.name[0]}
+                </Avatar>
+              </Box>
             </Grid>
             <Grid item xs>
-              <Typography variant="h4" gutterBottom>
+              <Typography
+                variant="h4"
+                gutterBottom
+                sx={{ fontSize: { xs: "1.4rem", sm: "2.125rem" } }}
+              >
                 {character.name}
               </Typography>
               <Chip label={character.role} color="primary" sx={{ mb: 2 }} />
@@ -99,6 +143,66 @@ export default function CharacterDetailPage() {
                 <Typography variant="body1" paragraph>
                   {character.description}
                 </Typography>
+              )}
+
+              {/* Portrait generation */}
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 1,
+                  alignItems: "center",
+                  mt: 1,
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={
+                    portraitLoading ? (
+                      <CircularProgress size={14} />
+                    ) : (
+                      <BrushIcon />
+                    )
+                  }
+                  onClick={handleGeneratePortrait}
+                  disabled={portraitLoading}
+                >
+                  {portraitLoading
+                    ? "Generating portrait…"
+                    : character.avatar_url
+                      ? "Regenerate Portrait"
+                      : "Generate Portrait"}
+                </Button>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setShowCustomPrompt((v) => !v)}
+                >
+                  {showCustomPrompt ? "Hide custom prompt" : "Custom prompt"}
+                </Button>
+              </Box>
+              <Collapse in={showCustomPrompt}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  multiline
+                  rows={2}
+                  placeholder="e.g. long silver hair, red eyes, school uniform, confident pose"
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  sx={{ mt: 1, maxWidth: 480 }}
+                  helperText="Override the auto-generated prompt with your own SD description"
+                />
+              </Collapse>
+              {portraitError && (
+                <Alert
+                  severity="error"
+                  sx={{ mt: 1 }}
+                  onClose={() => setPortraitError(null)}
+                >
+                  {portraitError}
+                </Alert>
               )}
             </Grid>
           </Grid>
@@ -108,6 +212,7 @@ export default function CharacterDetailPage() {
           <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
             <Tab label="Overview" />
             <Tab label="Traits" />
+            <Tab label="Behavior" />
             <Tab label="Relationships" />
           </Tabs>
 
@@ -164,6 +269,28 @@ export default function CharacterDetailPage() {
           </TabPanel>
 
           <TabPanel value={tabValue} index={2}>
+            {[
+              { label: "Behavior & Reactions", key: "behavior_notes" },
+              { label: "Speech Style", key: "speech_patterns" },
+              { label: "Fears", key: "fears" },
+              { label: "Motivations", key: "motivations" },
+              { label: "Relationships Summary", key: "relationships_summary" },
+              { label: "Story Arc Notes", key: "arc_notes" },
+            ].map(({ label, key }) => (
+              <Box key={key} sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  {label}
+                </Typography>
+                {character[key] ? (
+                  <Typography paragraph>{character[key]}</Typography>
+                ) : (
+                  <Typography color="text.secondary">Not recorded.</Typography>
+                )}
+              </Box>
+            ))}
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={3}>
             <Typography variant="h6" gutterBottom>
               Relationships
             </Typography>

@@ -43,6 +43,7 @@ import SideNotesPanel from "@/components/continue/SideNotesPanel";
 import ModelSelector from "@/components/continue/ModelSelector";
 import EntityManager from "@/components/continue/EntityManager";
 import LocationManager from "@/components/continue/LocationManager";
+import WorldSwitcher from "@/components/WorldSwitcher";
 import { DEFAULT_AI_MODEL } from "@/lib/constants";
 
 export default function ContinuePage() {
@@ -52,6 +53,8 @@ export default function ContinuePage() {
   const [characters, setCharacters] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL); // Use constant for default model
+  const [currentWorldId, setCurrentWorldId] = useState<string | null>(null);
+  const [currentWorldName, setCurrentWorldName] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [continuation, setContinuation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export default function ContinuePage() {
   const [generationStyle, setGenerationStyle] = useState<"strict" | "creative">(
     "strict",
   ); // Default to 'strict'
-  const [maxTokens, setMaxTokens] = useState(1500); // Default max tokens
+  const [maxTokens, setMaxTokens] = useState(600); // Default max tokens
 
   // Advanced state
   const [status, setStatus] = useState("Ready");
@@ -80,11 +83,21 @@ export default function ContinuePage() {
   );
   const [summaryLoading, setSummaryLoading] = useState(false);
 
+  // Story memory state
+  const [storyMemory, setStoryMemory] = useState<{
+    content: string;
+    part_count: number;
+    generated_at: string;
+  } | null>(null);
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [memoryExpanded, setMemoryExpanded] = useState(false);
+
   useEffect(() => {
     fetchCharacters();
     fetchLocations();
     fetchRecentParts();
     fetchRecentEventsSummary();
+    fetchStoryMemory();
   }, []);
 
   const fetchCharacters = async () => {
@@ -136,6 +149,53 @@ export default function ContinuePage() {
       setRecentEventsSummary("Unable to generate summary at this time.");
     } finally {
       setSummaryLoading(false);
+    }
+  };
+
+  const fetchStoryMemory = async () => {
+    try {
+      const res = await fetch("/api/story-memory");
+      if (res.ok) {
+        const data = await res.json();
+        setStoryMemory(data.memory);
+      }
+    } catch {
+      // No memory yet — silent
+    }
+  };
+
+  const handleGenerateMemory = async () => {
+    setMemoryLoading(true);
+    try {
+      const res = await fetch("/api/story-memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: selectedModel }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStoryMemory(data.memory);
+        setMemoryExpanded(true);
+        setSuccess(
+          "Story memory generated — AI will use this to keep context.",
+        );
+      } else {
+        const err = await res.json();
+        setError(err.error || "Failed to generate memory");
+      }
+    } catch {
+      setError("Failed to generate memory");
+    } finally {
+      setMemoryLoading(false);
+    }
+  };
+
+  const handleClearMemory = async () => {
+    try {
+      await fetch("/api/story-memory", { method: "DELETE" });
+      setStoryMemory(null);
+    } catch {
+      setError("Failed to clear memory");
     }
   };
 
@@ -312,10 +372,68 @@ export default function ContinuePage() {
 
     setLoading(true);
     setError(null);
-    setStatus("Inserting into story...");
 
     try {
-      // Get the next part number
+      // Step 1: Extract & merge entities first
+      setStatus("Extracting characters and locations...");
+
+      let entitySummary = "";
+      try {
+        const extractResponse = await fetch("/api/extract-entities", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: continuation }),
+        });
+
+        if (extractResponse.ok) {
+          const extracted = await extractResponse.json();
+
+          const entityExists = (list: any[], name: string) =>
+            list.some((item) => item.name.toLowerCase() === name.toLowerCase());
+
+          let addedChars = 0;
+          let addedLocs = 0;
+
+          for (const char of extracted.characters || []) {
+            if (!entityExists(characters, char.name)) {
+              const r = await fetch("/api/characters", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(char),
+              });
+              if (r.ok) addedChars++;
+            }
+          }
+
+          for (const loc of extracted.locations || []) {
+            if (!entityExists(locations, loc.name)) {
+              const r = await fetch("/api/locations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(loc),
+              });
+              if (r.ok) addedLocs++;
+            }
+          }
+
+          await fetchCharacters();
+          await fetchLocations();
+
+          const parts = [];
+          if (addedChars > 0)
+            parts.push(`${addedChars} character${addedChars > 1 ? "s" : ""}`);
+          if (addedLocs > 0)
+            parts.push(`${addedLocs} location${addedLocs > 1 ? "s" : ""}`);
+          if (parts.length > 0)
+            entitySummary = ` (added ${parts.join(" and ")})`;
+        }
+      } catch {
+        // Entity extraction failing should not block story insertion
+      }
+
+      // Step 2: Insert the story part
+      setStatus("Inserting into story...");
+
       const partsResponse = await fetch("/api/story-parts");
       const parts = await partsResponse.json();
       const nextPartNumber =
@@ -323,23 +441,20 @@ export default function ContinuePage() {
           ? Math.max(...parts.map((p: any) => p.part_number)) + 1
           : 1;
 
-      // Save as a new story part
       const response = await fetch("/api/story-parts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           part_number: nextPartNumber,
-          title: `Continuation - Part ${nextPartNumber}`,
+          title: `Part ${nextPartNumber}`,
           content: continuation,
           word_count: continuation.split(/\s+/).length,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to insert into story");
-      }
+      if (!response.ok) throw new Error("Failed to insert into story");
 
-      setSuccess("Story continuation inserted successfully!");
+      setSuccess(`Story part ${nextPartNumber} saved${entitySummary}.`);
       handleClear();
       setStatus("Ready");
       fetchRecentParts();
@@ -571,22 +686,140 @@ export default function ContinuePage() {
   ];
 
   return (
-    <Container maxWidth="xl">
-      <Box sx={{ my: 4 }}>
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+    <Container
+      maxWidth="xl"
+      disableGutters
+      sx={{ px: { xs: 1, sm: 2, md: 3 } }}
+    >
+      <Box sx={{ my: { xs: 2, sm: 4 } }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
           <AutoAwesomeIcon
-            sx={{ fontSize: 40, mr: 2, color: "primary.main" }}
+            sx={{
+              fontSize: { xs: 28, sm: 40 },
+              flexShrink: 0,
+              color: "primary.main",
+            }}
           />
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography
+              variant="h4"
+              component="h1"
+              gutterBottom
+              sx={{ fontSize: { xs: "1.4rem", sm: "2.125rem" } }}
+            >
               AI-First Story Creation
             </Typography>
-            <Typography variant="body1" color="text.secondary">
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ display: { xs: "none", sm: "block" } }}
+            >
               Create stories from scratch with AI assistance - build narrative,
               entities, and locations live
             </Typography>
           </Box>
         </Box>
+
+        {/* World Switcher */}
+        <Box sx={{ mb: 3 }}>
+          <WorldSwitcher
+            currentWorldId={currentWorldId}
+            onWorldChange={(id, name) => {
+              setCurrentWorldId(id);
+              setCurrentWorldName(name);
+            }}
+          />
+        </Box>
+
+        {/* AI Story Memory */}
+        <Paper variant="outlined" sx={{ mb: 3, overflow: "hidden" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              px: 2,
+              py: 1.5,
+              cursor: storyMemory ? "pointer" : "default",
+              bgcolor: storyMemory ? "background.default" : "transparent",
+            }}
+            onClick={() => storyMemory && setMemoryExpanded((v) => !v)}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <AutoAwesomeIcon
+                fontSize="small"
+                color={storyMemory ? "primary" : "disabled"}
+              />
+              <Typography
+                variant="subtitle2"
+                color={storyMemory ? "text.primary" : "text.secondary"}
+              >
+                {storyMemory
+                  ? `AI Story Memory — ${storyMemory.part_count} parts condensed`
+                  : "AI Story Memory — not generated yet"}
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              {storyMemory && (
+                <Button
+                  size="small"
+                  color="error"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearMemory();
+                  }}
+                  sx={{ minWidth: 0, px: 1 }}
+                >
+                  Clear
+                </Button>
+              )}
+              <Button
+                size="small"
+                variant={storyMemory ? "outlined" : "contained"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleGenerateMemory();
+                }}
+                disabled={memoryLoading}
+                startIcon={
+                  memoryLoading ? <CircularProgress size={14} /> : undefined
+                }
+              >
+                {memoryLoading
+                  ? "Generating…"
+                  : storyMemory
+                    ? "Regenerate"
+                    : "Generate Memory"}
+              </Button>
+            </Box>
+          </Box>
+          {memoryExpanded && storyMemory && (
+            <Box
+              sx={{
+                px: 2,
+                pb: 2,
+                borderTop: "1px solid",
+                borderColor: "divider",
+              }}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+                sx={{ mt: 1, mb: 0.5 }}
+              >
+                Condensed on{" "}
+                {new Date(storyMemory.generated_at).toLocaleString()}
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ whiteSpace: "pre-wrap", color: "text.secondary" }}
+              >
+                {storyMemory.content}
+              </Typography>
+            </Box>
+          )}
+        </Paper>
 
         {/* Info Alert */}
         <Alert severity="info" icon={<InfoIcon />} sx={{ mb: 3 }}>
@@ -661,7 +894,7 @@ export default function ContinuePage() {
             )}
 
             {/* Main Prompt Input */}
-            <Paper sx={{ p: 3, mb: 3 }}>
+            <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Your Prompt
               </Typography>
@@ -681,7 +914,7 @@ export default function ContinuePage() {
                   sx={{ display: "flex", alignItems: "center", gap: 1 }}
                 >
                   Generation Style
-                  <Tooltip title="Strict mode generates only what you request (no filler). Creative mode allows natural flow and embellishment.">
+                  <Tooltip title="Reword: AI renders your exact narrative intent as prose — no inventions, no extras. AI expands: AI uses your prompt as a starting point and builds naturally from there.">
                     <InfoIcon fontSize="small" color="action" />
                   </Tooltip>
                 </Typography>
@@ -697,9 +930,9 @@ export default function ContinuePage() {
                   size="small"
                   sx={{ mb: 2 }}
                 >
-                  <ToggleButton value="strict">Strict (no filler)</ToggleButton>
+                  <ToggleButton value="strict">Reword my intent</ToggleButton>
                   <ToggleButton value="creative">
-                    Creative (filler allowed)
+                    AI expands freely
                   </ToggleButton>
                 </ToggleButtonGroup>
 
@@ -709,11 +942,13 @@ export default function ContinuePage() {
                 <Slider
                   value={maxTokens}
                   onChange={(e, newValue) => setMaxTokens(newValue as number)}
-                  min={500}
+                  min={100}
                   max={3000}
-                  step={100}
+                  step={50}
                   disabled={loading}
                   marks={[
+                    { value: 100, label: "100" },
+                    { value: 300, label: "300" },
                     { value: 500, label: "500" },
                     { value: 1500, label: "1500" },
                     { value: 3000, label: "3000" },
@@ -727,18 +962,26 @@ export default function ContinuePage() {
                 fullWidth
                 multiline
                 rows={6}
-                placeholder="Describe what should happen next in the story...
-                
-Use [ --- ] markers for in-context notes, e.g.:
-[ --- Make this scene intense and emotional ]
-Duke confronts the villain..."
+                placeholder={
+                  characterFocus
+                    ? `You are playing as ${characterFocus}. Describe what ${characterFocus} does, says, thinks, or experiences next.\n\nThe AI will write it from ${characterFocus}'s POV and portray all other characters based on their saved profiles.\n\nExample: "${characterFocus} walks into the room and notices something feels wrong. She scans the faces around her."`
+                    : generationStyle === "strict"
+                      ? `Describe your narrative intent — what you want to happen next. The AI will render it as story prose without adding anything extra.\n\nExample: "Rhea enters the marketplace for the first time. She is overwhelmed by the noise and smells but tries to appear calm."\n\nUse [ --- note ] for inline instructions.`
+                      : `Describe what should happen next in the story...\n\nUse [ --- ] markers for in-context notes, e.g.:\n[ --- Make this scene intense and emotional ]\nDuke confronts the villain...`
+                }
+                label={
+                  characterFocus
+                    ? `Playing as ${characterFocus}`
+                    : "Your Prompt"
+                }
                 value={userPrompt}
                 onChange={(e) => setUserPrompt(e.target.value)}
                 disabled={loading}
+                InputLabelProps={{ shrink: true }}
               />
 
               <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
-                <FormControl sx={{ minWidth: 200 }}>
+                <FormControl sx={{ minWidth: { xs: "100%", sm: 200 } }}>
                   <InputLabel>Play as Character</InputLabel>
                   <Select
                     value={characterFocus}
@@ -761,7 +1004,7 @@ Duke confronts the villain..."
                   onClick={handleGenerate}
                   disabled={loading || !userPrompt.trim()}
                   startIcon={<AutoAwesomeIcon />}
-                  sx={{ flex: 1, minWidth: 200 }}
+                  sx={{ flex: 1, minWidth: { xs: "100%", sm: 160 } }}
                 >
                   Generate
                 </Button>
@@ -845,7 +1088,7 @@ Duke confronts the villain..."
 
             {/* Generated Output */}
             {continuation && (
-              <Paper sx={{ p: 3, mb: 3 }}>
+              <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
                 <Box
                   sx={{
                     display: "flex",

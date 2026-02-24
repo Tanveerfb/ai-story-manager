@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -16,37 +16,44 @@ import {
   Switch,
   FormControlLabel,
   Grid,
-} from '@mui/material';
-import { useThemeMode } from '@/components/ThemeProvider';
+} from "@mui/material";
+import { useThemeMode } from "@/components/ThemeProvider";
 
 export default function SettingsPage() {
   const { mode, toggleTheme } = useThemeMode();
-  const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
-  const [ollamaModel, setOllamaModel] = useState('llama3.1:70b');
-  const [temperature, setTemperature] = useState('0.82');
-  const [topP, setTopP] = useState('0.92');
-  const [topK, setTopK] = useState('50');
-  const [maxTokens, setMaxTokens] = useState('1500');
-  const [numCtx, setNumCtx] = useState('8192');
-  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
+  const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
+  const [ollamaModel, setOllamaModel] = useState("llama3.1:70b");
+  const [temperature, setTemperature] = useState("0.82");
+  const [topP, setTopP] = useState("0.92");
+  const [topK, setTopK] = useState("50");
+  const [maxTokens, setMaxTokens] = useState("1500");
+  const [numCtx, setNumCtx] = useState("8192");
+  const [connectionStatus, setConnectionStatus] = useState<
+    "unknown" | "connected" | "disconnected"
+  >("unknown");
 
   const testConnection = async () => {
     try {
       const response = await fetch(`${ollamaUrl}/api/tags`);
       if (response.ok) {
-        setConnectionStatus('connected');
+        setConnectionStatus("connected");
       } else {
-        setConnectionStatus('disconnected');
+        setConnectionStatus("disconnected");
       }
     } catch (error) {
-      setConnectionStatus('disconnected');
+      setConnectionStatus("disconnected");
     }
   };
 
   return (
     <Container maxWidth="md">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+      <Box sx={{ my: { xs: 2, sm: 4 } }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{ fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
+        >
           Settings
         </Typography>
 
@@ -55,7 +62,9 @@ export default function SettingsPage() {
             Appearance
           </Typography>
           <FormControlLabel
-            control={<Switch checked={mode === 'dark'} onChange={toggleTheme} />}
+            control={
+              <Switch checked={mode === "dark"} onChange={toggleTheme} />
+            }
             label="Dark Mode"
           />
         </Paper>
@@ -82,13 +91,28 @@ export default function SettingsPage() {
             sx={{ mb: 2 }}
           />
 
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              alignItems: "center",
+              flexWrap: "wrap",
+              mb: 2,
+            }}
+          >
             <Button variant="contained" onClick={testConnection}>
               Test Connection
             </Button>
-            {connectionStatus !== 'unknown' && (
-              <Alert severity={connectionStatus === 'connected' ? 'success' : 'error'}>
-                {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
+            {connectionStatus !== "unknown" && (
+              <Alert
+                severity={
+                  connectionStatus === "connected" ? "success" : "error"
+                }
+                sx={{ py: 0 }}
+              >
+                {connectionStatus === "connected"
+                  ? "Connected"
+                  : "Disconnected"}
               </Alert>
             )}
           </Box>
@@ -99,7 +123,8 @@ export default function SettingsPage() {
             AI Generation Parameters
           </Typography>
           <Typography variant="body2" color="text.secondary" paragraph>
-            These settings control the quality and creativity of AI-generated content.
+            These settings control the quality and creativity of AI-generated
+            content.
           </Typography>
 
           <Grid container spacing={2}>
@@ -165,7 +190,8 @@ export default function SettingsPage() {
           </Grid>
 
           <Alert severity="info" sx={{ mt: 3 }}>
-            Note: These settings are informational only. To change them, update your .env file and restart the application.
+            Note: These settings are informational only. To change them, update
+            your .env file and restart the application.
           </Alert>
         </Paper>
       </Box>

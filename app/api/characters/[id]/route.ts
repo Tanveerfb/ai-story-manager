@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCharacterById } from '@/lib/supabase';
-import { supabase } from '@/lib/supabase';
+import { NextRequest, NextResponse } from "next/server";
+import { getCharacterById } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await context.params;
@@ -12,24 +12,24 @@ export async function GET(
     return NextResponse.json(character);
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch character' },
-      { status: 500 }
+      { error: error.message || "Failed to fetch character" },
+      { status: 500 },
     );
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await context.params;
     const body = await request.json();
 
     const { data, error } = await supabase
-      .from('characters')
+      .from("characters")
       .update(body)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -38,8 +38,28 @@ export async function PUT(
     return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || 'Failed to update character' },
-      { status: 500 }
+      { error: error.message || "Failed to update character" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await context.params;
+
+    const { error } = await supabase.from("characters").delete().eq("id", id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Failed to delete character" },
+      { status: 500 },
     );
   }
 }

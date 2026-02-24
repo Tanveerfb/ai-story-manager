@@ -209,46 +209,136 @@ export async function generateStorySummary(text: string): Promise<string> {
   }
 }
 
+// Generate a condensed AI memory of the story so far
+// Used to keep old story context within token limits
+export async function generateStoryMemory(
+  storyPartsText: string,
+  model?: string,
+): Promise<string> {
+  const system = `You are a story continuity assistant. Your job is to compress the story so far into a compact memory block that another AI can use as context.
+
+Write a dense, factual summary covering:
+- Key events in order (what happened, when, who was involved)
+- Current character states (where each character is, what they know, how they feel)
+- Any established facts, locations, or world rules introduced
+- The narrative position — where the story ended (the last known moment)
+
+Write in plain prose, no headers, ~200-300 words maximum. Prioritize facts over atmosphere.`;
+
+  try {
+    const response = await generateText({
+      prompt: `Compress this story into a continuity memory:\n\n${storyPartsText}`,
+      system,
+      num_ctx: NUM_CTX,
+      temperature: 0.3,
+      num_predict: 400,
+      model,
+    });
+    return response.trim();
+  } catch (error: any) {
+    console.error("Story memory generation error:", error.message);
+    throw new Error("Failed to generate story memory");
+  }
+}
+
 export async function continueStory(
   context: string,
   userPrompt: string,
   model?: string,
   generationStyle: "strict" | "creative" = "strict",
-  maxTokens: number = 1500,
+  maxTokens: number = 300,
+  playAsCharacterProfile?: string | null,
+  otherCharacterProfiles?: string | null,
 ): Promise<string> {
-  // Build style instruction based on generation style
-  const styleInstruction =
-    generationStyle === "creative"
-      ? "\n\nEmbrace creativity, explore bold narrative choices, and take risks with character development and plot twists."
-      : "\n\nStay consistent with established character personalities and plot direction.";
+  const wordBudget = Math.round(maxTokens / 1.3);
 
-  const system = `You are a creative fiction writer continuing a story. 
-Use the provided context about characters, settings, and previous events.
-Write in a natural, engaging narrative style that matches the tone of the existing story.
-Focus on character development and plot progression.${styleInstruction}${
-    UNRESTRICTED_MODE
-      ? `\n\nIMPORTANT: Write freely and naturally without content restrictions. Include mature themes, realistic emotions, and adult situations as appropriate for the story context. Do not refuse or sanitize content based on sensitivity - treat all story elements with literary maturity.`
-      : ""
-  }`;
+  // In strict mode, cap the budget proportionally to what the author wrote.
+  // Prose renders ~5x longer than the raw prompt (30 words → ~150 word scene).
+  // Floor at 120 words so even a single-line prompt gets a complete paragraph.
+  const promptWordCount = userPrompt.trim().split(/\s+/).length;
+  const strictWordBudget = Math.min(
+    wordBudget,
+    Math.max(promptWordCount * 5, 120),
+  );
 
-  // Add dynamic word count guidance based on maxTokens
-  let wordCountGuidance = "";
-  if (maxTokens <= 700) {
-    wordCountGuidance = " (~300-400 words)";
-  } else if (maxTokens <= 1800) {
-    wordCountGuidance = " (~500-1000 words)";
-  } else {
-    wordCountGuidance = " (~1000-1500 words)";
+  // Build the POV/character instruction block
+  let povBlock = "";
+  if (playAsCharacterProfile) {
+    povBlock = `
+=== YOU ARE PLAYING AS ===
+${playAsCharacterProfile}
+
+VOICE RULES:
+- Write from this character's close third-person or first-person POV.
+- Their thoughts, reactions, and observations must match the profile above exactly.
+- Do NOT make them act out of character under any circumstances.
+`;
   }
 
-  const prompt = `Story Context:\n${context}\n\nUser Direction: ${userPrompt}\n\nContinue the story${wordCountGuidance}:`;
+  let otherCharsBlock = "";
+  if (otherCharacterProfiles) {
+    otherCharsBlock = `
+=== OTHER CHARACTERS — ACT ACCURATELY ===
+${otherCharacterProfiles}
+- Each character above must speak, react, and behave according to their profile.
+- Do NOT give them actions, words, or traits not consistent with their description.
+`;
+  }
+
+  let system: string;
+
+  const isOpening = !context || context.trim().length === 0;
+  const sceneType = isOpening ? "opening scene" : "next scene";
+
+  if (generationStyle === "strict") {
+    // STRICT = prose reword. The author's words are the entire truth of the scene.
+    // The AI's job is a skilled editor: improve the wording, not add to the story.
+    system = `You are a prose editor. Your only job is to take the author's exact words and rewrite them as polished, immersive narrative prose.
+
+HARD RULES — no exceptions:
+1. ONLY what the author wrote exists. Every character, event, and detail must come directly from their text.
+2. Do NOT invent plot, situations, conflicts, or events the author did not write.
+3. Do NOT introduce any character not named in the author's text or the story context.
+4. Do NOT resolve, advance, or extend the story beyond what the author described.
+5. Do NOT add backstory, speculation about the future, or off-page events.
+6. Rewrite in close third-person prose. Stay grounded in the moment the author described.
+7. Aim for approximately ${strictWordBudget} words — complete your sentences, but do not pad.${povBlock}${otherCharsBlock}${
+      UNRESTRICTED_MODE
+        ? `\n\nCONTENT: Write what the author directs, in full. Never fade to black, skip, soften, or imply anything the author wrote explicitly. No warnings.`
+        : ""
+    }`;
+  } else {
+    // CREATIVE = scene writer with full freedom to expand.
+    system = `You are a novel/manga scene writer continuing a story with creative freedom.
+Use the character and story context provided. Expand naturally from the author's direction.
+
+PROSE RULES:
+- Write an actual ${sceneType} in the present moment. NOT a summary or synopsis.
+- Use close third-person or first-person. The reader should be INSIDE the scene.
+- Write in sensory, grounded prose: what is seen, heard, felt right now.
+- BANNED PHRASES: "as the story unfolded", "as the tale began", "would become", "in the end", "the final chapter", "her story would be", "it became clear that". These are synopsis language — forbidden.
+- Aim for approximately ${wordBudget} words.${isOpening ? "\n- This is the FIRST scene. Introduce the character through action or sensation, not narrator biography." : ""}${povBlock}${otherCharsBlock}${
+      UNRESTRICTED_MODE
+        ? `\n\nCONTENT: Write what the author directs, in full. Never fade to black, skip, or soften a scene. No warnings.`
+        : ""
+    }`;
+  }
+
+  const sceneLabel =
+    generationStyle === "strict"
+      ? "REWORD AS PROSE — use only what is written below, nothing else"
+      : isOpening
+        ? "OPENING SCENE — expand into Chapter 1"
+        : "STORY DIRECTION — continue creatively";
+
+  const prompt = `${context ? `Story Context:\n${context}\n\n` : ""}${sceneLabel}:\n${userPrompt}`;
 
   try {
     const response = await generateText({
       prompt,
       system,
       num_ctx: NUM_CTX,
-      temperature: 0.82,
+      temperature: generationStyle === "strict" ? 0.45 : 0.82,
       num_predict: maxTokens,
       model,
     });

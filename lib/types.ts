@@ -6,6 +6,13 @@ export interface Character {
   personality?: string | null;
   physical_traits?: string | null; // JSON string of traits array
   traits?: string[]; // Temporary array before saving
+  // Behavioral profile
+  behavior_notes?: string | null; // How they react in different situations
+  speech_patterns?: string | null; // How they talk, vocabulary, tone
+  fears?: string | null; // What frightens or unsettles them
+  motivations?: string | null; // What drives them forward
+  relationships_summary?: string | null; // Their view of other characters
+  arc_notes?: string | null; // Where their story arc is heading
   first_appearance_part?: number;
   avatar_url?: string | null;
   background?: string | null;

@@ -1,44 +1,118 @@
 # AI-First Authoring Suite
 
-An AI-first story creation web application that empowers you to build narratives from scratch with AI assistance. Create stories, characters, and locations interactively with multiple uncensored AI models, live entity management, and advanced story continuation tools.
+An AI-first story creation web application for building narratives from scratch with AI assistance. Create stories, characters, and locations interactively with multiple uncensored AI models, live entity management, AI story memory, character portrait generation via Stable Diffusion, and advanced story continuation tools.
 
-## 🌟 Features
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+  - [1. Clone the Repository](#1-clone-the-repository)
+  - [2. Install Dependencies](#2-install-dependencies)
+  - [3. Set Up Ollama](#3-set-up-ollama)
+  - [4. Set Up Supabase](#4-set-up-supabase)
+  - [5. Set Up ComfyUI (Portrait Generation)](#5-set-up-comfyui-portrait-generation)
+  - [6. Configure Environment Variables](#6-configure-environment-variables)
+  - [7. Run the Development Server](#7-run-the-development-server)
+- [Usage Guide](#usage-guide)
+  - [Continue Story Editor](#continue-story-editor)
+  - [UI Layout](#ui-layout)
+  - [Story Memory (AI Context)](#story-memory-ai-context)
+  - [Character Portrait Generation](#character-portrait-generation)
+  - [Advanced Features](#advanced-features)
+  - [Managing Your Story](#managing-your-story)
+  - [Next-Gen Features](#next-gen-features)
+- [API Endpoints](#api-endpoints)
+- [Database Schema and Migrations](#database-schema-and-migrations)
+- [AI Configuration](#ai-configuration)
+- [Architecture](#architecture)
+- [Privacy and Security](#privacy-and-security)
+- [Mobile Access](#mobile-access)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+
+---
+
+## Features
 
 ### Core AI-First Workflow
-- **Start from Scratch**: No imports needed - create stories directly with AI guidance
-- **Multiple AI Models**: Switch between uncensored models (WizardLM, Llama 3, Dolphin) for creative flexibility
-- **Live Entity Creation**: Build characters and locations on-the-fly as your story develops
-- **Interactive Story Continuation**: AI-powered narrative generation with full context awareness
-- **In-Context Instructions**: Use `[ --- note ]` markers to guide AI behavior inline
-- **Iterative Revision**: Provide feedback and refine generated content without editing raw text
 
-### Advanced Features
-- **Character Manager**: Create, edit, and manage character profiles with traits and personalities
-- **Location Manager**: Build your story world with detailed location descriptions
-- **Model Selector**: Choose from multiple AI models optimized for creative fiction
-- **Story Branching**: Explore alternative scenarios without losing progress
-- **Draft Management**: Save, version, and restore story continuations
-- **Tags & Notes**: Organize scenes with tags and private author notes
-- **Dark/Light Mode**: Toggle between dark and light themes
+- **Start from Scratch** — No imports needed; create stories directly with AI guidance
+- **Multiple Uncensored AI Models** — Switch between WizardLM, Llama 3, Dolphin, and others
+- **Live Entity Creation** — Build characters and locations on-the-fly as your story develops
+- **Interactive Story Continuation** — AI-powered narrative generation with full context awareness
+- **In-Context Instructions** — Use `[ --- note ]` markers anywhere in your prompt to guide the AI inline
+- **Iterative Revision** — Provide feedback and refine generated content without editing raw text
+- **Story Branching** — Explore alternative scenarios without losing progress
+- **Draft Management** — Save, version, and restore story continuations
 
-## 🛠️ Tech Stack
+### AI Quality Features
 
-- **Frontend**: Next.js 16 (App Router), Material UI, React, TypeScript
-- **Backend**: Next.js API Routes (Node.js)
-- **Database**: Supabase (PostgreSQL)
-- **AI**: Local LLM via Ollama (multiple uncensored models supported)
-- **File Processing**: mammoth (DOCX parsing - legacy feature)
+- **Strict (Prose Editor) Mode** — Temperature 0.45; AI rewrites your exact words as polished prose; no invented plot, characters, or events; no resolution added
+- **Creative Mode** — Temperature 0.82; AI writes expansive scenes with natural flow and embellishment
+- **Proportional Word Budget** — Output scales to your prompt length (`promptWords × 5`, floor 120)
+- **Banned Filler Phrases** — AI never writes "Meanwhile...", "Little did...", passive synopsis, etc.
+- **No Hard Token Cut** — AI self-completes within the word budget naturally
 
-## 📋 Prerequisites
+### Story Memory
 
-Before you begin, ensure you have the following installed:
+- **AI-Generated Memory Block** — Compresses your full story into a ~250-word factual summary at temperature 0.3
+- **Smart Context Loading** — ≤6 parts: full context; >6 parts: last 5; with memory: memory + last 2 parts
+- **Generate / Regenerate / Clear** — Full UI panel on the Continue page
 
-- **Node.js** 18.0 or higher ([Download](https://nodejs.org/))
-- **Ollama** ([Installation Guide](https://ollama.ai/))
-- **Supabase Account** ([Sign up](https://supabase.com/))
-- **Git** (for cloning the repository)
+### Character Portraits (Stable Diffusion via ComfyUI)
 
-## 🚀 Installation
+- **One-Click Portrait Generation** — Brush icon on every character card and character detail page
+- **Custom SD Prompt** — Optional custom prompt field to override the auto-generated one
+- **Auto-Built Prompts** — Builds Stable Diffusion prompt from character description, traits, and personality
+- **Saved to Profile** — Portrait saved as the character's avatar automatically (base64 in `avatar_url`)
+- **Model Selection** — Uses any checkpoint model in your `ComfyUI/models/checkpoints/` folder
+
+### Entity Management
+
+- **Auto Extract on Insert** — When you click "Insert into Story", entity extraction runs first; new characters and locations are merged silently; success message shows what was added
+- **Character Manager** — Create, edit, merge, and manage character profiles with traits and personalities
+- **Location Manager** — Build your world with detailed location descriptions; merge duplicates; clean unused
+- **Missing Names Resolver** — Detect character names in events/relationships not yet linked to a canonical character
+- **Flashbacks** — Search and save key scenes for quick reference
+
+### Other UI Features
+
+- **Dark/Light Mode** — Toggle between themes
+- **Responsive Design** — Desktop, tablet, and mobile
+- **Tags and Notes** — Organize scenes with tags and private author notes
+- **Timeline View** — Events timeline linked to characters and locations
+
+---
+
+## Tech Stack
+
+| Layer           | Technology                                          |
+| --------------- | --------------------------------------------------- |
+| Frontend        | Next.js 16 (App Router), Material UI v5, TypeScript |
+| Backend         | Next.js API Routes (Node.js)                        |
+| Database        | Supabase (PostgreSQL)                               |
+| Local AI        | Ollama (uncensored models)                          |
+| Image Gen       | ComfyUI + Stable Diffusion (local GPU)              |
+| File Processing | mammoth (DOCX parsing — legacy)                     |
+
+---
+
+## Prerequisites
+
+- **Node.js** 18.0+ — [Download](https://nodejs.org/)
+- **Ollama** — [Installation Guide](https://ollama.ai/)
+- **Supabase Account** — [Sign up](https://supabase.com/)
+- **Python 3.12** (for ComfyUI) — [Download](https://www.python.org/downloads/release/python-3126/)
+- **Git**
+- **NVIDIA GPU** with up-to-date drivers (for portrait generation; CPU-only possible but very slow)
+
+---
+
+## Installation
 
 ### 1. Clone the Repository
 
@@ -55,45 +129,28 @@ npm install
 
 ### 3. Set Up Ollama
 
-Ollama is a local LLM runtime that runs AI models on your machine.
-
 #### Install Ollama
 
 - **macOS/Linux**:
-
   ```bash
   curl -fsSL https://ollama.ai/install.sh | sh
   ```
+- **Windows**: Download the installer from [ollama.ai](https://ollama.ai/) and run it. Ollama starts automatically as a Windows service on `http://localhost:11434`.
 
-- **Windows**:
-  1. Download the Windows installer from [ollama.ai](https://ollama.ai/)
-  2. Run the installer (OllamaSetup.exe)
-  3. Ollama will be installed and automatically start as a Windows service
-  4. The service runs on `http://localhost:11434` by default
-  5. **For mobile/network access**: Configure Windows Firewall:
-     - Open Windows Defender Firewall
-     - Click "Advanced settings"
-     - Add a new Inbound Rule for TCP port 11434
-     - Allow connections from your local network (192.168.x.x)
-
-#### Pull Recommended Models
-
-For the best AI-first authoring experience, install one or more uncensored models:
+#### Pull Models
 
 ```bash
-# Recommended: Large, high-quality model
-ollama pull llama3.1:70b
-
-# Fast and efficient
-ollama pull llama3.1:8b
-
-# Uncensored creative models
+# Recommended uncensored models
 ollama pull wizardlm-uncensored
 ollama pull dolphin-llama3
 ollama pull llama3-uncensored
-```
 
-**Note**: The application supports model switching, so you can install multiple models and choose the best one for each scene.
+# High quality (slower — requires 48GB+ RAM or GPU)
+ollama pull llama3.1:70b
+
+# Fast iteration
+ollama pull llama3.1:8b
+```
 
 #### Start Ollama Server
 
@@ -101,414 +158,835 @@ ollama pull llama3-uncensored
 ollama serve
 ```
 
-The server will start on `http://localhost:11434` by default.
-
 ### 4. Set Up Supabase
 
-#### Create a Supabase Project
+1. Create a project at [supabase.com](https://supabase.com/)
+2. Go to the **SQL Editor** in your Supabase dashboard
+3. Run all migrations **in order**:
 
-1. Go to [Supabase](https://supabase.com/) and create an account
-2. Create a new project
-3. Wait for the project to be set up
+| File                                                  | Purpose                                                                |
+| ----------------------------------------------------- | ---------------------------------------------------------------------- |
+| `supabase/migrations/001_initial_schema.sql`          | Core tables: story_parts, characters, locations, events, relationships |
+| `supabase/migrations/002_nextgen_features.sql`        | character_aliases, location_aliases, flashbacks, merge_history         |
+| `supabase/migrations/003_continue_story_features.sql` | continuation_drafts, continuation_history, continuation_branches       |
+| `supabase/migrations/005_story_memory.sql`            | story_memory table for AI context compression                          |
 
-#### Run Database Migration
+4. Go to **Project Settings → API** and copy your Project URL and anon key.
 
-1. Go to the SQL Editor in your Supabase dashboard
-2. Copy the contents of `supabase/migrations/001_initial_schema.sql`
-3. Paste and execute the SQL to create all tables
+### 5. Set Up ComfyUI (Portrait Generation)
 
-#### Get Your API Keys
+ComfyUI generates character portraits using Stable Diffusion locally on your GPU. Skip this section if you don't need portrait generation.
 
-1. Go to Project Settings > API
-2. Copy your Project URL and anon/public key
+#### Clone and Install
 
-### 5. Configure Environment Variables
+```powershell
+# From the ai-story-manager directory
+git clone https://github.com/comfyanonymous/ComfyUI.git
+cd ComfyUI
 
-Create a `.env.local` file in the root directory:
+# Create a Python 3.12 virtual environment
+# (Python 3.14 has no CUDA-compatible PyTorch builds as of early 2026)
+py -3.12 -m venv venv312
 
-```bash
-cp .env.example .env.local
+# Install PyTorch 2.6.0 with CUDA 12.4
+# Use cu124 — it works with NVIDIA driver 528+ including 591.x (CUDA 13.x)
+.\venv312\Scripts\python.exe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+# Install ComfyUI requirements
+.\venv312\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Edit `.env.local` with your Supabase credentials:
+> **Critical**: All three packages (torch, torchvision, torchaudio) must be from the **same build tag**. Mixing e.g. `torch 2.5.1+cu121` with `torchvision 0.25.0+cu124` causes `OSError: [WinError 127] c10_cuda.dll` on startup because `c10.dll` and `c10_cuda.dll` are from different versions.
+
+#### Place Your Checkpoint Model
+
+Put `.safetensors` files in `ComfyUI/models/checkpoints/`. The current configured model:
+
+```
+ComfyUI/models/checkpoints/cyberrealistic_illustriousAnimeV30.safetensors
+```
+
+#### Start ComfyUI
+
+```powershell
+cd ComfyUI
+.\venv312\Scripts\python.exe main.py --listen 0.0.0.0
+```
+
+Or use the convenience script from the project root:
+
+```powershell
+.\ComfyUI\run_comfyui.ps1
+```
+
+Successful startup output:
+
+```
+pytorch version: 2.6.0+cu124
+Device: cuda:0 NVIDIA GeForce RTX 3060 : cudaMallocAsync
+Total VRAM 12288 MB
+To see the GUI go to: http://0.0.0.0:8188
+```
+
+#### ComfyUI Troubleshooting
+
+| Error                            | Cause                                                                          | Fix                                                                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `WinError 127 c10_cuda.dll`      | Mixed PyTorch versions (e.g. `torch 2.5.1+cu121` + `torchvision 0.21.0+cu124`) | `pip uninstall torch torchvision torchaudio -y && pip cache purge` then reinstall fresh with `--index-url .../cu124` |
+| `CUDA not available`             | Wrong CUDA tag for your driver                                                 | Use `cu124` for driver 528+; check `nvidia-smi` for driver version                                                   |
+| `no module named triton` warning | Triton not available on Windows                                                | Harmless; ComfyUI uses `eager` backend automatically                                                                 |
+| Portrait loads then fails        | Model filename mismatch                                                        | `SD_MODEL` in `.env.local` must match the exact filename in `models/checkpoints/`                                    |
+
+### 6. Configure Environment Variables
+
+Create `.env.local` in the project root:
 
 ```env
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
+# Ollama
 OLLAMA_API_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1:70b
+OLLAMA_MODEL=wizardlm-uncensored:latest
+OLLAMA_UNRESTRICTED_MODE=true
 
-# Optional: Enable unrestricted content generation for mature/adult fiction
-# OLLAMA_UNRESTRICTED_MODE=true
-
-# Quality-focused AI settings
-AI_TEMPERATURE=0.82
+# AI Parameters
+AI_NUM_CTX=4096
+AI_TEMPERATURE=0.90
 AI_TOP_P=0.92
 AI_TOP_K=50
 AI_MAX_TOKENS=1500
 AI_REPEAT_PENALTY=1.1
-AI_NUM_CTX=4096
+
+# ComfyUI / Stable Diffusion (portrait generation)
+STABLE_DIFFUSION_HOST=http://localhost:8188
+SD_MODEL=cyberrealistic_illustriousAnimeV30.safetensors
 ```
 
-### 6. Run the Development Server
+To switch portrait models, change `SD_MODEL` to the filename of any checkpoint in `ComfyUI/models/checkpoints/`. The app picks it up on the next portrait generation without a restart.
+
+`OLLAMA_UNRESTRICTED_MODE=true` removes content filters from all story generation. See [Privacy and Security](#privacy-and-security).
+
+### 7. Run the Development Server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000). The app redirects automatically to the Continue Story editor.
 
-**For mobile/network access**, run with the `--hostname` flag to bind to all network interfaces:
+For network/mobile access (see [Mobile Access](#mobile-access)):
 
 ```bash
 npm run dev -- --hostname 0.0.0.0
 ```
 
-Then access from mobile using your PC's IP: `http://192.168.x.x:3000`
+---
 
-## 📖 Usage Guide
+## Usage Guide
 
-### Getting Started with AI-First Story Creation
+### Continue Story Editor
 
-When you launch the application, you'll land directly on the **Continue Story** page - your central creative workspace.
+The Continue Story page (`/continue`) is the central workspace. The home page redirects here immediately.
 
-### Creating Your First Story
+#### Basic Workflow
 
-1. **Select Your AI Model**
-   - Click the "AI Model" dropdown at the top
-   - Choose from available models (Llama 3.1, WizardLM-uncensored, Dolphin, etc.)
-   - Larger models (70B) provide better quality but are slower
-   - Smaller models (8B) are faster for quick iterations
+1. **Select AI Model** — Click the model dropdown; lists all models installed in Ollama
+2. **Select Generation Style**
+   - **Strict (no filler)** — AI takes your words and rewrites them as polished prose. No invented characters, events, or resolution. Temperature 0.45.
+   - **Creative (filler allowed)** — AI writes expansive scenes with natural flow and atmospheric detail. Temperature 0.82.
+3. **Set Max Tokens** — Slider 500–3000 (default 600). Actual output scales proportionally to your prompt length.
+4. **Create Characters** (optional) — Click **Add** in the Characters sidebar panel; fill in name, role, personality, traits, description
+5. **Create Locations** (optional) — Click **Add** in the Locations sidebar panel
+6. **Write Your Prompt** — Describe what should happen next
+7. **Generate** — AI uses characters, locations, previous story parts, and story memory as context
+8. **Edit** — Rich text editor appears with generated output; Georgia serif font for comfortable reading
+9. **Insert into Story** — Auto-extracts entities first, then saves as a new numbered story part
 
-2. **Choose Generation Style** (NEW)
-   - **Strict (no filler)** - Default mode. AI generates only what you explicitly request
-     - No extra exposition, narration, or embellishment
-     - Perfect for precise, controlled generation
-     - Ideal when you want exactly what you asked for
-   - **Creative (filler allowed)** - Natural flow with embellishment
-     - AI adds natural exposition and narrative flow
-     - More expansive, literary style
-     - Better for organic storytelling
-   - **Max Tokens Slider** - Control output length (500-3000 tokens)
-     - Default: 1500 tokens
-     - Lower values for concise output
-     - Higher values for detailed, expansive scenes
+Success message example: `"Story part 4 saved (added 1 character and 2 locations)."`
 
-3. **Create Characters**
-   - Click the **Add** button in the Characters panel
-   - Fill in character details: name, role, personality, traits, description
-   - Characters are automatically available for story context
+#### In-Context Markers
 
-4. **Create Locations**
-   - Click the **Add** button in the Locations panel
-   - Define location name, type, description, and atmosphere
-   - Locations enrich your story's setting and context
+Insert `[ --- note ]` anywhere in your prompt to give the AI inline instructions:
 
-5. **Write Your First Prompt**
-   - Enter what you want to happen in the story
-   - Use `[ --- note ]` markers for inline AI instructions
-   - Example: `[ --- Make this scene tense ] The detective enters the dark warehouse...`
-   - Optionally select a character to focus the narrative
+```
+[ --- Make Duke sound barely controlled — fury beneath the surface ]
+Duke confronts the man who betrayed him in the alley behind the bar.
+```
 
-6. **Generate Story Content**
-   - Click **Generate** to create your story continuation
-   - AI uses context from characters, locations, and previous parts
-   - Respects your chosen generation style (Strict or Creative)
-   - Wait for generation (30-90 seconds depending on model)
+```
+[ --- Write from Emma's POV, internal monologue only ]
+The letter arrived with no return address.
+```
 
-7. **Refine and Iterate**
-   - Review the generated content
-   - Use the feedback panel to revise: "Make the dialogue more natural"
-   - Edit the text directly in the editor
-   - **Extract Entities** (NEW) - Automatically pull characters and locations from generated content
-     - Click "Extract Entities" button after generation
-     - AI analyzes the text and extracts character names, locations
-     - New entities are automatically added to your Characters and Locations lists
-     - Existing entities are skipped to avoid duplicates
-   - Save as draft or insert into your story
+The AI reads these notes and applies them without diluting or skipping them.
+
+---
+
+### UI Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  AI-First Story Editor                                                           │
+│  Use [ --- note ] markers for in-context instructions.                          │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────┬────────────────────────────────────┐
+│  MAIN EDITOR                              │  SIDEBAR TOOLS                     │
+├───────────────────────────────────────────┼────────────────────────────────────┤
+│                                           │                                    │
+│  ▼ Story Memory                           │  ┌──────────────────────────────┐ │
+│  [Generate Memory] [Regenerate] [Clear]   │  │ Author's Notes & Tags        │ │
+│                                           │  ├──────────────────────────────┤ │
+│  ▼ Recent Story Context                   │  │ Scene Type: [Dropdown ▼]     │ │
+│  ┌──────────────────────────────────────┐ │  │                              │ │
+│  │ Part 45: The Confrontation           │ │  │ Tags:                        │ │
+│  │ Part 46: Revelation                  │ │  │ [Draft] [Climax] [Conflict]  │ │
+│  └──────────────────────────────────────┘ │  │                              │ │
+│                                           │  │ Side Notes: [textarea]       │ │
+│  ┌──────────────────────────────────────┐ │  └──────────────────────────────┘ │
+│  │ Your Prompt                          │ │                                    │
+│  │                                      │ │  ┌──────────────────────────────┐ │
+│  │ [ --- Make this intense ]            │ │  │ Alternative Scenarios        │ │
+│  │ Duke enters the warehouse...         │ │  ├──────────────────────────────┤ │
+│  └──────────────────────────────────────┘ │  │ [↗ Create Branch]            │ │
+│                                           │  └──────────────────────────────┘ │
+│  [Model ▼]  [Strict ▼]  [Tokens: ──●─]   │                                    │
+│  [✨ Generate]  [🔄 Retry]  [🗑 Clear]     │  ┌──────────────────────────────┐ │
+│                                           │  │ Generation History           │ │
+│  Quick Templates:                         │  ├──────────────────────────────┤ │
+│  [Continue cliffhanger] [Add dialogue]    │  │ 🕐 [timestamp] Prompt...     │ │
+│  [Character react] [Describe setting]     │  │ Content preview... [↶]       │ │
+│                                           │  └──────────────────────────────┘ │
+│  ┌──────────────────────────────────────┐ │                                    │
+│  │ Generated Continuation               │ │                                    │
+│  │ [💾 Save Draft]  [➕ Insert Story]   │ │                                    │
+│  ├──────────────────────────────────────┤ │                                    │
+│  │ (editable rich text — Georgia serif) │ │                                    │
+│  └──────────────────────────────────────┘ │                                    │
+│                                           │                                    │
+│  ┌──────────────────────────────────────┐ │                                    │
+│  │ Revision Instructions                │ │                                    │
+│  │ [📤 Generate Revision]               │ │                                    │
+│  │ [Make dialogue natural] [Add details]│ │                                    │
+│  └──────────────────────────────────────┘ │                                    │
+└───────────────────────────────────────────┴────────────────────────────────────┘
+```
+
+**Left column (8/12):** Story memory panel → Context accordion → Prompt input → Model/style/token controls → Quick templates → Generated content editor → Revision panel
+
+**Right column (4/12):** Author notes & tags → Branching panel → Generation history
+
+---
+
+### Story Memory (AI Context)
+
+For long stories, summary memory prevents context window overflow and keeps the AI coherent.
+
+**Strategy:**
+
+| Condition           | Context Sent to AI          |
+| ------------------- | --------------------------- |
+| No memory, ≤6 parts | All story parts             |
+| No memory, >6 parts | Last 5 parts                |
+| Memory exists       | Memory block + last 2 parts |
+
+**UI Panel on Continue page:**
+
+- **Generate Memory** — Reads all story parts; calls Ollama at temperature 0.3 to produce a ~250-word factual summary; saves to `story_memory` table
+- **Regenerate** — Overwrites existing memory (run after adding significant new story parts)
+- **Clear** — Deletes stored memory; reverts to last-N-parts strategy
+- Expand the panel to view memory content and when it was generated
+
+**Database requirement:** Run `supabase/migrations/005_story_memory.sql` before using this feature:
+
+```sql
+CREATE TABLE story_memory (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content    TEXT NOT NULL,
+  part_count INTEGER,
+  generated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+---
+
+### Character Portrait Generation
+
+Generates character portraits using Stable Diffusion locally via ComfyUI. Requires ComfyUI running at `http://localhost:8188`.
+
+#### From the Character Card (Characters list page)
+
+Each character card has a **brush icon** (🖌) button in the top-right corner:
+
+1. Click the brush icon
+2. Portrait generates in ~20–40 seconds on an RTX 3060 (first generation loads the model: ~30s extra)
+3. Portrait is displayed immediately and saved to the character's `avatar_url`
+
+#### From the Character Detail Page (`/characters/[id]`)
+
+1. Click **Generate Portrait** (or **Regenerate Portrait** if one already exists)
+2. Optionally expand **Custom Prompt** to enter your own Stable Diffusion prompt
+3. Click Generate — loading state shown during generation
+4. Portrait saved to character profile and displayed
+
+#### Auto-Built Prompt Logic
+
+When no custom prompt is provided, the system builds one from the character record:
+
+- Base: `"anime illustration, detailed character portrait, beautiful lighting, high quality"`
+- Appends: character name, description, physical traits
+- Personality mapping → expression hint:
+  - `"bratty"` → `"smug smirk"`
+  - `"cold"`, `"stoic"` → `"serious cold expression"`
+  - `"cheerful"`, `"gentle"` → `"warm gentle smile"`
+  - `"mysterious"` → `"enigmatic gaze"`
+  - `"confident"`, `"dominant"` → `"confident expression"`
+- Negative: `"bad anatomy, worst quality, blurry, deformed, ugly, extra limbs"`
+
+#### Switching Models
+
+Update `SD_MODEL` in `.env.local` to any `.safetensors` filename in `ComfyUI/models/checkpoints/`. The change takes effect on the next generation — no app restart needed.
+
+Currently installed models:
+
+- `cyberrealistic_illustriousAnimeV30.safetensors` ← active
+
+#### Portrait API
+
+| Method | Endpoint                               | Description                                               |
+| ------ | -------------------------------------- | --------------------------------------------------------- |
+| GET    | `/api/generate-portrait?action=status` | Check if ComfyUI is reachable                             |
+| GET    | `/api/generate-portrait?action=models` | List checkpoint models in ComfyUI                         |
+| POST   | `/api/generate-portrait`               | Generate portrait; body: `{ characterId, customPrompt? }` |
+
+**ComfyUI Workflow**: `CheckpointLoader → CLIPTextEncode (pos + neg) → KSampler (20 steps, CFG 7.0, euler_ancestral) → VAEDecode → SaveImage`
+
+---
 
 ### Advanced Features
 
-#### In-Context Markers
-Use `[ --- note ]` anywhere in your prompt to guide the AI:
-- `[ --- Write this from Emma's perspective ]`
-- `[ --- Make this scene intense and emotional ]`
-- `[ --- Include detailed description of the setting ]`
+#### Generation Styles
 
-#### Generation Style Control
-Fine-tune how AI generates content:
-- **Strict Mode**: Get exactly what you request, no extra content
-  - Use when you need precise control
-  - Prevents AI from adding unwanted exposition
-  - Perfect for filling specific gaps in your narrative
-- **Creative Mode**: Let AI enhance and embellish naturally
-  - Use for free-flowing, organic storytelling
-  - AI adds atmospheric details and transitions
-  - Better for exploratory writing sessions
-- **Adjust Max Tokens**: Control the length of generated content
-  - 500 tokens: Brief, concise responses
-  - 1500 tokens: Standard length (default)
-  - 3000 tokens: Extended, detailed scenes
+| Style                 | Temperature | Use When                                                         |
+| --------------------- | ----------- | ---------------------------------------------------------------- |
+| Strict (prose editor) | 0.45        | You wrote a rough line; AI polishes it into prose — no additions |
+| Creative              | 0.82        | Free-flowing narrative, atmospheric scenes, exploratory writing  |
+
+**Strict mode enforced rules:**
+
+- Only use what the author provided — no invented characters, events, or plot
+- No resolution, no conclusion — stay in the moment
+- Banned phrases: `"Meanwhile"`, `"Little did"`, `"As if on cue"`, `"At that moment"`, `"Suddenly"`, `"It was clear that"`, `"hours later"`, `"days passed"`, `"unbeknownst"`, and more
+
+**Uncensored rule (both modes):** Never fade to black, skip content, soften scenes, or add warnings or deflections — write what the author directs, in full.
 
 #### Automatic Entity Extraction
-Streamline your workflow by automatically extracting entities:
-- **Extract Entities Button**: Click after generating content
-  - AI analyzes generated text for characters and locations
-  - New entities are automatically added to your databases
-  - Existing entities are detected and skipped
-  - Get instant feedback on what was added
-- **Smart Detection**: Filters out pronouns and generic terms
-- **Seamless Integration**: Extracted entities immediately available in dropdowns
-- **No Manual Entry**: Save time by letting AI do the extraction
+
+When you click **Insert into Story**:
+
+1. Silent entity extraction runs first on the generated text
+2. New character/location names are added to your database
+3. Existing ones are detected and skipped (no duplicates)
+4. Story part is inserted regardless of extraction success/failure
+5. Success message: `"Story part 3 saved (added 1 character and 2 locations)."`
+
+You can also click **Extract Entities** manually at any time after generation.
 
 #### Model Switching
-Switch models mid-story to find the perfect voice:
-- Use larger models for important scenes
-- Use faster models for quick drafts
-- Each model has unique creative characteristics
+
+- Switch models mid-story for different scenes
+- Larger models (70B) for quality on pivotal scenes
+- Smaller models (8B) for fast iteration and structure work
+- Model list fetched live from Ollama — any installed model appears automatically
 
 #### Story Branching
-- Save your current draft
-- Click **Create Branch** to explore alternative scenarios
-- Return to main story or continue the branch
-- Never lose progress when experimenting
 
-#### Tags and Notes
-- Tag scenes: Draft, Climax, Character Development, etc.
-- Add private notes about creative decisions
-- Classify scene type: Action, Dialogue, Description
+1. Save current draft
+2. Click **Create Branch** in the sidebar
+3. Name the branch (e.g., `"Alternative ending"`, `"Dark path"`)
+4. Enter a prompt for the diverging scenario
+5. Add optional side notes
+6. Branch generates and saves independently; main draft is unchanged
+
+#### Draft Management
+
+- **Save Draft** — Preserves all metadata (tags, notes, scene type) without inserting into story
+- **Revision History** — Every generation is stored; one-click restore to any previous version
+- **Tags** — `Draft`, `Needs Review`, `Important`, `Climax`, `Character Development`, `Plot Point`, `Romance`, `Conflict`, `Resolution`
+- **Scene Type** — `Action`, `Dialogue`, `Description`, `Cliffhanger`, `Reversal`, `Revelation`, `Transition`, `Flashback`, `Emotional`
+
+#### Quick Prompt Templates
+
+One-click starters in the editor:
+
+- Continue from cliffhanger
+- Describe character's reaction
+- Add dialogue scene
+- Describe setting in detail
+- Plot twist
+
+#### Revision Workflow
+
+1. Generate initial content
+2. Read it — decide what needs changing
+3. Enter specific feedback in the **Revision Instructions** panel
+   - Good: `"Make the dialogue sharper — Duke doesn't ramble"`
+   - Good: `"Add more sensory detail about the rain"`
+   - Avoid: `"Make it better"`
+4. Click **Generate Revision** — AI rewrites using your instructions
+5. Old version auto-saved to history; restore anytime
+
+Quick revision templates: `"Make dialogue more natural"`, `"Add descriptive details"`, `"Increase tension"`, `"More emotional depth"`, `"Make character sound angrier"`
+
+---
 
 ### Managing Your Story
 
-#### View Story Parts
-1. Navigate to **Story Viewer** from the sidebar
-2. Browse all story parts in order
-3. Search and filter content
-4. Each generated continuation can be inserted as a new part
+#### Story Viewer (`/story`)
 
-#### Character Management
-1. Navigate to **Characters** from the sidebar
-2. View all characters with details
-3. Edit or delete characters as needed
-4. Characters created live are immediately available
+- Browse all inserted story parts in order
+- Search and filter by content
+- Each continuation inserted via **Insert into Story** becomes a numbered part
 
-#### Location Management
-1. Navigate to **Locations** from the sidebar
-2. Browse and manage all locations
-3. Edit descriptions and atmosphere
-4. Locations enrich AI-generated context
+#### Character Management (`/characters`)
 
-## ⚙️ AI Configuration
+- Character list with cards, avatars, and portrait generation button per card
+- Click any card for detail page with tabs: Overview, Traits, Relationships
+- Generate/regenerate portrait from detail page with custom prompt support
+- Merge duplicate characters: `/characters/merge`
+- Resolve unlinked name aliases: `/characters/unlinked`
 
-### Supported Models
+#### Location Management (`/locations`)
 
-The AI-First Authoring Suite supports multiple uncensored models optimized for creative fiction:
+- Browse all locations with type filtering
+- Edit descriptions and atmosphere
+- Merge duplicates: `/locations/merge` (three tabs: All, Suggested Merges, Unused)
+- Bulk delete unused locations
 
-| Model | Size | Best For | Speed |
-|-------|------|----------|-------|
-| Llama 3.1 (70B) | 70B | High-quality detailed narratives | Slow |
-| Llama 3.1 (8B) | 8B | Quick iterations and drafts | Fast |
-| WizardLM Uncensored | 13B | Creative fiction without filters | Medium |
-| Dolphin Llama 3 | 8B | Balanced versatility | Fast |
-| Llama 3 Uncensored | 8B | Community uncensored model | Fast |
+#### Events Timeline (`/timeline`)
 
-### AI Quality Settings
+- View all story events in chronological order
+- Filter by event type: dialogue, action, revelation
+- See character and location involvement per event
 
-The application is configured for maximum quality output:
+#### Flashbacks (`/flashbacks`)
 
-- **Temperature (0.82)**: Balanced creativity and coherence
-- **Top P (0.92)**: Nucleus sampling for diverse outputs
-- **Top K (50)**: Token selection pool
-- **Max Tokens (1500)**: Detailed, comprehensive responses
-- **Context Window (8192)**: Large context for better coherence
-- **Repeat Penalty (1.1)**: Reduces repetitive output
+- Search story content by keyword, character name, or location name
+- Save important scenes with custom titles
+- Expandable accordion view of saved flashbacks with delete option
 
-These settings prioritize quality over speed. Generation may take 30-90 seconds depending on your hardware.
+#### Settings (`/settings`)
 
-## 🏗️ Architecture
+- View current AI configuration (model, parameters)
+- Theme toggle (dark/light)
 
-### Core Workflow
-The AI-First Authoring Suite focuses on interactive story creation:
-1. **Continue Story Page** - Central workspace (default landing page)
-2. **Entity Managers** - Live character and location creation
-3. **AI Generation** - Model-aware story continuation with context
-4. **Draft System** - Save, branch, and version your work
+---
 
-### Database Schema
+### Next-Gen Features
 
-- **story_parts**: Stores story content with metadata
-- **characters**: Character profiles and attributes (created live or via API)
-- **locations**: Story locations (created live or via API)
-- **continuation_drafts**: Saved drafts with tags and notes
-- **continuation_history**: Version history for iterative revision
-- **continuation_branches**: Alternative story scenarios
-- **relationships**: Character relationships
-- **events**: Story events linked to characters and locations
+#### Missing Character Names Resolver (`/characters/unlinked`)
 
-### API Routes
+Detects names that appear in story events or character relationships but are not linked to a canonical character record.
 
-#### Core AI-First Routes
-- `GET /api/models`: List available Ollama models
-- `POST /api/continue`: Generate/revise story continuations (supports model selection)
-- `GET/POST/PUT/DELETE /api/characters`: Manage characters (live CRUD)
-- `GET/POST/PUT/DELETE /api/locations`: Manage locations (live CRUD)
-- `GET/POST/DELETE /api/story-parts`: Manage story parts
+- Shows usage count and context preview for each unlinked name
+- Fuzzy matching suggests similar existing characters (Levenshtein similarity)
+- **Link** — Associates the name with an existing character as an alias
+- **Ignore** — Dismisses false positives
 
-#### Legacy Routes (for existing content)
-- `POST /api/import-story`: Import and process DOCX files (hidden from UI)
-- `POST /api/extract-entities`: Extract entities from text
+API: `GET /api/characters/unlinked` · `POST /api/characters/link-nickname` · `DELETE /api/characters/unlinked`
 
-## 🔒 Privacy & Security
+#### Locations Merge and Review (`/locations/merge`)
 
-- **Local AI**: All AI processing happens locally via Ollama - no data sent to third parties
-- **Self-Hosted Database**: Use Supabase cloud or self-host your database
-- **Multiple Models**: Switch between uncensored models for unrestricted creative freedom
-- **Complete Control**: All your data stays under your control
+Three-tab interface for location database cleanup:
 
-### Unrestricted Content Mode
+| Tab              | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| All Locations    | Select any locations manually and merge them            |
+| Suggested Merges | Fuzzy match groups potential duplicates automatically   |
+| Unused Locations | Locations referenced 0–1 times in story; safe to delete |
 
-The application supports uncensored AI models by default. To enable unrestricted mode for all models:
+Merge preserves the primary location's data; all references updated automatically. Merge history is tracked in `merge_history` table.
 
-1. Add the following to your `.env.local` file:
+API: `POST /api/locations/merge` · `GET /api/locations/suggestions` · `GET /api/locations/unused` · `DELETE /api/locations/bulk-delete`
 
-   ```env
-   OLLAMA_UNRESTRICTED_MODE=true
+---
+
+## API Endpoints
+
+### AI Generation
+
+| Method | Endpoint                | Description                                |
+| ------ | ----------------------- | ------------------------------------------ |
+| POST   | `/api/continue`         | Generate/revise story continuation         |
+| GET    | `/api/models`           | List all installed Ollama models           |
+| GET    | `/api/story-memory`     | Get current story memory                   |
+| POST   | `/api/story-memory`     | Generate/update story memory               |
+| DELETE | `/api/story-memory`     | Clear story memory                         |
+| POST   | `/api/extract-entities` | Extract characters and locations from text |
+
+#### `/api/continue` Request Body
+
+```json
+{
+  "action": "generate",
+  "userPrompt": "Duke confronts the betrayer",
+  "model": "wizardlm-uncensored:latest",
+  "strict": true,
+  "maxTokens": 600,
+  "characterFocus": "character-uuid",
+  "selectedCharacters": ["uuid1", "uuid2"],
+  "selectedLocations": ["uuid1"]
+}
+```
+
+Actions: `generate`, `revise`, `save-draft`, `get-history`, `branch`, `list-drafts`, `delete-draft`
+
+### Characters
+
+| Method         | Endpoint                        | Description                |
+| -------------- | ------------------------------- | -------------------------- |
+| GET/POST       | `/api/characters`               | List all / create          |
+| GET/PUT/DELETE | `/api/characters/[id]`          | Get / update / delete      |
+| GET            | `/api/characters/unlinked`      | Unlinked name aliases      |
+| POST           | `/api/characters/link-nickname` | Link alias to character    |
+| POST           | `/api/characters/merge`         | Merge duplicate characters |
+
+### Locations
+
+| Method         | Endpoint                     | Description                           |
+| -------------- | ---------------------------- | ------------------------------------- |
+| GET/POST       | `/api/locations`             | List all / create                     |
+| GET/PUT/DELETE | `/api/locations/[id]`        | Get / update / delete                 |
+| POST           | `/api/locations/merge`       | Merge duplicates                      |
+| GET            | `/api/locations/suggestions` | Fuzzy match duplicate suggestions     |
+| GET            | `/api/locations/unused`      | Unused or rarely referenced locations |
+| DELETE         | `/api/locations/bulk-delete` | Delete multiple locations by ID       |
+
+### Story
+
+| Method         | Endpoint                | Description                          |
+| -------------- | ----------------------- | ------------------------------------ |
+| GET/POST       | `/api/story-parts`      | List all / create story part         |
+| GET/PUT/DELETE | `/api/story-parts/[id]` | Get / update / delete story part     |
+| GET            | `/api/events`           | Fetch events with optional filtering |
+
+### Portrait Generation
+
+| Method | Endpoint                               | Description                                               |
+| ------ | -------------------------------------- | --------------------------------------------------------- |
+| GET    | `/api/generate-portrait?action=status` | Check ComfyUI availability                                |
+| GET    | `/api/generate-portrait?action=models` | List available SD checkpoints                             |
+| POST   | `/api/generate-portrait`               | Generate portrait; body: `{ characterId, customPrompt? }` |
+
+### Flashbacks
+
+| Method          | Endpoint                 | Description                              |
+| --------------- | ------------------------ | ---------------------------------------- |
+| GET             | `/api/flashbacks/search` | Search events and story parts by keyword |
+| GET/POST/DELETE | `/api/flashbacks/save`   | Manage saved flashbacks                  |
+
+### Legacy (backward compatible, hidden from UI)
+
+| Method | Endpoint                  | Description                        |
+| ------ | ------------------------- | ---------------------------------- |
+| POST   | `/api/import-story`       | Import DOCX file                   |
+| POST   | `/api/import-story/batch` | Batch DOCX import                  |
+| POST   | `/api/continue-story`     | Legacy story continuation endpoint |
+
+---
+
+## Database Schema and Migrations
+
+Run all files in order in the Supabase SQL Editor.
+
+### `001_initial_schema.sql`
+
+| Table              | Key Columns                                                                   |
+| ------------------ | ----------------------------------------------------------------------------- |
+| `story_parts`      | `part_number`, `title`, `content`, `summary`                                  |
+| `characters`       | `name`, `role`, `description`, `personality`, `physical_traits`, `avatar_url` |
+| `character_traits` | `character_id`, `trait_type`, `trait_value`                                   |
+| `locations`        | `name`, `type`, `description`, `atmosphere`                                   |
+| `events`           | `event_type`, `content`, `character_ids`, `location_id`                       |
+| `relationships`    | `character_id`, `related_character_id`, `relationship_type`                   |
+| `story_context`    | `context_type`, `content`                                                     |
+
+### `002_nextgen_features.sql`
+
+| Table               | Purpose                                               |
+| ------------------- | ----------------------------------------------------- |
+| `character_aliases` | Nicknames / aliases linked to canonical characters    |
+| `location_aliases`  | Location name variations                              |
+| `flashbacks`        | Saved flashback scenes with custom titles             |
+| `location_usage`    | Tracks how often each location appears in story parts |
+| `merge_history`     | Audit trail for character and location merges         |
+
+### `003_continue_story_features.sql`
+
+| Table                   | Purpose                                                       |
+| ----------------------- | ------------------------------------------------------------- |
+| `continuation_drafts`   | Non-finalized continuations with tags, scene_type, side_notes |
+| `continuation_history`  | All generations per draft for version control and restore     |
+| `continuation_branches` | Alternative scenario branches linked to parent drafts         |
+
+### `005_story_memory.sql`
+
+| Table          | Purpose                                                     |
+| -------------- | ----------------------------------------------------------- |
+| `story_memory` | Single compressed story summary used by AI for long stories |
+
+---
+
+## AI Configuration
+
+### Ollama Models
+
+| Model                 | Size | Best For                         | Speed  |
+| --------------------- | ---- | -------------------------------- | ------ |
+| `wizardlm-uncensored` | 13B  | Creative fiction, mature content | Medium |
+| `llama3.1:70b`        | 70B  | High-quality detailed narratives | Slow   |
+| `llama3.1:8b`         | 8B   | Quick iterations and drafts      | Fast   |
+| `dolphin-llama3`      | 8B   | Balanced versatility             | Fast   |
+| `llama3-uncensored`   | 8B   | Community uncensored model       | Fast   |
+
+Any model installed in Ollama appears in the model selector automatically.
+
+### AI Parameters (`.env.local`)
+
+| Variable            | Default | Effect                                     |
+| ------------------- | ------- | ------------------------------------------ |
+| `AI_NUM_CTX`        | 4096    | Context window tokens                      |
+| `AI_TEMPERATURE`    | 0.90    | Fallback temperature (overridden per mode) |
+| `AI_TOP_P`          | 0.92    | Nucleus sampling                           |
+| `AI_TOP_K`          | 50      | Token selection pool                       |
+| `AI_MAX_TOKENS`     | 1500    | Max output tokens                          |
+| `AI_REPEAT_PENALTY` | 1.1     | Repetition reduction                       |
+
+**Effective temperatures per operation:**
+
+| Operation                 | Temperature |
+| ------------------------- | ----------- |
+| Creative story generation | 0.82        |
+| Strict prose editing      | 0.45        |
+| Story memory generation   | 0.30        |
+| Entity extraction         | 0.10        |
+
+### Stable Diffusion Parameters
+
+| Parameter        | Value                        |
+| ---------------- | ---------------------------- |
+| Sampling steps   | 20                           |
+| CFG scale        | 7.0                          |
+| Sampler          | `euler_ancestral`            |
+| Scheduler        | `normal`                     |
+| Image dimensions | 512 × 768 (portrait)         |
+| Model            | `SD_MODEL` from `.env.local` |
+
+---
+
+## Architecture
+
+### Project Structure
+
+```
+ai-story-manager/
+├── app/
+│   ├── api/
+│   │   ├── characters/           # List, create, merge, unlinked, link-nickname
+│   │   ├── continue/             # Main AI generation endpoint
+│   │   ├── events/               # Events with filtering
+│   │   ├── extract-entities/     # Entity extraction
+│   │   ├── flashbacks/           # Search and save flashbacks
+│   │   ├── generate-portrait/    # ComfyUI portrait generation
+│   │   ├── import-story/         # DOCX import (legacy)
+│   │   ├── locations/            # List, create, merge, suggestions, unused, bulk-delete
+│   │   ├── models/               # List Ollama models
+│   │   ├── story-memory/         # GET / POST / DELETE story memory
+│   │   └── story-parts/          # CRUD for story parts
+│   ├── characters/               # List + [id] detail + merge + unlinked pages
+│   ├── continue/                 # Main editor page
+│   ├── flashbacks/               # Flashback reference page
+│   ├── import/                   # Legacy import pages
+│   ├── locations/                # List + merge pages
+│   ├── settings/                 # Settings page
+│   ├── story/                    # Story viewer
+│   └── timeline/                 # Events timeline
+├── components/
+│   ├── CharacterCard.tsx         # Character card with portrait button (brush icon)
+│   ├── FileUpload.tsx            # Drag-and-drop upload
+│   ├── Navigation.tsx            # App navigation drawer
+│   ├── ThemeProvider.tsx         # MUI dark/light theme
+│   └── continue/
+│       ├── BranchingPanel.tsx    # Branch creation UI
+│       ├── EntityManager.tsx     # Live character creation inside editor
+│       ├── FeedbackPanel.tsx     # Revision instructions UI
+│       ├── GenerationProgress.tsx # Progress during generation
+│       ├── HistoryPanel.tsx      # Generation history with restore
+│       ├── LocationManager.tsx   # Live location creation inside editor
+│       ├── ModelSelector.tsx     # Ollama model dropdown
+│       └── SideNotesPanel.tsx    # Tags, scene type, author notes
+├── lib/
+│   ├── comfyui.ts                # ComfyUI API client — workflow builder, polling, prompt builder
+│   ├── constants.ts              # Centralized config
+│   ├── contextBuilder.ts         # Builds story context strings for AI prompts
+│   ├── fuzzyMatch.ts             # Levenshtein distance, similarity groups
+│   ├── ollama.ts                 # Ollama client — continueStory, generateStoryMemory
+│   ├── parsers.ts                # Text parsing utilities
+│   ├── supabase.ts               # Supabase client and helpers
+│   ├── theme.ts                  # MUI theme config
+│   └── types.ts                  # Shared TypeScript types
+├── supabase/
+│   └── migrations/               # SQL files — run in order
+├── ComfyUI/                      # Local ComfyUI install (excluded from git)
+│   ├── venv312/                  # Python 3.12 venv with torch 2.6.0+cu124
+│   ├── models/checkpoints/       # SD checkpoint files
+│   └── run_comfyui.ps1           # Startup script
+├── .env.local                    # Secrets and config (excluded from git)
+├── next.config.js
+├── package.json
+└── tsconfig.json
+```
+
+### Story Generation Data Flow
+
+```
+User submits prompt
+       │
+       ▼
+POST /api/continue
+       │
+       ├── Fetch story_memory (if exists)
+       ├── Fetch story parts
+       │     ├── Has memory?   → memory + last 2 parts
+       │     ├── ≤6 parts?    → all parts
+       │     └── >6 parts?    → last 5 parts
+       │
+       ├── buildUserInstruction()
+       │     └── characters, locations, style notes, token budget
+       │
+       └── continueStory(storyContext, userInstruction, model, strict, maxTokens)
+                 │
+                 ├── strict=true  → system: "prose editor", temp 0.45, sceneLabel: "REWORD AS PROSE"
+                 └── strict=false → system: "scene writer", temp 0.82, sceneLabel: "CONTINUE THE STORY"
+```
+
+### Portrait Generation Data Flow
+
+```
+Click portrait button
+       │
+       ▼
+POST /api/generate-portrait
+       │
+       ├── Fetch character from Supabase
+       ├── Build SD prompt (auto or custom)
+       ├── POST to ComfyUI /prompt (queue workflow)
+       ├── Poll ComfyUI /history/{id} until complete
+       ├── Fetch image bytes from /view endpoint
+       ├── Convert to base64 data URL
+       └── UPDATE characters SET avatar_url = base64 WHERE id = characterId
+```
+
+---
+
+## Privacy and Security
+
+- **Local AI** — All Ollama generation runs on your machine; no content sent to external APIs
+- **Local Image Generation** — ComfyUI runs locally; no images uploaded externally
+- **Self-Hosted Option** — Supabase can be self-hosted on your own PostgreSQL
+- **No Analytics** — No telemetry or usage tracking of any kind
+- **Uncensored Mode** — `OLLAMA_UNRESTRICTED_MODE=true` removes content filters; you take full responsibility for all generated content; use in accordance with applicable laws
+
+---
+
+## Mobile Access
+
+Access the app from any device on your local network.
+
+### Setup
+
+1. **Find your PC's local IP:**
+
+   ```powershell
+   ipconfig
+   # Look for "IPv4 Address" under your active network adapter
+   # Usually 192.168.x.x or 10.0.x.x
    ```
 
-2. Restart your development server
+2. **Update `.env.local`** if Ollama needs to be reached from another device:
 
-**⚠️ WARNING**: Enabling unrestricted mode removes content restrictions for story generation. This is intended for mature/adult fiction writing. You take full responsibility for all generated content. Use responsibly and in accordance with applicable laws.
+   ```env
+   OLLAMA_API_URL=http://192.168.1.100:11434
+   ```
 
-**Note**: Some model refusals may still occur due to:
+3. **Start Next.js with network binding:**
 
-- Hard-coded filters in specific model variants
-- Ollama server-level filtering (rare)
-- Model fine-tuning that includes content restrictions
+   ```bash
+   npm run dev -- --hostname 0.0.0.0
+   ```
 
-If you continue to experience unwanted content refusals with unrestricted mode enabled, consider:
+4. **Open on mobile:** `http://192.168.1.100:3000`
 
-- Using a different Llama model variant (e.g., community models without restrictions)
-- Checking Ollama server configuration
-- Using alternative models designed for creative fiction writing
+### Windows Firewall
 
-## 📱 Mobile Access Guide
+Add inbound rules for the following TCP ports:
 
-You can access the web application from your mobile device on the same local network.
+| Port  | Service            |
+| ----- | ------------------ |
+| 3000  | Next.js dev server |
+| 11434 | Ollama             |
+| 8188  | ComfyUI            |
 
-### Setup for Mobile Access
+Windows Defender Firewall → Advanced Settings → Inbound Rules → New Rule → Port → TCP → enter port number.
 
-#### 1. Find Your PC's Local IP Address
+---
 
-**Windows:**
+## Troubleshooting
 
-```bash
-ipconfig
-# Look for "IPv4 Address" under your active network adapter
-# Usually starts with 192.168.x.x or 10.0.x.x
-```
+### Ollama
 
-**macOS/Linux:**
+| Problem                                     | Fix                                                                   |
+| ------------------------------------------- | --------------------------------------------------------------------- |
+| Connection refused                          | Run `ollama serve`; check `OLLAMA_API_URL` in `.env.local`            |
+| Model not found                             | `ollama pull <model-name>`; verify with `ollama list`                 |
+| AI generates plot synopsis instead of prose | Ensure Strict mode is selected; check latest `lib/ollama.ts`          |
+| AI invents characters                       | Strict mode CHARACTER RULE forbids this; verify strict mode is `true` |
 
-```bash
-ifconfig
-# Look for "inet" under your active network adapter (en0, wlan0, etc.)
-# Or use: hostname -I
-```
+### ComfyUI / Portrait Generation
 
-#### 2. Configure Ollama for Network Access
+| Problem                       | Fix                                                                                       |
+| ----------------------------- | ----------------------------------------------------------------------------------------- |
+| `WinError 127 c10_cuda.dll`   | Mixed PyTorch versions; see [ComfyUI Installation](#5-set-up-comfyui-portrait-generation) |
+| Portrait button has no effect | Verify ComfyUI is running at `http://localhost:8188`; check browser console               |
+| `SD_MODEL not found`          | Filename in `SD_MODEL` must exactly match file in `models/checkpoints/`                   |
+| Out of VRAM                   | Close other GPU apps (games, NVIDIA Broadcast); consider a lower-res model                |
+| Slow generation               | ~20–40s on RTX 3060 is normal; first generation takes longer (model load)                 |
 
-Update your `.env.local` file:
+### Supabase
 
-```env
-# Change from localhost to your PC's local IP
-OLLAMA_API_URL=http://192.168.x.x:11434  # Replace x.x with your actual IP (e.g., 192.168.1.100)
-```
+| Problem                        | Fix                                                           |
+| ------------------------------ | ------------------------------------------------------------- |
+| Connection error               | Verify keys in `.env.local`; check Supabase project is active |
+| `story_memory` table not found | Run `005_story_memory.sql` in Supabase SQL Editor             |
+| Other table not found          | Ensure all four migration files have been run in order        |
 
-**Security Note**: This uses HTTP (unencrypted) which is acceptable for local network usage. However, avoid transmitting highly sensitive data over this connection. The traffic is only on your local network and not exposed to the internet.
+### Build
 
-**Windows Users**: Ensure Windows Firewall allows connections to port 11434 (see Ollama installation section above).
+| Problem           | Fix                                   |
+| ----------------- | ------------------------------------- |
+| TypeScript errors | `npx tsc --noEmit` to see all         |
+| Build fails       | Ensure Node.js 18+ (`node --version`) |
+| ESLint warnings   | `npm run lint`                        |
 
-**macOS/Linux Users**: Ollama listens on localhost by default. To allow network access:
+---
 
-```bash
-# Set environment variable before starting Ollama
-export OLLAMA_HOST=0.0.0.0:11434
-ollama serve
-```
-
-#### 3. Run Next.js with Network Binding
-
-```bash
-npm run dev -- --hostname 0.0.0.0
-```
-
-This allows the web app to be accessed from other devices on your network.
-
-#### 4. Access from Mobile
-
-On your mobile device:
-
-1. Connect to the **same WiFi network** as your PC
-2. Open browser and navigate to: `http://192.168.x.x:3000` (replace x.x with your PC's actual IP, e.g., `http://192.168.1.100:3000`)
-3. The app should load and work normally
-4. AI generation will use Ollama running on your PC
-
-### Mobile Access Troubleshooting
-
-- **Cannot connect to web app**:
-  - Verify mobile device is on same WiFi network
-  - Check if PC firewall allows incoming connections on port 3000
-  - **Windows**: Add inbound rule for TCP port 3000 in Windows Firewall (similar to Ollama setup)
-  - **macOS**: System Settings > Network > Firewall > Options > Allow port 3000
-  - **Linux**: Configure iptables/ufw to allow port 3000: `sudo ufw allow 3000/tcp`
-- **Web app loads but AI generation fails**:
-  - Verify OLLAMA_API_URL in .env.local uses PC's local IP, not localhost
-  - Check Ollama is running: `ollama list`
-  - Verify firewall allows port 11434 (add inbound rule if needed)
-- **Slow mobile performance**:
-  - Normal - AI generation happens on PC, which may take 30-90 seconds
-  - Ensure PC remains active and not in sleep mode
-  - Consider using a smaller model (llama3.1:8b) for faster responses
-
-## 🐛 Troubleshooting
-
-### Ollama Connection Issues
-
-- Ensure Ollama is running: `ollama serve`
-- Check if the model is downloaded: `ollama list`
-- Verify the API URL in `.env.local`
-
-### Supabase Connection Issues
-
-- Verify your API keys in `.env.local`
-- Check that the database migration ran successfully
-- Ensure your Supabase project is active
-
-### Import Failing
-
-- Ensure the file is a valid `.docx` file
-- Check that Ollama is running and the model is available
-- Check browser console and server logs for errors
-
-### Slow Generation
-
-- This is expected with llama3.1:70b on consumer hardware
-- Consider using a smaller model like llama3.1:8b for faster inference
-- Ensure your system meets the requirements for running large LLMs
-
-## 🤝 Contributing
-
-This is a personal project, but contributions are welcome! Feel free to open issues or submit pull requests.
-
-## 📄 License
+## License
 
 This project is open source and available under the MIT License.
 
-## 🙏 Acknowledgments
+---
 
-- Built with [Next.js](https://nextjs.org/)
-- UI components from [Material-UI](https://mui.com/)
-- Database by [Supabase](https://supabase.com/)
-- Local AI powered by [Ollama](https://ollama.ai/)
+_Built with [Next.js](https://nextjs.org/) · [Material UI](https://mui.com/) · [Supabase](https://supabase.com/) · [Ollama](https://ollama.ai/) · [ComfyUI](https://github.com/comfyanonymous/ComfyUI)_

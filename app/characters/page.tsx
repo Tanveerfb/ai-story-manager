@@ -16,6 +16,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import CharacterCard from "@/components/CharacterCard";
+import CharacterRefineDialog from "@/components/CharacterRefineDialog";
 import { useRouter } from "next/navigation";
 
 export default function CharactersPage() {
@@ -28,6 +29,7 @@ export default function CharactersPage() {
     type: "success" | "error" | "warning";
     text: string;
   } | null>(null);
+  const [refineTarget, setRefineTarget] = useState<any | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -107,16 +109,22 @@ export default function CharactersPage() {
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
+      <Box sx={{ my: { xs: 2, sm: 4 } }}>
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
-            mb: 3,
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: 1,
+            mb: 3,
           }}
         >
-          <Typography variant="h4" component="h1">
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
+          >
             Characters
           </Typography>
           <Button
@@ -176,12 +184,27 @@ export default function CharactersPage() {
                 <CharacterCard
                   character={character}
                   onClick={() => router.push(`/characters/${character.id}`)}
+                  onRefine={(char) => setRefineTarget(char)}
                 />
               </Grid>
             ))}
           </Grid>
         )}
       </Box>
+
+      <CharacterRefineDialog
+        open={!!refineTarget}
+        character={refineTarget}
+        onClose={() => setRefineTarget(null)}
+        onSaved={(updates) => {
+          // Merge updates into local state so UI reflects changes immediately
+          setCharacters((prev) =>
+            prev.map((c) =>
+              c.id === refineTarget?.id ? { ...c, ...updates } : c,
+            ),
+          );
+        }}
+      />
     </Container>
   );
 }

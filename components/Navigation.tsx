@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Drawer,
   List,
@@ -13,23 +13,23 @@ import {
   AppBar,
   Box,
   Typography,
-} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import HomeIcon from '@mui/icons-material/Home';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import CreateIcon from '@mui/icons-material/Create';
-import PeopleIcon from '@mui/icons-material/People';
-import PlaceIcon from '@mui/icons-material/Place';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import SettingsIcon from '@mui/icons-material/Settings';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import MergeTypeIcon from '@mui/icons-material/MergeType';
-import LinkOffIcon from '@mui/icons-material/LinkOff';
-import MovieFilterIcon from '@mui/icons-material/MovieFilter';
-import { useRouter } from 'next/navigation';
-import { useThemeMode } from './ThemeProvider';
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import HomeIcon from "@mui/icons-material/Home";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import CreateIcon from "@mui/icons-material/Create";
+import PeopleIcon from "@mui/icons-material/People";
+import PlaceIcon from "@mui/icons-material/Place";
+import TimelineIcon from "@mui/icons-material/Timeline";
+import SettingsIcon from "@mui/icons-material/Settings";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
+import MergeTypeIcon from "@mui/icons-material/MergeType";
+import LinkOffIcon from "@mui/icons-material/LinkOff";
+import MovieFilterIcon from "@mui/icons-material/MovieFilter";
+import { useRouter } from "next/navigation";
+import { useThemeMode } from "./ThemeProvider";
 
 const drawerWidth = 240;
 
@@ -39,15 +39,19 @@ const drawerWidth = 240;
  * Import-related items are hidden to enforce AI-first creation from scratch
  */
 const menuItems = [
-  { text: 'Continue Story', icon: <CreateIcon />, path: '/continue' },
-  { text: 'Characters', icon: <PeopleIcon />, path: '/characters' },
-  { text: 'Locations', icon: <PlaceIcon />, path: '/locations' },
-  { text: 'Story Viewer', icon: <MenuBookIcon />, path: '/story' },
-  { text: 'Timeline', icon: <TimelineIcon />, path: '/timeline' },
-  { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  { text: "Continue Story", icon: <CreateIcon />, path: "/continue" },
+  { text: "Characters", icon: <PeopleIcon />, path: "/characters" },
+  { text: "Locations", icon: <PlaceIcon />, path: "/locations" },
+  { text: "Story Viewer", icon: <MenuBookIcon />, path: "/story" },
+  { text: "Timeline", icon: <TimelineIcon />, path: "/timeline" },
+  { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
 ];
 
-export default function Navigation({ children }: { children: React.ReactNode }) {
+export default function Navigation({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const { mode, toggleTheme } = useThemeMode();
@@ -82,7 +86,7 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: "flex" }}>
       <AppBar
         position="fixed"
         sx={{
@@ -96,7 +100,7 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
+            sx={{ mr: 2, display: { sm: "none" } }}
           >
             <MenuIcon />
           </IconButton>
@@ -104,7 +108,7 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
             AI-First Story Creation
           </Typography>
           <IconButton onClick={toggleTheme} color="inherit">
-            {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            {mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton>
         </Toolbar>
       </AppBar>
@@ -120,8 +124,11 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
             keepMounted: true,
           }}
           sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            display: { xs: "block", sm: "none" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: drawerWidth,
+            },
           }}
         >
           {drawer}
@@ -129,8 +136,11 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
         <Drawer
           variant="permanent"
           sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            display: { xs: "none", sm: "block" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: drawerWidth,
+            },
           }}
           open
         >
@@ -141,8 +151,9 @@ export default function Navigation({ children }: { children: React.ReactNode }) 
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 1.5, sm: 3 },
           width: { sm: `calc(100% - ${drawerWidth}px)` },
+          minWidth: 0, // prevent overflow
         }}
       >
         <Toolbar />
