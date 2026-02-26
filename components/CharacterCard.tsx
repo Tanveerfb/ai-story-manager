@@ -1,19 +1,14 @@
 "use client";
 
+import { Card, Typography, Tag, Avatar, Button, Tooltip, Spin } from "antd";
 import {
-  Card,
-  CardContent,
-  Typography,
-  Chip,
-  Box,
-  Avatar,
-  IconButton,
-  Tooltip,
-  CircularProgress,
-} from "@mui/material";
-import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
-import BrushIcon from "@mui/icons-material/Brush";
+  ToolOutlined,
+  HighlightOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
 import { useState } from "react";
+
+const { Text, Title } = Typography;
 
 interface CharacterCardProps {
   character: {
@@ -59,12 +54,12 @@ export default function CharacterCard({
     }
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: string): string => {
     switch (role) {
       case "main":
-        return "primary";
+        return "blue";
       case "side":
-        return "secondary";
+        return "purple";
       default:
         return "default";
     }
@@ -72,26 +67,25 @@ export default function CharacterCard({
 
   return (
     <Card
-      sx={{
+      hoverable={!!onClick}
+      style={{
         cursor: onClick ? "pointer" : "default",
-        "&:hover": onClick ? { boxShadow: 6 } : {},
         position: "relative",
       }}
     >
       {/* AI Refine button — top-right corner, stops card click propagation */}
       {onRefine && (
         <Tooltip title="Build character with AI">
-          <IconButton
+          <Button
+            type="text"
             size="small"
-            color="primary"
+            icon={<ToolOutlined />}
             onClick={(e) => {
               e.stopPropagation();
               onRefine(character);
             }}
-            sx={{ position: "absolute", top: 8, right: 8 }}
-          >
-            <AutoFixHighIcon fontSize="small" />
-          </IconButton>
+            style={{ position: "absolute", top: 8, right: 8 }}
+          />
         </Tooltip>
       )}
 
@@ -104,55 +98,55 @@ export default function CharacterCard({
         <span
           style={{ position: "absolute", top: 8, right: onRefine ? 40 : 8 }}
         >
-          <IconButton
+          <Button
+            type="text"
             size="small"
-            color="secondary"
+            icon={
+              portraitLoading ? (
+                <Spin
+                  indicator={<LoadingOutlined style={{ fontSize: 16 }} />}
+                />
+              ) : (
+                <HighlightOutlined />
+              )
+            }
             onClick={handleGeneratePortrait}
             disabled={portraitLoading}
-          >
-            {portraitLoading ? (
-              <CircularProgress size={16} />
-            ) : (
-              <BrushIcon fontSize="small" />
-            )}
-          </IconButton>
+          />
         </span>
       </Tooltip>
 
-      <CardContent onClick={onClick}>
-        <Box
-          sx={{
+      <div onClick={onClick}>
+        <div
+          style={{
             display: "flex",
             alignItems: "center",
-            mb: 2,
-            pr: onRefine ? 3 : 0,
+            marginBottom: 16,
+            paddingRight: onRefine ? 24 : 0,
           }}
         >
           <Avatar
             src={portrait || character.avatar_url}
             alt={character.name}
-            sx={{ width: 56, height: 56, mr: 2 }}
+            size={56}
+            style={{ marginRight: 16 }}
           >
             {character.name[0]}
           </Avatar>
-          <Box>
-            <Typography variant="h6" component="div">
+          <div>
+            <Title level={5} style={{ margin: 0 }}>
               {character.name}
-            </Typography>
-            <Chip
-              label={character.role}
-              size="small"
-              color={getRoleColor(character.role)}
-            />
-          </Box>
-        </Box>
+            </Title>
+            <Tag color={getRoleColor(character.role)}>{character.role}</Tag>
+          </div>
+        </div>
         {character.description && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          <Text type="secondary" style={{ marginBottom: 8, display: "block" }}>
             {character.description.slice(0, 100)}
             {character.description.length > 100 ? "..." : ""}
-          </Typography>
+          </Text>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

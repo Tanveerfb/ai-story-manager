@@ -1,23 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Container,
-  Typography,
-  Box,
-  Grid,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Button,
-  Alert,
-  CircularProgress,
-} from "@mui/material";
+import { Typography, Input, Select, Button, Alert, Spin, Row, Col } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
 import CharacterCard from "@/components/CharacterCard";
 import CharacterRefineDialog from "@/components/CharacterRefineDialog";
 import { useRouter } from "next/navigation";
+
+const { Title, Text } = Typography;
 
 export default function CharactersPage() {
   const [characters, setCharacters] = useState<any[]>([]);
@@ -108,89 +98,92 @@ export default function CharactersPage() {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: { xs: 2, sm: 4 } }}>
-        <Box
-          sx={{
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ marginTop: 16, marginBottom: 32 }}>
+        <div
+          style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: 1,
-            mb: 3,
+            gap: 8,
+            marginBottom: 24,
           }}
         >
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{ fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
-          >
+          <Title level={2} style={{ margin: 0 }}>
             Characters
-          </Typography>
+          </Title>
           <Button
-            variant="contained"
+            type="primary"
             onClick={handleExtractFromStory}
             disabled={extracting}
-            startIcon={extracting ? <CircularProgress size={20} /> : null}
+            icon={
+              extracting ? (
+                <Spin
+                  indicator={<LoadingOutlined style={{ fontSize: 16 }} spin />}
+                  size="small"
+                />
+              ) : null
+            }
           >
             {extracting ? "Extracting..." : "Extract from Story Parts"}
           </Button>
-        </Box>
+        </div>
 
         {message && (
           <Alert
-            severity={message.type}
-            sx={{ mb: 2 }}
+            type={message.type}
+            title={message.text}
+            closable
             onClose={() => setMessage(null)}
-          >
-            {message.text}
-          </Alert>
+            style={{ marginBottom: 16 }}
+          />
         )}
 
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={8}>
-            <TextField
-              fullWidth
-              label="Search by name"
+        <Row gutter={16} style={{ marginBottom: 24 }}>
+          <Col xs={24} md={16}>
+            <Input
+              placeholder="Search by name"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              allowClear
             />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Filter by Role</InputLabel>
-              <Select
-                value={roleFilter}
-                label="Filter by Role"
-                onChange={(e) => setRoleFilter(e.target.value)}
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="main">Main</MenuItem>
-                <MenuItem value="side">Side</MenuItem>
-                <MenuItem value="minor">Minor</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
+          </Col>
+          <Col xs={24} md={8}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Filter by Role"
+              value={roleFilter || undefined}
+              onChange={(value) => setRoleFilter(value || "")}
+              allowClear
+              options={[
+                { value: "", label: "All" },
+                { value: "main", label: "Main" },
+                { value: "side", label: "Side" },
+                { value: "minor", label: "Minor" },
+              ]}
+            />
+          </Col>
+        </Row>
 
         {filteredCharacters.length === 0 ? (
-          <Typography color="text.secondary">
+          <Text type="secondary">
             No characters found. Import a story to extract characters.
-          </Typography>
+          </Text>
         ) : (
-          <Grid container spacing={3}>
+          <Row gutter={[24, 24]}>
             {filteredCharacters.map((character) => (
-              <Grid item xs={12} sm={6} md={4} key={character.id}>
+              <Col xs={24} sm={12} md={8} key={character.id}>
                 <CharacterCard
                   character={character}
                   onClick={() => router.push(`/characters/${character.id}`)}
                   onRefine={(char) => setRefineTarget(char)}
                 />
-              </Grid>
+              </Col>
             ))}
-          </Grid>
+          </Row>
         )}
-      </Box>
+      </div>
 
       <CharacterRefineDialog
         open={!!refineTarget}
@@ -205,6 +198,6 @@ export default function CharactersPage() {
           );
         }}
       />
-    </Container>
+    </div>
   );
 }

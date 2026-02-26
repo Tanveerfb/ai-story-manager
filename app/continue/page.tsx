@@ -2,49 +2,55 @@
 
 import { useEffect, useState } from "react";
 import {
-  Container,
   Typography,
-  Box,
-  Grid,
-  TextField,
+  Row,
+  Col,
+  Input,
   Button,
   Alert,
-  Paper,
+  Card,
   Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Divider,
-  Chip,
-  IconButton,
+  Tag,
   Tooltip,
-  ToggleButtonGroup,
-  ToggleButton,
+  Segmented,
   Slider,
-  CircularProgress,
-  Collapse,
-  LinearProgress,
-} from "@mui/material";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import ClearIcon from "@mui/icons-material/Clear";
-import AddIcon from "@mui/icons-material/Add";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import InfoIcon from "@mui/icons-material/Info";
-import RepeatIcon from "@mui/icons-material/Repeat";
-import StopIcon from "@mui/icons-material/Stop";
-import FactCheckIcon from "@mui/icons-material/FactCheck";
+  Spin,
+  Progress,
+} from "antd";
+import {
+  ThunderboltOutlined,
+  ReloadOutlined,
+  ClearOutlined,
+  PlusOutlined,
+  DownOutlined,
+  UpOutlined,
+  InfoCircleOutlined,
+  SyncOutlined,
+  StopOutlined,
+  AuditOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
 
+import { theme as antdTheme } from "antd";
 import GenerationProgress from "@/components/continue/GenerationProgress";
 import ModelSelector from "@/components/continue/ModelSelector";
 import EntityManager from "@/components/continue/EntityManager";
 import LocationManager from "@/components/continue/LocationManager";
 import { useWorld } from "@/components/WorldProvider";
+import { useThemeMode } from "@/components/ThemeProvider";
+import { getSemanticColors } from "@/lib/theme";
 import { DEFAULT_AI_MODEL } from "@/lib/constants";
+
+const { Text, Title } = Typography;
+const { TextArea } = Input;
 
 export default function ContinuePage() {
   const { worldId } = useWorld();
+  const { mode } = useThemeMode();
+  const { token } = antdTheme.useToken();
+  const isDark = mode === "dark";
+  const sc = getSemanticColors(isDark);
 
   // Core state
   const [userPrompt, setUserPrompt] = useState("");
@@ -564,88 +570,80 @@ export default function ContinuePage() {
   // ─── Render ───
 
   return (
-    <Container
-      maxWidth="xl"
-      disableGutters
-      sx={{ px: { xs: 1, sm: 2, md: 3 } }}
-    >
-      <Box sx={{ my: { xs: 2, sm: 3 } }}>
+    <div style={{ maxWidth: 1536, margin: "0 auto", padding: "0 12px" }}>
+      <div style={{ margin: "16px 0 24px" }}>
         {/* Header row */}
-        <Box
-          sx={{
+        <div
+          style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            mb: 2,
+            marginBottom: 16,
             flexWrap: "wrap",
-            gap: 1,
+            gap: 8,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <AutoAwesomeIcon color="primary" />
-            <Typography
-              variant="h5"
-              component="h1"
-              sx={{ fontWeight: 700, fontSize: { xs: "1.3rem", sm: "1.5rem" } }}
-            >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ThunderboltOutlined
+              style={{ fontSize: 20, color: token.colorPrimary }}
+            />
+            <Title level={4} style={{ margin: 0, fontWeight: 700 }}>
               Continue Story
-            </Typography>
-          </Box>
+            </Title>
+          </div>
           <ModelSelector
             selectedModel={selectedModel}
             onModelChange={setSelectedModel}
             disabled={loading}
           />
-        </Box>
+        </div>
 
         {/* Story Memory — compact bar */}
-        <Paper
-          variant="outlined"
-          sx={{
-            mb: 2,
-            overflow: "hidden",
-            borderColor: storyMemory ? "primary.main" : "divider",
+        <Card
+          size="small"
+          style={{
+            marginBottom: 16,
+            borderColor: storyMemory ? token.colorPrimary : undefined,
           }}
+          styles={{ body: { padding: 0 } }}
         >
-          <Box
-            sx={{
+          <div
+            style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              px: 2,
-              py: 1,
+              padding: "8px 16px",
               cursor: storyMemory ? "pointer" : "default",
             }}
             onClick={() => storyMemory && setMemoryExpanded((v) => !v)}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Text type="secondary" style={{ fontSize: 13 }}>
               {storyMemory
                 ? `Story Memory active — ${storyMemory.part_count} parts condensed`
                 : "Story Memory — not generated"}
-            </Typography>
-            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            </Text>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               {storyMemory && (
                 <Button
                   size="small"
-                  color="error"
+                  type="text"
+                  danger
                   onClick={(e) => {
                     e.stopPropagation();
                     handleClearMemory();
                   }}
-                  sx={{ minWidth: 0, px: 1, py: 0 }}
                 >
                   Clear
                 </Button>
               )}
               <Button
                 size="small"
-                variant={storyMemory ? "text" : "outlined"}
+                type={storyMemory ? "text" : "default"}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleGenerateMemory();
                 }}
                 disabled={memoryLoading}
-                sx={{ py: 0 }}
               >
                 {memoryLoading
                   ? "Generating…"
@@ -654,136 +652,129 @@ export default function ContinuePage() {
                     : "Generate"}
               </Button>
               {storyMemory && (
-                <IconButton size="small">
-                  {memoryExpanded ? (
-                    <ExpandLessIcon fontSize="small" />
-                  ) : (
-                    <ExpandMoreIcon fontSize="small" />
-                  )}
-                </IconButton>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={memoryExpanded ? <UpOutlined /> : <DownOutlined />}
+                />
               )}
-            </Box>
-          </Box>
-          <Collapse in={memoryExpanded && !!storyMemory}>
-            <Box
-              sx={{
-                px: 2,
-                pb: 1.5,
-                borderTop: "1px solid",
-                borderColor: "divider",
+            </div>
+          </div>
+          {memoryExpanded && storyMemory && (
+            <div
+              style={{
+                padding: "0 16px 12px",
+                borderTop: `1px solid ${sc.border}`,
               }}
             >
-              <Typography
-                variant="body2"
-                sx={{
+              <Text
+                type="secondary"
+                style={{
                   whiteSpace: "pre-wrap",
-                  color: "text.secondary",
-                  mt: 1,
+                  display: "block",
+                  marginTop: 8,
                   fontSize: "0.8rem",
                 }}
               >
                 {storyMemory?.content}
-              </Typography>
-            </Box>
-          </Collapse>
-        </Paper>
+              </Text>
+            </div>
+          )}
+        </Card>
 
-        <Grid container spacing={2}>
+        <Row gutter={[16, 16]}>
           {/* ─── Main Column ─── */}
-          <Grid item xs={12} lg={8}>
+          <Col xs={24} lg={16}>
             {/* Prompt Card */}
-            <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}>
+            <Card style={{ marginBottom: 16 }}>
               {/* Generation style toggle + character focus — single row */}
-              <Box
-                sx={{
+              <div
+                style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 2,
-                  mb: 2,
+                  gap: 16,
+                  marginBottom: 16,
                   flexWrap: "wrap",
                 }}
               >
-                <ToggleButtonGroup
+                <Segmented
                   value={generationStyle}
-                  exclusive
-                  onChange={(_, v) => v && setGenerationStyle(v)}
+                  onChange={(v) =>
+                    setGenerationStyle(v as "strict" | "creative")
+                  }
                   disabled={loading}
-                  size="small"
-                >
-                  <ToggleButton value="strict">
-                    <Tooltip title="AI renders your exact narrative intent as prose — no inventions">
-                      <span>Reword</span>
-                    </Tooltip>
-                  </ToggleButton>
-                  <ToggleButton value="creative">
-                    <Tooltip title="AI uses your prompt as a starting point and expands freely">
-                      <span>Expand</span>
-                    </Tooltip>
-                  </ToggleButton>
-                </ToggleButtonGroup>
+                  options={[
+                    {
+                      label: (
+                        <Tooltip title="AI renders your exact narrative intent as prose — no inventions">
+                          <span>Reword</span>
+                        </Tooltip>
+                      ),
+                      value: "strict",
+                    },
+                    {
+                      label: (
+                        <Tooltip title="AI uses your prompt as a starting point and expands freely">
+                          <span>Expand</span>
+                        </Tooltip>
+                      ),
+                      value: "creative",
+                    },
+                  ]}
+                />
 
-                <FormControl size="small" sx={{ minWidth: 160 }}>
-                  <InputLabel>Play as</InputLabel>
-                  <Select
-                    value={characterFocus}
-                    label="Play as"
-                    onChange={(e) => setCharacterFocus(e.target.value)}
-                    disabled={loading}
-                  >
-                    <MenuItem value="">
-                      <em>None</em>
-                    </MenuItem>
-                    {characters.map((char) => (
-                      <MenuItem key={char.id} value={char.name}>
-                        {char.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Select
+                  value={characterFocus || undefined}
+                  onChange={(v) => setCharacterFocus(v ?? "")}
+                  placeholder="Play as"
+                  allowClear
+                  disabled={loading}
+                  style={{ minWidth: 160 }}
+                  options={[
+                    ...characters.map((char) => ({
+                      label: char.name,
+                      value: char.name,
+                    })),
+                  ]}
+                />
 
                 <Button
                   size="small"
-                  variant="text"
+                  type="text"
                   onClick={() => setShowAdvanced((v) => !v)}
-                  sx={{
-                    ml: "auto",
-                    textTransform: "none",
-                    color: "text.secondary",
-                  }}
+                  style={{ marginLeft: "auto" }}
                 >
                   {showAdvanced ? "Hide settings" : "Settings"}
                 </Button>
-              </Box>
+              </div>
 
               {/* Advanced settings (collapsible) */}
-              <Collapse in={showAdvanced}>
-                <Box sx={{ mb: 2, pl: 1 }}>
-                  <Typography variant="caption" color="text.secondary">
+              {showAdvanced && (
+                <div style={{ marginBottom: 16, paddingLeft: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
                     Max Tokens: {maxTokens}
-                  </Typography>
+                  </Text>
                   <Slider
                     value={maxTokens}
-                    onChange={(_, v) => setMaxTokens(v as number)}
+                    onChange={(v) => setMaxTokens(v)}
                     min={100}
                     max={3000}
                     step={50}
                     disabled={loading}
-                    marks={[
-                      { value: 100, label: "100" },
-                      { value: 600, label: "600" },
-                      { value: 1500, label: "1500" },
-                      { value: 3000, label: "3000" },
-                    ]}
-                    valueLabelDisplay="auto"
-                    sx={{ maxWidth: 400 }}
+                    marks={{
+                      100: "100",
+                      600: "600",
+                      1500: "1500",
+                      3000: "3000",
+                    }}
+                    tooltip={{ open: undefined }}
+                    style={{ maxWidth: 400 }}
                   />
-                </Box>
-              </Collapse>
+                </div>
+              )}
 
               {/* Prompt text area */}
-              <TextField
-                fullWidth
-                multiline
+              <TextArea
                 rows={5}
                 placeholder={
                   characterFocus
@@ -795,120 +786,109 @@ export default function ContinuePage() {
                 value={userPrompt}
                 onChange={(e) => setUserPrompt(e.target.value)}
                 disabled={loading}
-                sx={{
-                  "& .MuiInputBase-root": {
-                    fontSize: "0.95rem",
-                    lineHeight: 1.6,
-                  },
-                }}
+                style={{ fontSize: "0.95rem", lineHeight: 1.6 }}
               />
 
               {/* Action buttons */}
-              <Box
-                sx={{
+              <div
+                style={{
                   display: "flex",
-                  gap: 1,
-                  mt: 2,
+                  gap: 8,
+                  marginTop: 16,
                   alignItems: "center",
                 }}
               >
                 <Button
-                  variant="contained"
+                  type="primary"
                   onClick={handleGenerate}
                   disabled={loading || !userPrompt.trim()}
-                  startIcon={<AutoAwesomeIcon />}
-                  sx={{ px: 3 }}
+                  icon={<ThunderboltOutlined />}
+                  style={{ paddingInline: 24 }}
                 >
                   Generate
                 </Button>
                 <Tooltip title="Retry">
-                  <span>
-                    <IconButton
-                      onClick={handleGenerate}
-                      disabled={loading || !userPrompt.trim()}
-                      color="primary"
-                      size="small"
-                    >
-                      <RefreshIcon />
-                    </IconButton>
-                  </span>
+                  <Button
+                    type="text"
+                    onClick={handleGenerate}
+                    disabled={loading || !userPrompt.trim()}
+                    icon={<ReloadOutlined />}
+                    size="small"
+                  />
                 </Tooltip>
                 <Tooltip title="Clear output">
-                  <span>
-                    <IconButton
-                      onClick={handleClear}
-                      disabled={loading || !continuation}
-                      size="small"
-                    >
-                      <ClearIcon />
-                    </IconButton>
-                  </span>
+                  <Button
+                    type="text"
+                    onClick={handleClear}
+                    disabled={loading || !continuation}
+                    icon={<ClearOutlined />}
+                    size="small"
+                  />
                 </Tooltip>
-              </Box>
+              </div>
 
               {/* Auto-Continue Section */}
-              <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <RepeatIcon color="action" />
-                  <Typography variant="subtitle2" sx={{ flex: 1 }}>
+              <Card size="small" style={{ marginTop: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <SyncOutlined style={{ color: token.colorTextSecondary }} />
+                  <Text strong style={{ flex: 1 }}>
                     Auto-Continue
-                  </Typography>
-                  <TextField
+                  </Text>
+                  <Input
                     size="small"
                     type="number"
-                    label="Chapters"
+                    placeholder="Chapters"
                     value={autoContinueCount}
                     onChange={(e) =>
                       setAutoContinueCount(
                         Math.max(1, Math.min(20, Number(e.target.value) || 1)),
                       )
                     }
-                    sx={{ width: 100 }}
-                    inputProps={{ min: 1, max: 20 }}
+                    style={{ width: 100 }}
+                    min={1}
+                    max={20}
                     disabled={autoContinueRunning}
                   />
                   {autoContinueRunning ? (
                     <Button
-                      variant="outlined"
-                      color="error"
-                      startIcon={<StopIcon />}
+                      danger
+                      icon={<StopOutlined />}
                       onClick={() => setAutoContinueStop(true)}
                     >
                       Stop
                     </Button>
                   ) : (
                     <Button
-                      variant="outlined"
-                      startIcon={<RepeatIcon />}
+                      icon={<SyncOutlined />}
                       onClick={handleAutoContinue}
                       disabled={loading || !userPrompt.trim()}
                     >
                       Auto-Write
                     </Button>
                   )}
-                </Box>
+                </div>
                 {autoContinueRunning && (
-                  <Box sx={{ mt: 1 }}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={(autoContinueProgress / autoContinueCount) * 100}
+                  <div style={{ marginTop: 8 }}>
+                    <Progress
+                      percent={Math.round(
+                        (autoContinueProgress / autoContinueCount) * 100,
+                      )}
+                      size="small"
                     />
-                    <Typography variant="caption" color="text.secondary">
+                    <Text type="secondary" style={{ fontSize: 12 }}>
                       Chapter {autoContinueProgress} of {autoContinueCount}
-                    </Typography>
-                  </Box>
+                    </Text>
+                  </div>
                 )}
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  display="block"
-                  sx={{ mt: 0.5 }}
+                <Text
+                  type="secondary"
+                  style={{ fontSize: 12, display: "block", marginTop: 4 }}
                 >
                   Generates and auto-inserts multiple chapters sequentially
                   using your prompt as the base direction.
-                </Typography>
-              </Paper>
-            </Paper>
+                </Text>
+              </Card>
+            </Card>
 
             {/* Generation Progress */}
             <GenerationProgress
@@ -920,105 +900,87 @@ export default function ContinuePage() {
             {/* Alerts */}
             {error && (
               <Alert
-                severity="error"
-                sx={{ mb: 2 }}
+                type="error"
+                title={error}
+                closable
                 onClose={() => setError(null)}
-              >
-                {error}
-              </Alert>
+                style={{ marginBottom: 16 }}
+              />
             )}
             {success && (
               <Alert
-                severity="success"
-                sx={{ mb: 2 }}
+                type="success"
+                title={success}
+                closable
                 onClose={() => setSuccess(null)}
-              >
-                {success}
-              </Alert>
+                style={{ marginBottom: 16 }}
+              />
             )}
 
             {/* Generated Output */}
             {continuation && (
-              <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}>
-                <Typography
-                  variant="subtitle2"
-                  color="text.secondary"
-                  sx={{ mb: 1.5 }}
+              <Card style={{ marginBottom: 16 }}>
+                <Text
+                  type="secondary"
+                  strong
+                  style={{ display: "block", marginBottom: 12 }}
                 >
                   Generated — edit as needed, then insert into your story:
-                </Typography>
+                </Text>
 
-                <TextField
-                  fullWidth
-                  multiline
-                  minRows={12}
+                <TextArea
+                  autoSize={{ minRows: 12 }}
                   value={continuation}
                   onChange={(e) => setContinuation(e.target.value)}
-                  variant="outlined"
                   disabled={loading}
-                  sx={{
-                    mb: 2,
-                    "& .MuiInputBase-root": {
-                      fontFamily: "Georgia, serif",
-                      fontSize: "1rem",
-                      lineHeight: 1.8,
-                    },
+                  style={{
+                    marginBottom: 16,
+                    fontFamily: "Georgia, serif",
+                    fontSize: "1rem",
+                    lineHeight: 1.8,
                   }}
                 />
 
-                <Divider sx={{ mb: 2 }} />
+                <Divider style={{ marginBottom: 16 }} />
 
                 {/* Insert controls */}
-                <Box
-                  sx={{
+                <div
+                  style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 1.5,
+                    gap: 12,
                     flexWrap: "wrap",
                   }}
                 >
-                  <FormControl size="small" sx={{ minWidth: 150 }}>
-                    <InputLabel>Insert into</InputLabel>
-                    <Select
-                      value={selectedPartNumber}
-                      label="Insert into"
-                      onChange={(e) =>
-                        setSelectedPartNumber(
-                          e.target.value === "new"
-                            ? "new"
-                            : Number(e.target.value),
-                        )
-                      }
-                      disabled={loading}
-                    >
-                      {availableParts.map((num) => (
-                        <MenuItem key={num} value={num}>
-                          Part {num}
-                        </MenuItem>
-                      ))}
-                      <MenuItem value="new">
-                        <em>+ New Part</em>
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
+                  <Select
+                    value={selectedPartNumber}
+                    onChange={(v) =>
+                      setSelectedPartNumber(v === "new" ? "new" : Number(v))
+                    }
+                    disabled={loading}
+                    style={{ minWidth: 150 }}
+                    placeholder="Insert into"
+                    options={[
+                      ...availableParts.map((num) => ({
+                        label: `Part ${num}`,
+                        value: num,
+                      })),
+                      { label: "+ New Part", value: "new" as any },
+                    ]}
+                  />
 
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ flex: 1 }}
-                  >
+                  <Text type="secondary" style={{ flex: 1, fontSize: 12 }}>
                     {selectedPartNumber === "new"
                       ? "Creates new part, Chapter 1"
                       : `Adds next chapter to Part ${selectedPartNumber}`}
-                  </Typography>
+                  </Text>
 
                   <Button
-                    variant="outlined"
-                    startIcon={
+                    icon={
                       consistencyLoading ? (
-                        <CircularProgress size={16} />
+                        <LoadingOutlined />
                       ) : (
-                        <FactCheckIcon />
+                        <AuditOutlined />
                       )
                     }
                     onClick={handleConsistencyCheck}
@@ -1027,41 +989,38 @@ export default function ContinuePage() {
                     Check Consistency
                   </Button>
                   <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
+                    type="primary"
+                    icon={<PlusOutlined />}
                     onClick={handleInsertIntoStory}
                     disabled={loading}
                   >
                     Insert into Story
                   </Button>
-                </Box>
+                </div>
 
                 {/* Consistency Results */}
                 {consistencyResult && (
-                  <Box sx={{ mt: 2 }}>
+                  <div style={{ marginTop: 16 }}>
                     <Alert
-                      severity={
+                      type={
                         consistencyResult.issues.length === 0
                           ? "success"
                           : "warning"
                       }
-                      sx={{ mb: 1 }}
-                    >
-                      {consistencyResult.summary}
-                    </Alert>
+                      title={consistencyResult.summary}
+                      style={{ marginBottom: 8 }}
+                    />
                     {consistencyResult.issues.map((issue, i) => (
-                      <Paper key={i} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
-                        <Box
-                          sx={{
+                      <Card key={i} size="small" style={{ marginBottom: 8 }}>
+                        <div
+                          style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: 1,
-                            mb: 0.5,
+                            gap: 8,
+                            marginBottom: 4,
                           }}
                         >
-                          <Chip
-                            label={issue.type}
-                            size="small"
+                          <Tag
                             color={
                               issue.severity === "high"
                                 ? "error"
@@ -1069,40 +1028,38 @@ export default function ContinuePage() {
                                   ? "warning"
                                   : "default"
                             }
-                          />
-                          <Chip
-                            label={issue.severity}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </Box>
-                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                          >
+                            {issue.type}
+                          </Tag>
+                          <Tag>{issue.severity}</Tag>
+                        </div>
+                        <Text style={{ display: "block", marginBottom: 4 }}>
                           {issue.description}
-                        </Typography>
+                        </Text>
                         {issue.quote && (
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ fontStyle: "italic", mb: 0.5 }}
+                          <Text
+                            type="secondary"
+                            italic
+                            style={{ display: "block", marginBottom: 4 }}
                           >
                             &ldquo;{issue.quote}&rdquo;
-                          </Typography>
+                          </Text>
                         )}
                         {issue.suggestion && (
-                          <Typography variant="body2" color="primary">
+                          <Text type="success">
                             Suggestion: {issue.suggestion}
-                          </Typography>
+                          </Text>
                         )}
-                      </Paper>
+                      </Card>
                     ))}
-                  </Box>
+                  </div>
                 )}
-              </Paper>
+              </Card>
             )}
-          </Grid>
+          </Col>
 
           {/* ─── Sidebar ─── */}
-          <Grid item xs={12} lg={4}>
+          <Col xs={24} lg={8}>
             <EntityManager
               characters={characters}
               onCharactersChange={fetchCharacters}
@@ -1111,9 +1068,9 @@ export default function ContinuePage() {
               locations={locations}
               onLocationsChange={fetchLocations}
             />
-          </Grid>
-        </Grid>
-      </Box>
-    </Container>
+          </Col>
+        </Row>
+      </div>
+    </div>
   );
 }

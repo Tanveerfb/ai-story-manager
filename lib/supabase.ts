@@ -131,6 +131,7 @@ export async function insertStoryPart(storyPart: {
   content: string;
   word_count?: number;
   summary?: string;
+  world_id?: string | null;
 }) {
   const { data, error } = await supabase
     .from("story_parts")

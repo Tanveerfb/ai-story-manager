@@ -2,18 +2,18 @@
 
 import { useState } from "react";
 import {
-  Container,
   Typography,
-  Box,
-  TextField,
+  Input,
+  InputNumber,
   Button,
   Alert,
-  CircularProgress,
-  Paper,
-  FormControlLabel,
+  Spin,
+  Card,
   Checkbox,
-} from "@mui/material";
+} from "antd";
 import FileUpload from "@/components/FileUpload";
+
+const { Title, Text } = Typography;
 
 export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -62,93 +62,95 @@ export default function ImportPage() {
   };
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Import Story
-        </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ marginTop: 32, marginBottom: 32 }}>
+        <Title level={3}>Import Story</Title>
+        <Text type="secondary">
           Upload a .docx, .md, .markdown, .txt, or .gdoc file containing your
           story. The AI will automatically extract characters, locations,
           events, and relationships.
-        </Typography>
+        </Text>
 
-        <Box sx={{ mt: 4 }}>
+        <div style={{ marginTop: 32 }}>
           <FileUpload onFileSelect={setFile} />
-        </Box>
+        </div>
 
-        <Box sx={{ mt: 3 }}>
-          <TextField
-            fullWidth
-            label="Part Number"
-            type="number"
-            value={partNumber}
-            onChange={(e) => setPartNumber(parseInt(e.target.value) || 1)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Title (Optional)"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={skipExtraction}
-                onChange={(e) => setSkipExtraction(e.target.checked)}
-              />
-            }
-            label="Skip AI extraction (add entities manually later)"
-          />
-        </Box>
+        <div style={{ marginTop: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 4 }}>
+              Part Number
+            </label>
+            <InputNumber
+              style={{ width: "100%" }}
+              value={partNumber}
+              onChange={(value) => setPartNumber(value ?? 1)}
+            />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 4 }}>
+              Title (Optional)
+            </label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div>
+            <Checkbox
+              checked={skipExtraction}
+              onChange={(e) => setSkipExtraction(e.target.checked)}
+            >
+              Skip AI extraction (add entities manually later)
+            </Checkbox>
+          </div>
+        </div>
 
-        <Box sx={{ mt: 3 }}>
+        <div style={{ marginTop: 24 }}>
           <Button
-            variant="contained"
+            type="primary"
             size="large"
-            fullWidth
+            block
             onClick={handleImport}
             disabled={!file || loading}
           >
             {loading ? (
               <>
-                <CircularProgress size={24} sx={{ mr: 2 }} />
+                <Spin size="small" style={{ marginRight: 8 }} />
                 Processing...
               </>
             ) : (
               "Import Story"
             )}
           </Button>
-        </Box>
+        </div>
 
         {error && (
-          <Alert severity="error" sx={{ mt: 3 }}>
-            {error}
-          </Alert>
+          <Alert
+            type="error"
+            title={error}
+            style={{ marginTop: 24 }}
+            showIcon
+          />
         )}
 
         {success && (
-          <Paper sx={{ mt: 3, p: 3 }}>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Story imported successfully!
-            </Alert>
-            <Typography variant="h6" gutterBottom>
-              Extracted Entities:
-            </Typography>
-            <Typography>
-              • Characters: {success.extracted.characters}
-            </Typography>
-            <Typography>• Locations: {success.extracted.locations}</Typography>
-            <Typography>• Events: {success.extracted.events}</Typography>
-            <Typography>
-              • Relationships: {success.extracted.relationships}
-            </Typography>
-            <Typography>• Themes: {success.extracted.themes}</Typography>
-          </Paper>
+          <Card style={{ marginTop: 24 }}>
+            <Alert
+              type="success"
+              title="Story imported successfully!"
+              style={{ marginBottom: 16 }}
+              showIcon
+            />
+            <Title level={5}>Extracted Entities:</Title>
+            <Text>• Characters: {success.extracted.characters}</Text>
+            <br />
+            <Text>• Locations: {success.extracted.locations}</Text>
+            <br />
+            <Text>• Events: {success.extracted.events}</Text>
+            <br />
+            <Text>• Relationships: {success.extracted.relationships}</Text>
+            <br />
+            <Text>• Themes: {success.extracted.themes}</Text>
+          </Card>
         )}
-      </Box>
-    </Container>
+      </div>
+    </div>
   );
 }

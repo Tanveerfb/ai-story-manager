@@ -1,11 +1,16 @@
-'use client';
+"use client";
 
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { createAppTheme } from '@/lib/theme';
-import { useState, createContext, useContext, ReactNode } from 'react';
+import { ConfigProvider, theme as antdTheme } from "antd";
+import { getAntdTheme } from "@/lib/theme";
+import {
+  useState,
+  useEffect,
+  createContext,
+  useContext,
+  ReactNode,
+} from "react";
 
-type ThemeMode = 'light' | 'dark';
+type ThemeMode = "light" | "dark";
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -13,27 +18,34 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  mode: 'dark',
+  mode: "dark",
   toggleTheme: () => {},
 });
 
 export const useThemeMode = () => useContext(ThemeContext);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<ThemeMode>('dark');
+  const [mode, setMode] = useState<ThemeMode>("dark");
+
+  // Keep <html> class in sync so CSS-based dark-mode selectors work
+  useEffect(() => {
+    const root = document.documentElement;
+    if (mode === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [mode]);
 
   const toggleTheme = () => {
-    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+    setMode((prevMode) => (prevMode === "light" ? "dark" : "light"));
   };
 
-  const theme = createAppTheme(mode);
+  const themeConfig = getAntdTheme(mode);
 
   return (
     <ThemeContext.Provider value={{ mode, toggleTheme }}>
-      <MuiThemeProvider theme={theme}>
-        <CssBaseline />
-        {children}
-      </MuiThemeProvider>
+      <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>
     </ThemeContext.Provider>
   );
 }

@@ -1,23 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  Container,
-  Typography,
-  Box,
-  Paper,
-  TextField,
-  Button,
-  Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Switch,
-  FormControlLabel,
-  Grid,
-} from "@mui/material";
+import { useState } from "react";
+import { Typography, Card, Input, Button, Alert, Switch, Row, Col } from "antd";
 import { useThemeMode } from "@/components/ThemeProvider";
+
+const { Title, Text } = Typography;
 
 export default function SettingsPage() {
   const { mode, toggleTheme } = useThemeMode();
@@ -46,155 +33,191 @@ export default function SettingsPage() {
   };
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ my: { xs: 2, sm: 4 } }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{ fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
-        >
-          Settings
-        </Typography>
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ marginTop: 16, marginBottom: 16 }}>
+        <Title level={3}>Settings</Title>
 
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Appearance
-          </Typography>
-          <FormControlLabel
-            control={
-              <Switch checked={mode === "dark"} onChange={toggleTheme} />
-            }
-            label="Dark Mode"
-          />
-        </Paper>
+        <Card style={{ marginBottom: 24 }}>
+          <Title level={5}>Appearance</Title>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Switch checked={mode === "dark"} onChange={toggleTheme} />
+            <Text>Dark Mode</Text>
+          </div>
+        </Card>
 
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Ollama Configuration
-          </Typography>
+        <Card style={{ marginBottom: 24 }}>
+          <Title level={5}>Ollama Configuration</Title>
 
-          <TextField
-            fullWidth
-            label="Ollama API URL"
-            value={ollamaUrl}
-            onChange={(e) => setOllamaUrl(e.target.value)}
-            sx={{ mb: 2 }}
-          />
+          <div style={{ marginBottom: 16 }}>
+            <Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 4 }}
+            >
+              Ollama API URL
+            </Text>
+            <Input
+              value={ollamaUrl}
+              onChange={(e) => setOllamaUrl(e.target.value)}
+            />
+          </div>
 
-          <TextField
-            fullWidth
-            label="Model"
-            value={ollamaModel}
-            onChange={(e) => setOllamaModel(e.target.value)}
-            helperText="e.g., llama3.1:70b, llama2, mistral"
-            sx={{ mb: 2 }}
-          />
+          <div style={{ marginBottom: 16 }}>
+            <Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 4 }}
+            >
+              Model
+            </Text>
+            <Input
+              value={ollamaModel}
+              onChange={(e) => setOllamaModel(e.target.value)}
+            />
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              e.g., llama3.1:70b, llama2, mistral
+            </Text>
+          </div>
 
-          <Box
-            sx={{
+          <div
+            style={{
               display: "flex",
-              gap: 2,
+              gap: 16,
               alignItems: "center",
               flexWrap: "wrap",
-              mb: 2,
+              marginBottom: 16,
             }}
           >
-            <Button variant="contained" onClick={testConnection}>
+            <Button type="primary" onClick={testConnection}>
               Test Connection
             </Button>
             {connectionStatus !== "unknown" && (
               <Alert
-                severity={
-                  connectionStatus === "connected" ? "success" : "error"
+                type={connectionStatus === "connected" ? "success" : "error"}
+                title={
+                  connectionStatus === "connected"
+                    ? "Connected"
+                    : "Disconnected"
                 }
-                sx={{ py: 0 }}
-              >
-                {connectionStatus === "connected"
-                  ? "Connected"
-                  : "Disconnected"}
-              </Alert>
+                showIcon
+                style={{ padding: "4px 12px" }}
+              />
             )}
-          </Box>
-        </Paper>
+          </div>
+        </Card>
 
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            AI Generation Parameters
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
+        <Card>
+          <Title level={5}>AI Generation Parameters</Title>
+          <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
             These settings control the quality and creativity of AI-generated
             content.
-          </Typography>
+          </Text>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Temperature"
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12}>
+              <Text
+                type="secondary"
+                style={{ display: "block", marginBottom: 4 }}
+              >
+                Temperature
+              </Text>
+              <Input
                 type="number"
                 value={temperature}
                 onChange={(e) => setTemperature(e.target.value)}
-                inputProps={{ step: 0.01, min: 0, max: 2 }}
-                helperText="Creativity (0.0-2.0)"
+                step={0.01}
+                min={0}
+                max={2}
               />
-            </Grid>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Creativity (0.0-2.0)
+              </Text>
+            </Col>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Top P"
+            <Col xs={24} sm={12}>
+              <Text
+                type="secondary"
+                style={{ display: "block", marginBottom: 4 }}
+              >
+                Top P
+              </Text>
+              <Input
                 type="number"
                 value={topP}
                 onChange={(e) => setTopP(e.target.value)}
-                inputProps={{ step: 0.01, min: 0, max: 1 }}
-                helperText="Nucleus sampling (0.0-1.0)"
+                step={0.01}
+                min={0}
+                max={1}
               />
-            </Grid>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Nucleus sampling (0.0-1.0)
+              </Text>
+            </Col>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Top K"
+            <Col xs={24} sm={12}>
+              <Text
+                type="secondary"
+                style={{ display: "block", marginBottom: 4 }}
+              >
+                Top K
+              </Text>
+              <Input
                 type="number"
                 value={topK}
                 onChange={(e) => setTopK(e.target.value)}
-                inputProps={{ step: 1, min: 1 }}
-                helperText="Token selection pool"
+                step={1}
+                min={1}
               />
-            </Grid>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Token selection pool
+              </Text>
+            </Col>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Max Tokens"
+            <Col xs={24} sm={12}>
+              <Text
+                type="secondary"
+                style={{ display: "block", marginBottom: 4 }}
+              >
+                Max Tokens
+              </Text>
+              <Input
                 type="number"
                 value={maxTokens}
                 onChange={(e) => setMaxTokens(e.target.value)}
-                inputProps={{ step: 100, min: 100 }}
-                helperText="Maximum response length"
+                step={100}
+                min={100}
               />
-            </Grid>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Maximum response length
+              </Text>
+            </Col>
 
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Context Window (num_ctx)"
+            <Col xs={24}>
+              <Text
+                type="secondary"
+                style={{ display: "block", marginBottom: 4 }}
+              >
+                Context Window (num_ctx)
+              </Text>
+              <Input
                 type="number"
                 value={numCtx}
                 onChange={(e) => setNumCtx(e.target.value)}
-                inputProps={{ step: 512, min: 512 }}
-                helperText="Context window size for the model"
+                step={512}
+                min={512}
               />
-            </Grid>
-          </Grid>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Context window size for the model
+              </Text>
+            </Col>
+          </Row>
 
-          <Alert severity="info" sx={{ mt: 3 }}>
-            Note: These settings are informational only. To change them, update
-            your .env file and restart the application.
-          </Alert>
-        </Paper>
-      </Box>
-    </Container>
+          <Alert
+            type="info"
+            showIcon
+            title="Note: These settings are informational only. To change them, update your .env file and restart the application."
+            style={{ marginTop: 24 }}
+          />
+        </Card>
+      </div>
+    </div>
   );
 }

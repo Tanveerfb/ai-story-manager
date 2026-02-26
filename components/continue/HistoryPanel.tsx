@@ -1,16 +1,7 @@
-import {
-  Paper,
-  Typography,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton,
-  Box,
-  Chip,
-  Divider
-} from '@mui/material';
-import RestoreIcon from '@mui/icons-material/Restore';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { Card, Typography, List, Tag, Button, Divider, Tooltip } from "antd";
+import { RollbackOutlined, ClockCircleOutlined } from "@ant-design/icons";
+
+const { Title, Text } = Typography;
 
 interface HistoryEntry {
   id: string;
@@ -25,97 +16,110 @@ interface HistoryPanelProps {
   onRestore?: (entry: HistoryEntry) => void;
 }
 
-export default function HistoryPanel({ history, onRestore }: HistoryPanelProps) {
+export default function HistoryPanel({
+  history,
+  onRestore,
+}: HistoryPanelProps) {
   if (!history || history.length === 0) {
     return (
-      <Paper sx={{ p: 3, mt: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Generation History
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
+      <Card style={{ padding: 24, marginTop: 24 }}>
+        <Title level={5}>Generation History</Title>
+        <Text type="secondary">
           No history yet. Your previous generations will appear here.
-        </Typography>
-      </Paper>
+        </Text>
+      </Card>
     );
   }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   return (
-    <Paper sx={{ p: 3, mt: 3, maxHeight: 500, overflow: 'auto' }}>
-      <Typography variant="h6" gutterBottom>
-        Generation History
-      </Typography>
-      <Typography variant="body2" color="text.secondary" paragraph>
+    <Card
+      style={{ padding: 24, marginTop: 24, maxHeight: 500, overflow: "auto" }}
+    >
+      <Title level={5}>Generation History</Title>
+      <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
         View and restore previous versions
-      </Typography>
+      </Text>
 
-      <List>
-        {history.map((entry, index) => (
-          <Box key={entry.id}>
-            {index > 0 && <Divider sx={{ my: 2 }} />}
-            <ListItem
-              sx={{ 
-                px: 0,
-                alignItems: 'flex-start'
-              }}
+      <List
+        dataSource={history}
+        renderItem={(entry, index) => (
+          <div key={entry.id}>
+            {index > 0 && <Divider style={{ margin: "16px 0" }} />}
+            <List.Item
+              style={{ padding: 0, alignItems: "flex-start" }}
+              actions={
+                onRestore
+                  ? [
+                      <Tooltip title="Restore this version" key="restore">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<RollbackOutlined />}
+                          onClick={() => onRestore(entry)}
+                        />
+                      </Tooltip>,
+                    ]
+                  : undefined
+              }
             >
-              <ListItemText
-                primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <AccessTimeIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="caption" color="text.secondary">
+              <List.Item.Meta
+                title={
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <ClockCircleOutlined
+                      style={{
+                        fontSize: 14,
+                        marginRight: 8,
+                        color: "rgba(0,0,0,0.45)",
+                      }}
+                    />
+                    <Text type="secondary" style={{ fontSize: 12 }}>
                       {formatDate(entry.created_at)}
-                    </Typography>
-                  </Box>
+                    </Text>
+                  </div>
                 }
-                secondary={
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Prompt:</strong> {entry.user_prompt ? (
-                        entry.user_prompt.substring(0, 100) + (entry.user_prompt.length > 100 ? '...' : '')
-                      ) : 'No prompt'}
-                    </Typography>
+                description={
+                  <div>
+                    <Text style={{ marginBottom: 8, display: "block" }}>
+                      <strong>Prompt:</strong>{" "}
+                      {entry.user_prompt
+                        ? entry.user_prompt.substring(0, 100) +
+                          (entry.user_prompt.length > 100 ? "..." : "")
+                        : "No prompt"}
+                    </Text>
                     {entry.revision_instructions && (
-                      <Chip 
-                        label={`Revision: ${entry.revision_instructions.substring(0, 40)}...`}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                        sx={{ mb: 1 }}
-                      />
+                      <Tag color="blue" style={{ marginBottom: 8 }}>
+                        Revision: {entry.revision_instructions.substring(0, 40)}
+                        ...
+                      </Tag>
                     )}
-                    <Typography variant="body2" color="text.secondary">
-                      {entry.generated_content ? (
-                        entry.generated_content.substring(0, 150) + '...'
-                      ) : 'No content'}
-                    </Typography>
-                  </Box>
+                    <Text type="secondary" style={{ display: "block" }}>
+                      {entry.generated_content
+                        ? entry.generated_content.substring(0, 150) + "..."
+                        : "No content"}
+                    </Text>
+                  </div>
                 }
               />
-              {onRestore && (
-                <IconButton
-                  edge="end"
-                  onClick={() => onRestore(entry)}
-                  size="small"
-                  sx={{ mt: 1 }}
-                  title="Restore this version"
-                >
-                  <RestoreIcon />
-                </IconButton>
-              )}
-            </ListItem>
-          </Box>
-        ))}
-      </List>
-    </Paper>
+            </List.Item>
+          </div>
+        )}
+      />
+    </Card>
   );
 }

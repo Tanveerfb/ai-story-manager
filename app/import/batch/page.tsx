@@ -1,34 +1,32 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
-  Container,
   Typography,
-  Box,
   Button,
   Alert,
-  CircularProgress,
-  Paper,
-  FormControlLabel,
+  Card,
   Checkbox,
   List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  IconButton,
-  Chip,
-  TextField,
-  LinearProgress,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import PendingIcon from '@mui/icons-material/Pending';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+  Tag,
+  InputNumber,
+  Progress,
+  Spin,
+} from "antd";
+import {
+  DeleteOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  CloudUploadOutlined,
+} from "@ant-design/icons";
+import { theme as antdTheme } from "antd";
+
+const { Title, Text } = Typography;
 
 interface FileWithStatus {
   file: File;
-  status: 'pending' | 'processing' | 'completed' | 'error';
+  status: "pending" | "processing" | "completed" | "error";
   error?: string;
   extracted?: {
     characters: number;
@@ -51,7 +49,7 @@ export default function BatchImportPage() {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files).map((file) => ({
         file,
-        status: 'pending' as const,
+        status: "pending" as const,
       }));
       setFiles((prev) => [...prev, ...newFiles]);
     }
@@ -68,7 +66,7 @@ export default function BatchImportPage() {
 
   const handleBatchImport = async () => {
     if (files.length === 0) {
-      setError('Please select at least one file');
+      setError("Please select at least one file");
       return;
     }
 
@@ -81,17 +79,17 @@ export default function BatchImportPage() {
       files.forEach((fileWithStatus, index) => {
         formData.append(`file_${index}`, fileWithStatus.file);
       });
-      formData.append('startingPartNumber', startingPartNumber.toString());
-      formData.append('skipExtraction', skipExtraction.toString());
+      formData.append("startingPartNumber", startingPartNumber.toString());
+      formData.append("skipExtraction", skipExtraction.toString());
 
-      const response = await fetch('/api/import-story/batch', {
-        method: 'POST',
+      const response = await fetch("/api/import-story/batch", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Batch import failed');
+        throw new Error(errorData.error || "Batch import failed");
       }
 
       const result = await response.json();
@@ -102,11 +100,11 @@ export default function BatchImportPage() {
           const fileResult = result.results[index];
           return {
             ...fileWithStatus,
-            status: fileResult.success ? 'completed' : 'error',
+            status: fileResult.success ? "completed" : "error",
             error: fileResult.error,
             extracted: fileResult.extracted,
           };
-        })
+        }),
       );
 
       setProgress({ current: result.totalFiles, total: result.totalFiles });
@@ -117,220 +115,219 @@ export default function BatchImportPage() {
     }
   };
 
+  const { token } = antdTheme.useToken();
+
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending':
-        return <PendingIcon />;
-      case 'processing':
-        return <PendingIcon color="primary" />;
-      case 'completed':
-        return <CheckCircleIcon color="success" />;
-      case 'error':
-        return <ErrorIcon color="error" />;
+      case "pending":
+        return <ClockCircleOutlined />;
+      case "processing":
+        return <ClockCircleOutlined style={{ color: token.colorPrimary }} />;
+      case "completed":
+        return <CheckCircleOutlined style={{ color: token.colorSuccess }} />;
+      case "error":
+        return <CloseCircleOutlined style={{ color: token.colorError }} />;
       default:
-        return <PendingIcon />;
+        return <ClockCircleOutlined />;
     }
   };
 
-  const completedCount = files.filter((f) => f.status === 'completed').length;
-  const errorCount = files.filter((f) => f.status === 'error').length;
+  const completedCount = files.filter((f) => f.status === "completed").length;
+  const errorCount = files.filter((f) => f.status === "error").length;
   const estimatedTime = skipExtraction ? files.length * 2 : files.length * 30;
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Batch Import Stories
-        </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ marginTop: 32, marginBottom: 32 }}>
+        <Title level={2}>Batch Import Stories</Title>
+        <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
           Upload multiple files (.docx, .md, .markdown, .txt) to import them
           sequentially. Each file will be assigned a part number automatically.
-        </Typography>
+        </Text>
 
-        <Box sx={{ mt: 4 }}>
-          <Paper sx={{ p: 3, mb: 3 }}>
+        <div style={{ marginTop: 32 }}>
+          <Card style={{ marginBottom: 24 }}>
             <input
               type="file"
               id="batch-file-upload"
               accept=".docx,.md,.markdown,.txt"
               multiple
               onChange={handleFileSelect}
-              style={{ display: 'none' }}
+              style={{ display: "none" }}
             />
             <label htmlFor="batch-file-upload">
               <Button
-                variant="outlined"
-                component="span"
-                fullWidth
-                startIcon={<CloudUploadIcon />}
+                icon={<CloudUploadOutlined />}
                 disabled={loading}
+                block
+                onClick={() =>
+                  document.getElementById("batch-file-upload")?.click()
+                }
               >
                 Select Files
               </Button>
             </label>
-          </Paper>
+          </Card>
 
-          <Box sx={{ mb: 3 }}>
-            <TextField
-              fullWidth
-              label="Starting Part Number"
-              type="number"
-              value={startingPartNumber}
-              onChange={(e) =>
-                setStartingPartNumber(parseInt(e.target.value) || 1)
-              }
-              sx={{ mb: 2 }}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 16 }}>
+              <Text style={{ display: "block", marginBottom: 4 }}>
+                Starting Part Number
+              </Text>
+              <InputNumber
+                style={{ width: "100%" }}
+                value={startingPartNumber}
+                onChange={(value) => setStartingPartNumber(value || 1)}
+                disabled={loading}
+                min={1}
+              />
+            </div>
+            <Checkbox
+              checked={skipExtraction}
+              onChange={(e) => setSkipExtraction(e.target.checked)}
               disabled={loading}
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={skipExtraction}
-                  onChange={(e) => setSkipExtraction(e.target.checked)}
-                  disabled={loading}
-                />
-              }
-              label="Skip AI extraction (add entities manually later)"
-            />
-          </Box>
+            >
+              Skip AI extraction (add entities manually later)
+            </Checkbox>
+          </div>
 
           {files.length > 0 && (
-            <Paper sx={{ mb: 3 }}>
-              <Box
-                sx={{
-                  p: 2,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+            <Card
+              style={{ marginBottom: 24 }}
+              styles={{ body: { padding: 0 } }}
+            >
+              <div
+                style={{
+                  padding: 16,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-                <Typography variant="h6">
-                  Files ({files.length})
+                <div>
+                  <Text strong style={{ fontSize: 16 }}>
+                    Files ({files.length})
+                  </Text>
                   {completedCount > 0 && (
-                    <Chip
-                      label={`${completedCount} completed`}
-                      color="success"
-                      size="small"
-                      sx={{ ml: 2 }}
-                    />
+                    <Tag color="success" style={{ marginLeft: 8 }}>
+                      {completedCount} completed
+                    </Tag>
                   )}
                   {errorCount > 0 && (
-                    <Chip
-                      label={`${errorCount} failed`}
-                      color="error"
-                      size="small"
-                      sx={{ ml: 1 }}
-                    />
+                    <Tag color="error" style={{ marginLeft: 4 }}>
+                      {errorCount} failed
+                    </Tag>
                   )}
-                </Typography>
-                <Button
-                  size="small"
-                  onClick={clearAllFiles}
-                  disabled={loading}
-                >
+                </div>
+                <Button size="small" onClick={clearAllFiles} disabled={loading}>
                   Clear All
                 </Button>
-              </Box>
+              </div>
 
               {loading && (
-                <Box sx={{ px: 2, pb: 2 }}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                <div style={{ padding: "0 16px 16px" }}>
+                  <Text
+                    type="secondary"
+                    style={{ display: "block", marginBottom: 8 }}
+                  >
                     Processing {progress.current} of {progress.total} files...
-                  </Typography>
-                  <LinearProgress />
-                </Box>
+                  </Text>
+                  <Progress
+                    percent={
+                      progress.total > 0
+                        ? Math.round((progress.current / progress.total) * 100)
+                        : 0
+                    }
+                    showInfo={false}
+                  />
+                </div>
               )}
 
-              <List>
-                {files.map((fileWithStatus, index) => (
-                  <ListItem
-                    key={index}
-                    secondaryAction={
-                      !loading && (
-                        <IconButton
-                          edge="end"
-                          onClick={() => removeFile(index)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      )
+              <List
+                dataSource={files}
+                renderItem={(fileWithStatus, index) => (
+                  <List.Item
+                    actions={
+                      !loading
+                        ? [
+                            <Button
+                              key="delete"
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => removeFile(index)}
+                            />,
+                          ]
+                        : undefined
                     }
                   >
-                    <ListItemIcon>{getStatusIcon(fileWithStatus.status)}</ListItemIcon>
-                    <ListItemText
-                      primary={fileWithStatus.file.name}
-                      secondary={
+                    <List.Item.Meta
+                      avatar={getStatusIcon(fileWithStatus.status)}
+                      title={fileWithStatus.file.name}
+                      description={
                         <>
                           Part {startingPartNumber + index}
                           {fileWithStatus.error && (
-                            <Typography
-                              component="span"
-                              variant="body2"
-                              color="error"
-                              sx={{ display: 'block' }}
-                            >
+                            <Text type="danger" style={{ display: "block" }}>
                               Error: {fileWithStatus.error}
-                            </Typography>
+                            </Text>
                           )}
                           {fileWithStatus.extracted && (
-                            <Typography
-                              component="span"
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{ display: 'block' }}
-                            >
-                              Extracted: {fileWithStatus.extracted.characters} chars,{' '}
-                              {fileWithStatus.extracted.locations} locs,{' '}
+                            <Text type="secondary" style={{ display: "block" }}>
+                              Extracted: {fileWithStatus.extracted.characters}{" "}
+                              chars, {fileWithStatus.extracted.locations} locs,{" "}
                               {fileWithStatus.extracted.events} events
-                            </Typography>
+                            </Text>
                           )}
                         </>
                       }
                     />
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
+                  </List.Item>
+                )}
+              />
+            </Card>
           )}
 
           {files.length > 0 && !loading && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="text.secondary">
+            <div style={{ marginBottom: 16 }}>
+              <Text type="secondary">
                 Estimated time: ~{Math.ceil(estimatedTime / 60)} minutes
-              </Typography>
-            </Box>
+              </Text>
+            </div>
           )}
 
           <Button
-            variant="contained"
+            type="primary"
             size="large"
-            fullWidth
+            block
             onClick={handleBatchImport}
             disabled={files.length === 0 || loading}
+            loading={loading}
           >
-            {loading ? (
-              <>
-                <CircularProgress size={24} sx={{ mr: 2 }} />
-                Processing Files...
-              </>
-            ) : (
-              `Import ${files.length} File${files.length !== 1 ? 's' : ''}`
-            )}
+            {loading
+              ? "Processing Files..."
+              : `Import ${files.length} File${files.length !== 1 ? "s" : ""}`}
           </Button>
-        </Box>
+        </div>
 
         {error && (
-          <Alert severity="error" sx={{ mt: 3 }}>
-            {error}
-          </Alert>
+          <Alert
+            type="error"
+            title={error}
+            style={{ marginTop: 24 }}
+            showIcon
+          />
         )}
 
         {completedCount > 0 && !loading && (
-          <Alert severity="success" sx={{ mt: 3 }}>
-            Successfully imported {completedCount} of {files.length} files!
-          </Alert>
+          <Alert
+            type="success"
+            title={`Successfully imported ${completedCount} of ${files.length} files!`}
+            style={{ marginTop: 24 }}
+            showIcon
+          />
         )}
-      </Box>
-    </Container>
+      </div>
+    </div>
   );
 }

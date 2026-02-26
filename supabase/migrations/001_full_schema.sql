@@ -18,6 +18,11 @@ CREATE TABLE IF NOT EXISTS story_worlds (
 ALTER TABLE story_worlds ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "allow_all_story_worlds" ON story_worlds FOR ALL USING (true) WITH CHECK (true);
 
+-- NOTE: Supabase enables RLS by default on new tables.
+-- We add permissive policies for all tables so the anon/service_role key can
+-- read and write without restriction.  In production you would scope these
+-- to authenticated users or specific roles.
+
 -- Seed a default world
 INSERT INTO story_worlds (id, name, description)
 VALUES ('00000000-0000-0000-0000-000000000001', 'Default World', 'Your original story world')
@@ -335,3 +340,44 @@ CREATE TABLE IF NOT EXISTS scene_plans (
 
 CREATE INDEX IF NOT EXISTS idx_scene_plans_world  ON scene_plans(world_id);
 CREATE INDEX IF NOT EXISTS idx_scene_plans_status ON scene_plans(status);
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Row-Level Security — permissive allow-all policies for every table
+-- ═══════════════════════════════════════════════════════════════════════════
+
+ALTER TABLE story_parts            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE characters             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE character_traits       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE character_aliases      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE relationships          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE locations              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE location_aliases       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE location_usage         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE story_context          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE story_memory           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE flashbacks             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE continuation_drafts    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE continuation_history   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE continuation_branches  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE merge_history          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scene_plans            ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "allow_all" ON story_parts            FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON characters             FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON character_traits       FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON character_aliases      FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON relationships          FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON locations              FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON location_aliases       FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON location_usage         FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON events                 FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON story_context          FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON story_memory           FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON flashbacks             FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON continuation_drafts    FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON continuation_history   FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON continuation_branches  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON merge_history          FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all" ON scene_plans            FOR ALL USING (true) WITH CHECK (true);

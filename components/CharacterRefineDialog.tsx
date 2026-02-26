@@ -2,23 +2,26 @@
 
 import { useState } from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Box,
-  TextField,
+  Modal,
+  Input,
   Button,
   Typography,
-  Chip,
-  CircularProgress,
+  Tag,
   Alert,
   Divider,
-  Paper,
-} from "@mui/material";
-import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
+  Card,
+  Space,
+} from "antd";
+import {
+  ToolOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
+import { theme as antdTheme } from "antd";
+
+const { Text, Title } = Typography;
+const { TextArea } = Input;
 
 const FIELD_LABELS: Record<string, string> = {
   personality: "Personality",
@@ -55,6 +58,7 @@ export default function CharacterRefineDialog({
   onClose,
   onSaved,
 }: CharacterRefineDialogProps) {
+  const { token } = antdTheme.useToken();
   const [instruction, setInstruction] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,116 +107,128 @@ export default function CharacterRefineDialog({
   };
 
   return (
-    <Dialog
+    <Modal
       open={open}
-      onClose={handleClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{ sx: { m: { xs: 1, sm: 2 } } }}
-    >
-      <DialogTitle>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <AutoFixHighIcon color="primary" />
-          <Box>
-            <Typography variant="h6">AI Character Builder</Typography>
-            <Typography variant="caption" color="text.secondary">
+      onCancel={handleClose}
+      width={600}
+      title={
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <ToolOutlined style={{ color: token.colorPrimary }} />
+          <div>
+            <Title level={5} style={{ margin: 0 }}>
+              AI Character Builder
+            </Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>
               {character?.name}
-            </Typography>
-          </Box>
-        </Box>
-      </DialogTitle>
+            </Text>
+          </div>
+        </div>
+      }
+      footer={
+        <Space>
+          <Button icon={<CloseOutlined />} onClick={handleClose}>
+            {saved ? "Close" : "Cancel"}
+          </Button>
+          <Button
+            type="primary"
+            onClick={handleRefine}
+            disabled={loading || !instruction.trim()}
+            icon={loading ? <LoadingOutlined /> : <ToolOutlined />}
+          >
+            {loading ? "Refining..." : "Refine with AI"}
+          </Button>
+        </Space>
+      }
+    >
+      <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+        Tell the AI one specific thing about this character. It will update only
+        the relevant profile fields — nothing else.
+      </Text>
 
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Tell the AI one specific thing about this character. It will update
-          only the relevant profile fields — nothing else.
-        </Typography>
+      {/* Quick prompt suggestions */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 4,
+          marginBottom: 16,
+        }}
+      >
+        {QUICK_PROMPTS.map((p) => (
+          <Tag
+            key={p}
+            style={{ cursor: "pointer", fontSize: "0.7rem" }}
+            onClick={() => setInstruction(p)}
+          >
+            {p}
+          </Tag>
+        ))}
+      </div>
 
-        {/* Quick prompt suggestions */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 2 }}>
-          {QUICK_PROMPTS.map((p) => (
-            <Chip
-              key={p}
-              label={p}
-              size="small"
-              variant="outlined"
-              clickable
-              onClick={() => setInstruction(p)}
-              sx={{ fontSize: "0.7rem" }}
-            />
-          ))}
-        </Box>
+      <TextArea
+        rows={3}
+        placeholder={`e.g. "Rhea speaks softly but her words are sharp and precise. She never raises her voice even when angry."`}
+        value={instruction}
+        onChange={(e) => {
+          setInstruction(e.target.value);
+          setPendingUpdates(null);
+          setSaved(false);
+          setError(null);
+        }}
+        disabled={loading}
+        autoFocus
+      />
 
-        <TextField
-          fullWidth
-          multiline
-          rows={3}
-          label="Your instruction"
-          placeholder={`e.g. "Rhea speaks softly but her words are sharp and precise. She never raises her voice even when angry."`}
-          value={instruction}
-          onChange={(e) => {
-            setInstruction(e.target.value);
-            setPendingUpdates(null);
-            setSaved(false);
-            setError(null);
-          }}
-          disabled={loading}
-          autoFocus
+      {error && (
+        <Alert
+          type="error"
+          title={error}
+          closable
+          onClose={() => setError(null)}
+          style={{ marginTop: 16 }}
         />
+      )}
 
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-
-        {/* Show what was updated */}
-        {pendingUpdates && Object.keys(pendingUpdates).length > 0 && (
-          <Box sx={{ mt: 2 }}>
-            <Divider sx={{ mb: 2 }} />
-            <Typography
-              variant="subtitle2"
-              gutterBottom
-              sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+      {/* Show what was updated */}
+      {pendingUpdates && Object.keys(pendingUpdates).length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <Divider style={{ marginBottom: 16 }} />
+          <Text
+            strong
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              marginBottom: 8,
+            }}
+          >
+            <CheckOutlined style={{ color: "#52c41a", fontSize: 14 }} />
+            Updated fields (saved automatically):
+          </Text>
+          {Object.entries(pendingUpdates).map(([field, value]) => (
+            <Card
+              key={field}
+              size="small"
+              style={{ marginBottom: 8 }}
+              styles={{ body: { padding: 12 } }}
             >
-              <CheckIcon fontSize="small" color="success" />
-              Updated fields (saved automatically):
-            </Typography>
-            {Object.entries(pendingUpdates).map(([field, value]) => (
-              <Paper
-                key={field}
-                variant="outlined"
-                sx={{ p: 1.5, mb: 1, bgcolor: "action.hover" }}
+              <Text
+                type="secondary"
+                strong
+                style={{
+                  display: "block",
+                  marginBottom: 4,
+                  fontSize: 12,
+                  color: token.colorPrimary,
+                }}
               >
-                <Typography
-                  variant="caption"
-                  color="primary"
-                  sx={{ fontWeight: 600, display: "block", mb: 0.5 }}
-                >
-                  {FIELD_LABELS[field] || field}
-                </Typography>
-                <Typography variant="body2">{value}</Typography>
-              </Paper>
-            ))}
-          </Box>
-        )}
-      </DialogContent>
-
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={handleClose} startIcon={<CloseIcon />}>
-          {saved ? "Close" : "Cancel"}
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleRefine}
-          disabled={loading || !instruction.trim()}
-          startIcon={
-            loading ? <CircularProgress size={16} /> : <AutoFixHighIcon />
-          }
-        >
-          {loading ? "Refining..." : "Refine with AI"}
-        </Button>
-      </DialogActions>
-    </Dialog>
+                {FIELD_LABELS[field] || field}
+              </Text>
+              <Text>{value}</Text>
+            </Card>
+          ))}
+        </div>
+      )}
+    </Modal>
   );
 }

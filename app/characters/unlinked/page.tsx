@@ -1,33 +1,27 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
-  Container,
   Typography,
-  Box,
-  Grid,
-  TextField,
   Button,
   Alert,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Paper,
-  Chip,
+  Spin,
+  Modal,
   Card,
-  CardContent,
+  Tag,
   Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  IconButton,
   Tooltip,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import LinkIcon from '@mui/icons-material/Link';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+  Row,
+  Col,
+} from "antd";
+import {
+  DeleteOutlined,
+  LinkOutlined,
+  CheckCircleOutlined,
+} from "@ant-design/icons";
+import { theme as antdTheme } from "antd";
+
+const { Title, Text } = Typography;
 
 interface UnlinkedName {
   name: string;
@@ -37,6 +31,7 @@ interface UnlinkedName {
 }
 
 export default function UnlinkedCharactersPage() {
+  const { token } = antdTheme.useToken();
   const [unlinkedNames, setUnlinkedNames] = useState<UnlinkedName[]>([]);
   const [characters, setCharacters] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,7 +39,7 @@ export default function UnlinkedCharactersPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [selectedName, setSelectedName] = useState<UnlinkedName | null>(null);
-  const [selectedCharacterId, setSelectedCharacterId] = useState('');
+  const [selectedCharacterId, setSelectedCharacterId] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -54,8 +49,8 @@ export default function UnlinkedCharactersPage() {
     setLoading(true);
     try {
       const [unlinkedRes, charactersRes] = await Promise.all([
-        fetch('/api/characters/unlinked'),
-        fetch('/api/characters'),
+        fetch("/api/characters/unlinked"),
+        fetch("/api/characters"),
       ]);
 
       if (unlinkedRes.ok) {
@@ -68,8 +63,8 @@ export default function UnlinkedCharactersPage() {
         setCharacters(charactersData);
       }
     } catch (error) {
-      console.error('Failed to fetch data:', error);
-      setError('Failed to load unlinked characters');
+      console.error("Failed to fetch data:", error);
+      setError("Failed to load unlinked characters");
     } finally {
       setLoading(false);
     }
@@ -78,7 +73,7 @@ export default function UnlinkedCharactersPage() {
   const handleLinkClick = (name: UnlinkedName) => {
     setSelectedName(name);
     setSelectedCharacterId(
-      name.suggestedMatches.length > 0 ? name.suggestedMatches[0].id : ''
+      name.suggestedMatches.length > 0 ? name.suggestedMatches[0].id : "",
     );
     setLinkDialogOpen(true);
   };
@@ -92,9 +87,9 @@ export default function UnlinkedCharactersPage() {
     setSuccess(null);
 
     try {
-      const response = await fetch('/api/characters/link-nickname', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/characters/link-nickname", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           characterId: selectedCharacterId,
           alias: selectedName.name,
@@ -103,7 +98,7 @@ export default function UnlinkedCharactersPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to link nickname');
+        throw new Error(errorData.error || "Failed to link nickname");
       }
 
       setSuccess(`Successfully linked "${selectedName.name}" to character`);
@@ -123,15 +118,15 @@ export default function UnlinkedCharactersPage() {
     setSuccess(null);
 
     try {
-      const response = await fetch('/api/characters/unlinked', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/characters/unlinked", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete name');
+        throw new Error(errorData.error || "Failed to delete name");
       }
 
       setSuccess(`Successfully ignored "${name}"`);
@@ -144,174 +139,174 @@ export default function UnlinkedCharactersPage() {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Missing Character Names
-        </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
-          These names appear in events or relationships but are not linked to any canonical character.
-          Link them to existing characters or ignore them.
-        </Typography>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ marginTop: 32, marginBottom: 32 }}>
+        <Title level={2}>Missing Character Names</Title>
+        <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+          These names appear in events or relationships but are not linked to
+          any canonical character. Link them to existing characters or ignore
+          them.
+        </Text>
 
         {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress />
-          </Box>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              margin: "32px 0",
+            }}
+          >
+            <Spin size="large" />
+          </div>
         )}
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
+          <Alert
+            type="error"
+            title={error}
+            style={{ marginBottom: 24 }}
+            showIcon
+          />
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 3 }}>
-            {success}
-          </Alert>
+          <Alert
+            type="success"
+            title={success}
+            style={{ marginBottom: 24 }}
+            showIcon
+          />
         )}
 
         {!loading && unlinkedNames.length === 0 ? (
-          <Alert severity="success" icon={<CheckCircleIcon />}>
-            All character names are properly linked!
-          </Alert>
+          <Alert
+            type="success"
+            icon={<CheckCircleOutlined />}
+            title="All character names are properly linked!"
+            showIcon
+          />
         ) : (
-          <Grid container spacing={3}>
+          <Row gutter={[24, 24]}>
             {unlinkedNames.map((unlinkedName) => (
-              <Grid item xs={12} key={unlinkedName.name}>
+              <Col xs={24} key={unlinkedName.name}>
                 <Card>
-                  <CardContent>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        mb: 2,
-                      }}
-                    >
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h6" component="div">
-                          {unlinkedName.name}
-                        </Typography>
-                        <Chip
-                          label={`${unlinkedName.usageCount} occurrence${unlinkedName.usageCount > 1 ? 's' : ''}`}
-                          size="small"
-                          color="primary"
-                          sx={{ mt: 1 }}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      marginBottom: 16,
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <Text strong style={{ fontSize: 16, display: "block" }}>
+                        {unlinkedName.name}
+                      </Text>
+                      <Tag color="blue" style={{ marginTop: 8 }}>
+                        {unlinkedName.usageCount} occurrence
+                        {unlinkedName.usageCount > 1 ? "s" : ""}
+                      </Tag>
+                    </div>
+                    <div>
+                      <Tooltip title="Link to Character">
+                        <Button
+                          type="text"
+                          icon={<LinkOutlined />}
+                          style={{ color: token.colorPrimary }}
+                          onClick={() => handleLinkClick(unlinkedName)}
+                          disabled={loading}
                         />
-                      </Box>
-                      <Box>
-                        <Tooltip title="Link to Character">
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleLinkClick(unlinkedName)}
-                            disabled={loading}
-                          >
-                            <LinkIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Ignore">
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDeleteName(unlinkedName.name)}
-                            disabled={loading}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </Box>
+                      </Tooltip>
+                      <Tooltip title="Ignore">
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleDeleteName(unlinkedName.name)}
+                          disabled={loading}
+                        />
+                      </Tooltip>
+                    </div>
+                  </div>
 
-                    {unlinkedName.contexts.length > 0 && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Context Preview:
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontStyle: 'italic', color: 'text.secondary' }}
-                        >
-                          {unlinkedName.contexts[0].slice(0, 150)}...
-                        </Typography>
-                      </Box>
-                    )}
+                  {unlinkedName.contexts.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <Text
+                        type="secondary"
+                        strong
+                        style={{ display: "block", marginBottom: 4 }}
+                      >
+                        Context Preview:
+                      </Text>
+                      <Text type="secondary" italic>
+                        {unlinkedName.contexts[0].slice(0, 150)}...
+                      </Text>
+                    </div>
+                  )}
 
-                    {unlinkedName.suggestedMatches.length > 0 && (
-                      <Box>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          Suggested Matches:
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                          {unlinkedName.suggestedMatches.map((match) => (
-                            <Chip
-                              key={match.id}
-                              label={`${match.name} (${(match.score * 100).toFixed(0)}%)`}
-                              size="small"
-                              variant="outlined"
-                              color="secondary"
-                            />
-                          ))}
-                        </Box>
-                      </Box>
-                    )}
-                  </CardContent>
+                  {unlinkedName.suggestedMatches.length > 0 && (
+                    <div>
+                      <Text
+                        type="secondary"
+                        strong
+                        style={{ display: "block", marginBottom: 4 }}
+                      >
+                        Suggested Matches:
+                      </Text>
+                      <div
+                        style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
+                      >
+                        {unlinkedName.suggestedMatches.map((match) => (
+                          <Tag key={match.id} color="purple">
+                            {match.name} ({(match.score * 100).toFixed(0)}%)
+                          </Tag>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </Card>
-              </Grid>
+              </Col>
             ))}
-          </Grid>
+          </Row>
         )}
-      </Box>
+      </div>
 
       {/* Link Dialog */}
-      <Dialog
+      <Modal
+        title="Link Name to Character"
         open={linkDialogOpen}
-        onClose={() => setLinkDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Link Name to Character</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" gutterBottom>
-              Link "{selectedName?.name}" to:
-            </Typography>
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>Select Character</InputLabel>
-              <Select
-                value={selectedCharacterId}
-                label="Select Character"
-                onChange={(e) => setSelectedCharacterId(e.target.value)}
-              >
-                {characters.map((char) => (
-                  <MenuItem key={char.id} value={char.id}>
-                    {char.name} ({char.role})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLinkDialogOpen(false)}>Cancel</Button>
+        onCancel={() => setLinkDialogOpen(false)}
+        width={600}
+        footer={[
+          <Button key="cancel" onClick={() => setLinkDialogOpen(false)}>
+            Cancel
+          </Button>,
           <Button
+            key="link"
+            type="primary"
             onClick={handleConfirmLink}
-            color="primary"
-            variant="contained"
             disabled={!selectedCharacterId}
           >
             Link
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+          </Button>,
+        ]}
+      >
+        <div style={{ marginTop: 16 }}>
+          <Text style={{ display: "block", marginBottom: 8 }}>
+            Link &quot;{selectedName?.name}&quot; to:
+          </Text>
+          <Select
+            style={{ width: "100%", marginTop: 16 }}
+            placeholder="Select Character"
+            value={selectedCharacterId || undefined}
+            onChange={(value) => setSelectedCharacterId(value)}
+            options={characters.map((char) => ({
+              value: char.id,
+              label: `${char.name} (${char.role})`,
+            }))}
+          />
+        </div>
+      </Modal>
+    </div>
   );
 }

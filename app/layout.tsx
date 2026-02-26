@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { WorldProvider } from "@/components/WorldProvider";
 import Navigation from "@/components/Navigation";
@@ -24,11 +25,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ThemeProvider>
-          <WorldProvider>
-            <Navigation>{children}</Navigation>
-          </WorldProvider>
-        </ThemeProvider>
+        <AntdRegistry>
+          <ThemeProvider>
+            <WorldProvider>
+              <Navigation>{children}</Navigation>
+            </WorldProvider>
+          </ThemeProvider>
+        </AntdRegistry>
       </body>
     </html>
   );

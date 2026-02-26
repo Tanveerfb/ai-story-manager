@@ -1,16 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Box,
-  Typography,
-  Chip,
-} from "@mui/material";
-import SmartToyIcon from "@mui/icons-material/SmartToy";
+import { Select, Tag, Typography } from "antd";
+import { RobotOutlined } from "@ant-design/icons";
+
+const { Text } = Typography;
 
 /**
  * Model Selector Component for AI-First Authoring Suite
@@ -77,69 +71,56 @@ export default function ModelSelector({
     }
   };
 
-  return (
-    <Box sx={{ mb: 2 }}>
-      <FormControl fullWidth>
-        <InputLabel id="model-selector-label">AI Model</InputLabel>
-        <Select
-          labelId="model-selector-label"
-          id="model-selector"
-          value={selectedModel}
-          label="AI Model"
-          onChange={(e) => onModelChange(e.target.value)}
-          disabled={disabled}
-          startAdornment={
-            <SmartToyIcon sx={{ mr: 1, color: "action.active" }} />
-          }
-        >
-          {AVAILABLE_MODELS.map((model) => {
-            const isInstalled = installedModels.includes(model.id);
-            return (
-              <MenuItem key={model.id} value={model.id}>
-                <Box sx={{ width: "100%" }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="body1">{model.name}</Typography>
-                    {model.size && (
-                      <Chip
-                        label={model.size}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    )}
-                    {!isInstalled && (
-                      <Chip
-                        label="Not Installed"
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                      />
-                    )}
-                  </Box>
-                  {model.description && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ display: "block" }}
-                    >
-                      {model.description}
-                    </Typography>
-                  )}
-                </Box>
-              </MenuItem>
-            );
-          })}
-        </Select>
-      </FormControl>
+  const options = AVAILABLE_MODELS.map((model) => {
+    const isInstalled = installedModels.includes(model.id);
+    return {
+      value: model.id,
+      label: (
+        <div style={{ width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>{model.name}</span>
+            {model.size && (
+              <Tag color="blue" bordered>
+                {model.size}
+              </Tag>
+            )}
+            {!isInstalled && (
+              <Tag color="warning" bordered>
+                Not Installed
+              </Tag>
+            )}
+          </div>
+          {model.description && (
+            <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+              {model.description}
+            </Text>
+          )}
+        </div>
+      ),
+    };
+  });
 
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ mt: 1, display: "block" }}
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <Select
+        id="model-selector"
+        value={selectedModel}
+        onChange={onModelChange}
+        disabled={disabled}
+        options={options}
+        placeholder="AI Model"
+        suffixIcon={<RobotOutlined />}
+        style={{ width: "100%" }}
+        optionLabelProp="label"
+      />
+
+      <Text
+        type="secondary"
+        style={{ marginTop: 8, display: "block", fontSize: 12 }}
       >
         Select your preferred AI model for story generation. Larger models
         provide better quality but are slower.
-      </Typography>
-    </Box>
+      </Text>
+    </div>
   );
 }

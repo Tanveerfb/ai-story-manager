@@ -2,34 +2,28 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-  Container,
   Typography,
-  Box,
-  Paper,
   Button,
-  TextField,
-  Chip,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Tag,
+  Modal,
   Select,
-  MenuItem,
-  InputLabel,
-  FormControl,
   Alert,
   Card,
-  CardContent,
-  CardActions,
   Tooltip,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+  Input,
+  InputNumber,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ArrowRightOutlined,
+  ArrowLeftOutlined,
+} from "@ant-design/icons";
 import { useWorld } from "@/components/WorldProvider";
+
+const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 interface ScenePlan {
   id: string;
@@ -175,89 +169,106 @@ export default function ScenesPage() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Box
-        sx={{
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 16px" }}>
+      <div
+        style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          mb: 3,
+          marginBottom: 24,
         }}
       >
-        <Typography variant="h4">Scene Planner</Typography>
+        <Title level={3} style={{ margin: 0 }}>
+          Scene Planner
+        </Title>
         <Button
-          variant="contained"
-          startIcon={<AddIcon />}
+          type="primary"
+          icon={<PlusOutlined />}
           onClick={() => openEdit()}
         >
           New Scene
         </Button>
-      </Box>
+      </div>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
+        <Alert
+          type="error"
+          title={error}
+          closable
+          onClose={() => setError(null)}
+          style={{ marginBottom: 16 }}
+        />
       )}
       {success && (
         <Alert
-          severity="success"
-          sx={{ mb: 2 }}
+          type="success"
+          title={success}
+          closable
           onClose={() => setSuccess(null)}
-        >
-          {success}
-        </Alert>
+          style={{ marginBottom: 16 }}
+        />
       )}
 
       {loading ? (
-        <Typography>Loading...</Typography>
+        <Text>Loading...</Text>
       ) : (
-        <Box
-          sx={{
+        <div
+          style={{
             display: "flex",
-            gap: 2,
+            gap: 16,
             overflowX: "auto",
-            pb: 2,
+            paddingBottom: 16,
             minHeight: 400,
           }}
         >
           {COLUMNS.map((col) => {
             const colScenes = scenes.filter((s) => s.status === col.key);
             return (
-              <Paper
+              <Card
                 key={col.key}
-                sx={{
+                style={{
                   flex: "1 0 260px",
                   minWidth: 260,
                   maxWidth: 360,
-                  p: 2,
-                  bgcolor: "background.default",
                   display: "flex",
                   flexDirection: "column",
                 }}
+                styles={{
+                  body: {
+                    padding: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    flex: 1,
+                  },
+                }}
               >
-                <Box
-                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 16,
+                  }}
                 >
-                  <Box
-                    sx={{
+                  <div
+                    style={{
                       width: 12,
                       height: 12,
                       borderRadius: "50%",
-                      bgcolor: col.color,
+                      backgroundColor: col.color,
                     }}
                   />
-                  <Typography variant="h6" sx={{ flex: 1 }}>
+                  <Title level={5} style={{ flex: 1, margin: 0 }}>
                     {col.label}
-                  </Typography>
-                  <Chip label={colScenes.length} size="small" />
-                </Box>
+                  </Title>
+                  <Tag>{colScenes.length}</Tag>
+                </div>
 
-                <Box
-                  sx={{
+                <div
+                  style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: 1.5,
+                    gap: 12,
                     flex: 1,
                     overflowY: "auto",
                   }}
@@ -265,218 +276,224 @@ export default function ScenesPage() {
                   {colScenes.map((scene) => (
                     <Card
                       key={scene.id}
-                      variant="outlined"
-                      sx={{ "&:hover": { borderColor: col.color } }}
-                    >
-                      <CardContent sx={{ pb: 1 }}>
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight="bold"
-                          gutterBottom
+                      size="small"
+                      hoverable
+                      style={{ borderColor: undefined }}
+                      styles={{
+                        body: { paddingBottom: 8 },
+                      }}
+                      actions={[
+                        <div
+                          key="actions"
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            padding: "0 8px",
+                          }}
                         >
-                          {scene.title}
-                        </Typography>
-                        {scene.description && (
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mb: 1 }}
-                          >
-                            {scene.description.length > 120
-                              ? scene.description.slice(0, 120) + "..."
-                              : scene.description}
-                          </Typography>
-                        )}
-                        {scene.mood && (
-                          <Chip
-                            label={scene.mood}
-                            size="small"
-                            variant="outlined"
-                            sx={{ mr: 0.5, mb: 0.5 }}
-                          />
-                        )}
-                        {scene.location && (
-                          <Chip
-                            label={scene.location}
-                            size="small"
-                            color="info"
-                            variant="outlined"
-                            sx={{ mr: 0.5, mb: 0.5 }}
-                          />
-                        )}
-                        {(scene.characters || []).map((c) => (
-                          <Chip
-                            key={c}
-                            label={c}
-                            size="small"
-                            color="secondary"
-                            variant="outlined"
-                            sx={{ mr: 0.5, mb: 0.5 }}
-                          />
-                        ))}
-                        {scene.target_part && (
-                          <Typography
-                            variant="caption"
-                            display="block"
-                            color="text.secondary"
-                            sx={{ mt: 0.5 }}
-                          >
-                            Target: Part {scene.target_part}
-                            {scene.target_chapter
-                              ? `, Ch. ${scene.target_chapter}`
-                              : ""}
-                          </Typography>
-                        )}
-                      </CardContent>
-                      <CardActions
-                        sx={{ justifyContent: "space-between", px: 1, pt: 0 }}
-                      >
-                        <Box>
-                          <Tooltip title="Move back">
-                            <span>
-                              <IconButton
+                          <div>
+                            <Tooltip title="Move back">
+                              <Button
+                                type="text"
                                 size="small"
+                                icon={<ArrowLeftOutlined />}
                                 onClick={() => moveScene(scene, "back")}
                                 disabled={col.key === COLUMNS[0].key}
-                              >
-                                <ArrowBackIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          <Tooltip title="Move forward">
-                            <span>
-                              <IconButton
+                              />
+                            </Tooltip>
+                            <Tooltip title="Move forward">
+                              <Button
+                                type="text"
                                 size="small"
+                                icon={<ArrowRightOutlined />}
                                 onClick={() => moveScene(scene, "forward")}
                                 disabled={
                                   col.key === COLUMNS[COLUMNS.length - 1].key
                                 }
-                              >
-                                <ArrowForwardIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                        </Box>
-                        <Box>
-                          <IconButton
-                            size="small"
-                            onClick={() => openEdit(scene)}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDelete(scene.id)}
-                            color="error"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </CardActions>
+                              />
+                            </Tooltip>
+                          </div>
+                          <div>
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<EditOutlined />}
+                              onClick={() => openEdit(scene)}
+                            />
+                            <Button
+                              type="text"
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleDelete(scene.id)}
+                            />
+                          </div>
+                        </div>,
+                      ]}
+                    >
+                      <Text
+                        strong
+                        style={{ display: "block", marginBottom: 4 }}
+                      >
+                        {scene.title}
+                      </Text>
+                      {scene.description && (
+                        <Text
+                          type="secondary"
+                          style={{
+                            display: "block",
+                            fontSize: 13,
+                            marginBottom: 8,
+                          }}
+                        >
+                          {scene.description.length > 120
+                            ? scene.description.slice(0, 120) + "..."
+                            : scene.description}
+                        </Text>
+                      )}
+                      <div
+                        style={{ display: "flex", flexWrap: "wrap", gap: 4 }}
+                      >
+                        {scene.mood && <Tag>{scene.mood}</Tag>}
+                        {scene.location && (
+                          <Tag color="blue">{scene.location}</Tag>
+                        )}
+                        {(scene.characters || []).map((c) => (
+                          <Tag key={c} color="purple">
+                            {c}
+                          </Tag>
+                        ))}
+                      </div>
+                      {scene.target_part && (
+                        <Text
+                          type="secondary"
+                          style={{
+                            display: "block",
+                            fontSize: 12,
+                            marginTop: 4,
+                          }}
+                        >
+                          Target: Part {scene.target_part}
+                          {scene.target_chapter
+                            ? `, Ch. ${scene.target_chapter}`
+                            : ""}
+                        </Text>
+                      )}
                     </Card>
                   ))}
                   {colScenes.length === 0 && (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      textAlign="center"
-                      sx={{ mt: 4, opacity: 0.5 }}
+                    <Text
+                      type="secondary"
+                      style={{
+                        display: "block",
+                        textAlign: "center",
+                        marginTop: 32,
+                        opacity: 0.5,
+                      }}
                     >
                       No scenes
-                    </Typography>
+                    </Text>
                   )}
-                </Box>
-              </Paper>
+                </div>
+              </Card>
             );
           })}
-        </Box>
+        </div>
       )}
 
       {/* Scene Dialog */}
-      <Dialog
+      <Modal
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
+        onCancel={() => setDialogOpen(false)}
+        title={editScene.id ? "Edit Scene" : "New Scene Plan"}
+        width={600}
+        okText={editScene.id ? "Update" : "Create"}
+        onOk={handleSave}
+        okButtonProps={{ disabled: !editScene.title?.trim() }}
       >
-        <DialogTitle>
-          {editScene.id ? "Edit Scene" : "New Scene Plan"}
-        </DialogTitle>
-        <DialogContent
-          sx={{
+        <div
+          style={{
             display: "flex",
             flexDirection: "column",
-            gap: 2,
-            pt: "16px !important",
+            gap: 16,
+            paddingTop: 8,
           }}
         >
-          <TextField
-            label="Title"
-            fullWidth
-            value={editScene.title || ""}
-            onChange={(e) =>
-              setEditScene({ ...editScene, title: e.target.value })
-            }
-          />
-          <TextField
-            label="Description"
-            fullWidth
-            multiline
-            minRows={2}
-            value={editScene.description || ""}
-            onChange={(e) =>
-              setEditScene({ ...editScene, description: e.target.value })
-            }
-          />
-          <TextField
-            label="Scene Objectives"
-            fullWidth
-            multiline
-            minRows={2}
-            value={editScene.objectives || ""}
-            onChange={(e) =>
-              setEditScene({ ...editScene, objectives: e.target.value })
-            }
-            placeholder="What should happen in this scene? Key plot points, reveals, etc."
-          />
-          <TextField
-            label="Location"
-            fullWidth
-            value={editScene.location || ""}
-            onChange={(e) =>
-              setEditScene({ ...editScene, location: e.target.value })
-            }
-          />
-          <FormControl fullWidth>
-            <InputLabel>Mood</InputLabel>
-            <Select
-              value={editScene.mood || ""}
-              label="Mood"
+          <div>
+            <Text style={{ display: "block", marginBottom: 4 }}>Title</Text>
+            <Input
+              value={editScene.title || ""}
               onChange={(e) =>
-                setEditScene({ ...editScene, mood: e.target.value })
+                setEditScene({ ...editScene, title: e.target.value })
               }
-            >
-              <MenuItem value="">None</MenuItem>
-              {MOODS.map((m) => (
-                <MenuItem key={m} value={m}>
-                  {m}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+            />
+          </div>
+          <div>
+            <Text style={{ display: "block", marginBottom: 4 }}>
+              Description
+            </Text>
+            <TextArea
+              rows={2}
+              value={editScene.description || ""}
+              onChange={(e) =>
+                setEditScene({ ...editScene, description: e.target.value })
+              }
+            />
+          </div>
+          <div>
+            <Text style={{ display: "block", marginBottom: 4 }}>
+              Scene Objectives
+            </Text>
+            <TextArea
+              rows={2}
+              value={editScene.objectives || ""}
+              onChange={(e) =>
+                setEditScene({ ...editScene, objectives: e.target.value })
+              }
+              placeholder="What should happen in this scene? Key plot points, reveals, etc."
+            />
+          </div>
+          <div>
+            <Text style={{ display: "block", marginBottom: 4 }}>Location</Text>
+            <Input
+              value={editScene.location || ""}
+              onChange={(e) =>
+                setEditScene({ ...editScene, location: e.target.value })
+              }
+            />
+          </div>
+          <div>
+            <Text style={{ display: "block", marginBottom: 4 }}>Mood</Text>
+            <Select
+              style={{ width: "100%" }}
+              value={editScene.mood || undefined}
+              onChange={(value) =>
+                setEditScene({ ...editScene, mood: value || "" })
+              }
+              allowClear
+              placeholder="Select mood"
+              options={MOODS.map((m) => ({ label: m, value: m }))}
+            />
+          </div>
 
           {/* Characters */}
-          <Box>
-            <Typography variant="body2" sx={{ mb: 0.5 }}>
+          <div>
+            <Text style={{ display: "block", marginBottom: 4 }}>
               Characters in Scene
-            </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1 }}>
+            </Text>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 4,
+                marginBottom: 8,
+              }}
+            >
               {(editScene.characters || []).map((c, i) => (
-                <Chip
+                <Tag
                   key={i}
-                  label={c}
-                  size="small"
-                  onDelete={() =>
+                  closable
+                  onClose={() =>
                     setEditScene({
                       ...editScene,
                       characters: (editScene.characters || []).filter(
@@ -484,75 +501,71 @@ export default function ScenesPage() {
                       ),
                     })
                   }
-                />
+                >
+                  {c}
+                </Tag>
               ))}
-            </Box>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <TextField
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Input
                 size="small"
                 value={charInput}
                 onChange={(e) => setCharInput(e.target.value)}
                 placeholder="Character name"
                 onKeyDown={(e) => e.key === "Enter" && addCharToScene()}
-                sx={{ flex: 1 }}
+                style={{ flex: 1 }}
               />
-              <Button size="small" variant="outlined" onClick={addCharToScene}>
+              <Button size="small" onClick={addCharToScene}>
                 Add
               </Button>
-            </Box>
-          </Box>
+            </div>
+          </div>
 
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <TextField
-              label="Target Part"
-              type="number"
-              value={editScene.target_part ?? ""}
-              onChange={(e) =>
-                setEditScene({
-                  ...editScene,
-                  target_part: e.target.value ? Number(e.target.value) : null,
-                })
-              }
-              sx={{ flex: 1 }}
-            />
-            <TextField
-              label="Target Chapter"
-              type="number"
-              value={editScene.target_chapter ?? ""}
-              onChange={(e) =>
-                setEditScene({
-                  ...editScene,
-                  target_chapter: e.target.value
-                    ? Number(e.target.value)
-                    : null,
-                })
-              }
-              sx={{ flex: 1 }}
-            />
-          </Box>
+          <div style={{ display: "flex", gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <Text style={{ display: "block", marginBottom: 4 }}>
+                Target Part
+              </Text>
+              <InputNumber
+                style={{ width: "100%" }}
+                value={editScene.target_part}
+                onChange={(value) =>
+                  setEditScene({
+                    ...editScene,
+                    target_part: value ?? null,
+                  })
+                }
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <Text style={{ display: "block", marginBottom: 4 }}>
+                Target Chapter
+              </Text>
+              <InputNumber
+                style={{ width: "100%" }}
+                value={editScene.target_chapter}
+                onChange={(value) =>
+                  setEditScene({
+                    ...editScene,
+                    target_chapter: value ?? null,
+                  })
+                }
+              />
+            </div>
+          </div>
 
-          <TextField
-            label="Notes"
-            fullWidth
-            multiline
-            minRows={2}
-            value={editScene.notes || ""}
-            onChange={(e) =>
-              setEditScene({ ...editScene, notes: e.target.value })
-            }
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={!editScene.title?.trim()}
-          >
-            {editScene.id ? "Update" : "Create"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+          <div>
+            <Text style={{ display: "block", marginBottom: 4 }}>Notes</Text>
+            <TextArea
+              rows={2}
+              value={editScene.notes || ""}
+              onChange={(e) =>
+                setEditScene({ ...editScene, notes: e.target.value })
+              }
+            />
+          </div>
+        </div>
+      </Modal>
+    </div>
   );
 }

@@ -1,14 +1,7 @@
-import {
-  Paper,
-  Typography,
-  TextField,
-  Box,
-  Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
-} from '@mui/material';
+import { Card, Typography, Input, Select, Tag } from "antd";
+
+const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 interface SideNotesPanelProps {
   notes: string;
@@ -20,28 +13,28 @@ interface SideNotesPanelProps {
 }
 
 const SCENE_TYPES = [
-  'Action',
-  'Dialogue',
-  'Description',
-  'Cliffhanger',
-  'Reversal',
-  'Revelation',
-  'Transition',
-  'Flashback',
-  'Emotional',
-  'Other'
+  "Action",
+  "Dialogue",
+  "Description",
+  "Cliffhanger",
+  "Reversal",
+  "Revelation",
+  "Transition",
+  "Flashback",
+  "Emotional",
+  "Other",
 ];
 
 const TAG_SUGGESTIONS = [
-  'Draft',
-  'Needs Review',
-  'Important',
-  'Climax',
-  'Character Development',
-  'Plot Point',
-  'Romance',
-  'Conflict',
-  'Resolution'
+  "Draft",
+  "Needs Review",
+  "Important",
+  "Climax",
+  "Character Development",
+  "Plot Point",
+  "Romance",
+  "Conflict",
+  "Resolution",
 ];
 
 export default function SideNotesPanel({
@@ -50,66 +43,75 @@ export default function SideNotesPanel({
   tags,
   onTagsChange,
   sceneType,
-  onSceneTypeChange
+  onSceneTypeChange,
 }: SideNotesPanelProps) {
   const handleTagClick = (tag: string) => {
     if (tags.includes(tag)) {
-      onTagsChange(tags.filter(t => t !== tag));
+      onTagsChange(tags.filter((t) => t !== tag));
     } else {
       onTagsChange([...tags, tag]);
     }
   };
 
   return (
-    <Paper sx={{ p: 3, mt: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Author&apos;s Notes & Tags
-      </Typography>
-      
-      <Box sx={{ mb: 3 }}>
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Scene Type</InputLabel>
+    <Card style={{ padding: 24, marginTop: 24 }}>
+      <Title level={5}>Author&apos;s Notes &amp; Tags</Title>
+
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 16 }}>
+          <Text strong style={{ display: "block", marginBottom: 8 }}>
+            Scene Type
+          </Text>
           <Select
-            value={sceneType}
-            label="Scene Type"
-            onChange={(e) => onSceneTypeChange(e.target.value)}
-          >
-            <MenuItem value="">None</MenuItem>
-            {SCENE_TYPES.map((type) => (
-              <MenuItem key={type} value={type}>
-                {type}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            value={sceneType || undefined}
+            placeholder="Scene Type"
+            onChange={(value) => onSceneTypeChange(value ?? "")}
+            allowClear
+            style={{ width: "100%" }}
+            options={[
+              { value: "", label: "None" },
+              ...SCENE_TYPES.map((type) => ({ value: type, label: type })),
+            ]}
+          />
+        </div>
 
-        <Typography variant="subtitle2" gutterBottom>
+        <Text strong style={{ display: "block", marginBottom: 8 }}>
           Tags:
-        </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+        </Text>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+            marginBottom: 16,
+          }}
+        >
           {TAG_SUGGESTIONS.map((tag) => (
-            <Chip
+            <Tag
               key={tag}
-              label={tag}
-              size="small"
-              color={tags.includes(tag) ? 'primary' : 'default'}
+              color={tags.includes(tag) ? "blue" : "default"}
               onClick={() => handleTagClick(tag)}
-              sx={{ cursor: 'pointer' }}
-            />
+              style={{ cursor: "pointer" }}
+            >
+              {tag}
+            </Tag>
           ))}
-        </Box>
+        </div>
 
-        <TextField
-          fullWidth
-          multiline
+        <Text strong style={{ display: "block", marginBottom: 8 }}>
+          Side Notes
+        </Text>
+        <TextArea
           rows={4}
-          label="Side Notes"
           placeholder="Add your notes about this continuation: intentions, tone, character motivations, etc."
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
-          helperText="These notes are private and help you keep track of your creative decisions"
         />
-      </Box>
-    </Paper>
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          These notes are private and help you keep track of your creative
+          decisions
+        </Text>
+      </div>
+    </Card>
   );
 }

@@ -2,21 +2,18 @@
 
 import { useEffect, useState } from "react";
 import {
-  Container,
   Typography,
-  Box,
-  Grid,
+  Row,
+  Col,
   Card,
-  CardContent,
-  TextField,
+  Input,
   Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Button,
   Alert,
-  CircularProgress,
-} from "@mui/material";
+  Spin,
+} from "antd";
+
+const { Title, Text } = Typography;
 
 export default function LocationsPage() {
   const [locations, setLocations] = useState<any[]>([]);
@@ -105,105 +102,97 @@ export default function LocationsPage() {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: { xs: 2, sm: 4 } }}>
-        <Box
-          sx={{
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ marginTop: 16, marginBottom: 32 }}>
+        <div
+          style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: 1,
-            mb: 3,
+            gap: 8,
+            marginBottom: 24,
           }}
         >
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{ fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
-          >
+          <Title level={2} style={{ margin: 0 }}>
             Locations
-          </Typography>
+          </Title>
           <Button
-            variant="contained"
+            type="primary"
             onClick={handleExtractFromStory}
             disabled={extracting}
-            startIcon={extracting ? <CircularProgress size={20} /> : null}
+            icon={extracting ? <Spin size="small" /> : undefined}
           >
             {extracting ? "Extracting..." : "Extract from Story Parts"}
           </Button>
-        </Box>
+        </div>
 
         {message && (
           <Alert
-            severity={message.type}
-            sx={{ mb: 2 }}
+            type={message.type}
+            title={message.text}
+            closable
             onClose={() => setMessage(null)}
-          >
-            {message.text}
-          </Alert>
+            style={{ marginBottom: 16 }}
+          />
         )}
 
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={8}>
-            <TextField
-              fullWidth
-              label="Search by name"
+        <Row gutter={16} style={{ marginBottom: 24 }}>
+          <Col xs={24} md={16}>
+            <Input
+              placeholder="Search by name"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Filter by Type</InputLabel>
-              <Select
-                value={typeFilter}
-                label="Filter by Type"
-                onChange={(e) => setTypeFilter(e.target.value)}
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="indoor">Indoor</MenuItem>
-                <MenuItem value="outdoor">Outdoor</MenuItem>
-                <MenuItem value="private">Private</MenuItem>
-                <MenuItem value="public">Public</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
+          </Col>
+          <Col xs={24} md={8}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Filter by Type"
+              value={typeFilter || undefined}
+              onChange={(value) => setTypeFilter(value || "")}
+              allowClear
+              options={[
+                { value: "", label: "All" },
+                { value: "indoor", label: "Indoor" },
+                { value: "outdoor", label: "Outdoor" },
+                { value: "private", label: "Private" },
+                { value: "public", label: "Public" },
+              ]}
+            />
+          </Col>
+        </Row>
 
         {filteredLocations.length === 0 ? (
-          <Typography color="text.secondary">
+          <Text type="secondary">
             No locations found. Import a story to extract locations.
-          </Typography>
+          </Text>
         ) : (
-          <Grid container spacing={3}>
+          <Row gutter={[24, 24]}>
             {filteredLocations.map((location) => (
-              <Grid item xs={12} sm={6} md={4} key={location.id}>
+              <Col xs={24} sm={12} md={8} key={location.id}>
                 <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      {location.name}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      paragraph
-                    >
-                      {location.description || "No description available"}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      Type: {location.type || "Unknown"}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      Importance: {location.importance || "Unknown"}
-                    </Typography>
-                  </CardContent>
+                  <Title level={5} style={{ marginTop: 0 }}>
+                    {location.name}
+                  </Title>
+                  <Text
+                    type="secondary"
+                    style={{ display: "block", marginBottom: 8 }}
+                  >
+                    {location.description || "No description available"}
+                  </Text>
+                  <Text style={{ display: "block", fontSize: 12 }}>
+                    Type: {location.type || "Unknown"}
+                  </Text>
+                  <Text style={{ display: "block", fontSize: 12 }}>
+                    Importance: {location.importance || "Unknown"}
+                  </Text>
                 </Card>
-              </Grid>
+              </Col>
             ))}
-          </Grid>
+          </Row>
         )}
-      </Box>
-    </Container>
+      </div>
+    </div>
   );
 }

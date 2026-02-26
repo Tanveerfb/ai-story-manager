@@ -1,37 +1,35 @@
-import { useState } from 'react';
-import {
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  Divider,
-  Alert
-} from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
+import { useState } from "react";
+import { Card, Typography, Input, Button, Divider, Alert } from "antd";
+import { SendOutlined } from "@ant-design/icons";
+
+const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 interface FeedbackPanelProps {
   onSubmitFeedback: (instructions: string) => void;
   isLoading: boolean;
 }
 
-export default function FeedbackPanel({ onSubmitFeedback, isLoading }: FeedbackPanelProps) {
-  const [feedbackText, setFeedbackText] = useState('');
-  
+export default function FeedbackPanel({
+  onSubmitFeedback,
+  isLoading,
+}: FeedbackPanelProps) {
+  const [feedbackText, setFeedbackText] = useState("");
+
   const suggestionTemplates = [
-    'Make the dialogue more natural',
-    'Add more descriptive details',
-    'Increase the tension in this scene',
-    'Make the character sound angrier',
-    'Add more emotional depth',
-    'Shorten this section',
-    'Expand on this moment',
+    "Make the dialogue more natural",
+    "Add more descriptive details",
+    "Increase the tension in this scene",
+    "Make the character sound angrier",
+    "Add more emotional depth",
+    "Shorten this section",
+    "Expand on this moment",
   ];
 
   const handleSubmit = () => {
     if (feedbackText.trim()) {
       onSubmitFeedback(feedbackText);
-      setFeedbackText('');
+      setFeedbackText("");
     }
   };
 
@@ -40,58 +38,60 @@ export default function FeedbackPanel({ onSubmitFeedback, isLoading }: FeedbackP
   };
 
   return (
-    <Paper sx={{ p: 3, mt: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Revision Instructions
-      </Typography>
-      <Typography variant="body2" color="text.secondary" paragraph>
+    <Card style={{ padding: 24, marginTop: 24 }}>
+      <Title level={5}>Revision Instructions</Title>
+      <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
         Provide feedback to guide the AI in rewriting the generated content.
-      </Typography>
+      </Text>
 
-      <Alert severity="info" sx={{ mb: 2 }}>
-        <strong>Tip:</strong> Be specific about what you want changed. The AI will respect your instructions and never water down scenes.
-      </Alert>
+      <Alert
+        type="info"
+        title={
+          <>
+            <strong>Tip:</strong> Be specific about what you want changed. The
+            AI will respect your instructions and never water down scenes.
+          </>
+        }
+        style={{ marginBottom: 16 }}
+      />
 
-      <TextField
-        fullWidth
-        multiline
+      <TextArea
         rows={4}
         placeholder="E.g., 'Make Duke sound more determined', 'Add more tension to the confrontation', 'Include more description of the setting'"
         value={feedbackText}
         onChange={(e) => setFeedbackText(e.target.value)}
         disabled={isLoading}
-        sx={{ mb: 2 }}
+        style={{ marginBottom: 16 }}
       />
 
       <Button
-        variant="contained"
-        startIcon={<SendIcon />}
+        type="primary"
+        icon={<SendOutlined />}
         onClick={handleSubmit}
         disabled={isLoading || !feedbackText.trim()}
-        fullWidth
-        sx={{ mb: 2 }}
+        block
+        style={{ marginBottom: 16 }}
       >
         Generate Revision
       </Button>
 
-      <Divider sx={{ my: 2 }} />
+      <Divider style={{ margin: "16px 0" }} />
 
-      <Typography variant="subtitle2" gutterBottom>
+      <Text strong style={{ display: "block", marginBottom: 8 }}>
         Quick Templates:
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+      </Text>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {suggestionTemplates.map((template, idx) => (
           <Button
             key={idx}
             size="small"
-            variant="outlined"
             onClick={() => handleTemplateClick(template)}
             disabled={isLoading}
           >
             {template}
           </Button>
         ))}
-      </Box>
-    </Paper>
+      </div>
+    </Card>
   );
 }

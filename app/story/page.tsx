@@ -2,36 +2,38 @@
 
 import { useEffect, useState, useMemo } from "react";
 import {
-  Container,
   Typography,
-  Box,
-  Paper,
+  Card,
   Button,
-  TextField,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
+  Input,
+  Collapse,
+  Tag,
+  Modal,
   Tooltip,
-  Divider,
   Alert,
-} from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import EditIcon from "@mui/icons-material/Edit";
-import SaveIcon from "@mui/icons-material/Save";
-import CloseIcon from "@mui/icons-material/Close";
-import DownloadIcon from "@mui/icons-material/Download";
+} from "antd";
+import {
+  DeleteOutlined,
+  BookOutlined,
+  EditOutlined,
+  SaveOutlined,
+  CloseOutlined,
+  DownloadOutlined,
+} from "@ant-design/icons";
+import { theme as antdTheme } from "antd";
 import { useRouter } from "next/navigation";
 import { useWorld } from "@/components/WorldProvider";
+import { useThemeMode } from "@/components/ThemeProvider";
+import { getSemanticColors } from "@/lib/theme";
+
+const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 export default function StoryPage() {
+  const { mode } = useThemeMode();
+  const { token } = antdTheme.useToken();
+  const isDark = mode === "dark";
+  const sc = getSemanticColors(isDark);
   const { worldId } = useWorld();
   const [storyParts, setStoryParts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,40 +161,35 @@ export default function StoryPage() {
   );
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: { xs: 2, sm: 4 } }}>
-        <Box
-          sx={{
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ marginTop: 16, marginBottom: 32 }}>
+        <div
+          style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: 1,
-            mb: 3,
+            gap: 8,
+            marginBottom: 24,
           }}
         >
-          <Box>
-            <Typography
-              variant="h4"
-              component="h1"
-              sx={{ fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
-            >
+          <div>
+            <Title level={3} style={{ margin: 0 }}>
               Story Viewer
-            </Typography>
+            </Title>
             {storyParts.length > 0 && (
-              <Typography variant="body2" color="text.secondary">
+              <Text type="secondary">
                 {sortedPartNumbers.length} part
                 {sortedPartNumbers.length !== 1 ? "s" : ""} &middot;{" "}
                 {storyParts.length} chapter
                 {storyParts.length !== 1 ? "s" : ""} &middot;{" "}
                 {totalWords.toLocaleString()} words
-              </Typography>
+              </Text>
             )}
-          </Box>
-          <Box sx={{ display: "flex", gap: 1 }}>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
             <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
+              icon={<DownloadOutlined />}
               onClick={() => {
                 const params = new URLSearchParams({ format: "markdown" });
                 if (worldId) params.set("world_id", worldId);
@@ -202,8 +199,7 @@ export default function StoryPage() {
               Export MD
             </Button>
             <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
+              icon={<DownloadOutlined />}
               onClick={() => {
                 const params = new URLSearchParams({ format: "text" });
                 if (worldId) params.set("world_id", worldId);
@@ -212,41 +208,37 @@ export default function StoryPage() {
             >
               Export TXT
             </Button>
-            <Button
-              variant="contained"
-              onClick={() => router.push("/continue")}
-            >
+            <Button type="primary" onClick={() => router.push("/continue")}>
               Continue Story
             </Button>
-          </Box>
-        </Box>
+          </div>
+        </div>
 
         {success && (
           <Alert
-            severity="success"
-            sx={{ mb: 2 }}
+            type="success"
+            title={success}
+            closable
             onClose={() => setSuccess(null)}
-          >
-            {success}
-          </Alert>
+            style={{ marginBottom: 16 }}
+          />
         )}
 
-        <TextField
-          fullWidth
-          label="Search"
+        <Input
+          placeholder="Search"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ mb: 3 }}
+          style={{ marginBottom: 24 }}
         />
 
         {loading ? (
-          <Typography>Loading...</Typography>
+          <Text>Loading...</Text>
         ) : sortedPartNumbers.length === 0 ? (
-          <Paper sx={{ p: 3, textAlign: "center" }}>
-            <Typography color="text.secondary">
+          <Card style={{ textAlign: "center" }}>
+            <Text type="secondary">
               No story parts found. Go to Continue Story to start writing.
-            </Typography>
-          </Paper>
+            </Text>
+          </Card>
         ) : (
           sortedPartNumbers.map((partNum) => {
             const chapters = groupedParts[partNum];
@@ -256,98 +248,93 @@ export default function StoryPage() {
             );
 
             return (
-              <Paper key={partNum} sx={{ mb: 3, overflow: "hidden" }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    px: 3,
-                    py: 2,
-                    bgcolor: "primary.main",
-                    color: "primary.contrastText",
-                  }}
-                >
-                  <MenuBookIcon />
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    Part {partNum}
-                  </Typography>
-                  <Chip
-                    label={`${chapters.length} ch.`}
-                    size="small"
-                    sx={{
-                      bgcolor: "rgba(255,255,255,0.2)",
-                      color: "inherit",
+              <Card
+                key={partNum}
+                style={{ marginBottom: 24, overflow: "hidden" }}
+                styles={{
+                  header: {
+                    background: token.colorPrimary,
+                    color: "#fff",
+                    borderBottom: "none",
+                  },
+                  body: { padding: 0 },
+                }}
+                title={
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      color: "#fff",
                     }}
-                  />
-                  <Typography
-                    variant="body2"
-                    sx={{ ml: "auto", opacity: 0.85 }}
                   >
-                    {partWordCount.toLocaleString()} words
-                  </Typography>
-                </Box>
-
-                {chapters.map((chapter: any, idx: number) => {
-                  const isEditing = editingId === chapter.id;
-
-                  return (
-                    <Accordion
-                      key={chapter.id}
-                      disableGutters
-                      elevation={0}
-                      sx={{
-                        "&:before": { display: "none" },
-                        borderTop: idx > 0 ? "1px solid" : "none",
-                        borderColor: "divider",
+                    <BookOutlined />
+                    <span style={{ fontWeight: 700, fontSize: 16 }}>
+                      Part {partNum}
+                    </span>
+                    <Tag
+                      style={{
+                        background: "rgba(255,255,255,0.2)",
+                        color: "inherit",
+                        border: "none",
                       }}
                     >
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Box
-                          sx={{
+                      {chapters.length} ch.
+                    </Tag>
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        opacity: 0.85,
+                        fontSize: 13,
+                      }}
+                    >
+                      {partWordCount.toLocaleString()} words
+                    </span>
+                  </div>
+                }
+              >
+                <Collapse
+                  bordered={false}
+                  items={chapters.map((chapter: any) => {
+                    const isEditing = editingId === chapter.id;
+
+                    return {
+                      key: chapter.id,
+                      label: (
+                        <div
+                          style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: 1,
+                            gap: 8,
                             flexWrap: "wrap",
                             width: "100%",
-                            pr: 1,
+                            paddingRight: 8,
                           }}
                         >
-                          <Chip
-                            label={`Ch. ${chapter.chapter_number || 1}`}
-                            color="secondary"
-                            size="small"
-                            variant="outlined"
-                          />
-                          <Typography
-                            variant="subtitle1"
-                            sx={{ fontWeight: 600 }}
-                          >
-                            {chapter.title || "Untitled"}
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ ml: { xs: 0, sm: "auto" } }}
-                          >
+                          <Tag color="purple" bordered>
+                            Ch. {chapter.chapter_number || 1}
+                          </Tag>
+                          <Text strong>{chapter.title || "Untitled"}</Text>
+                          <Text type="secondary" style={{ marginLeft: "auto" }}>
                             {chapter.word_count || 0} words
-                          </Typography>
+                          </Text>
                           <Tooltip title="Edit">
-                            <IconButton
+                            <Button
+                              type="text"
                               size="small"
-                              color="primary"
+                              icon={<EditOutlined />}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 startEditing(chapter);
                               }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
+                            />
                           </Tooltip>
                           <Tooltip title="Delete">
-                            <IconButton
+                            <Button
+                              type="text"
                               size="small"
-                              color="error"
+                              danger
+                              icon={<DeleteOutlined />}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setDeleteTarget({
@@ -357,126 +344,123 @@ export default function StoryPage() {
                                   chapter_number: chapter.chapter_number || 1,
                                 });
                               }}
-                            >
-                              <DeleteOutlineIcon fontSize="small" />
-                            </IconButton>
+                            />
                           </Tooltip>
-                        </Box>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        {isEditing ? (
-                          <Box>
-                            <TextField
-                              fullWidth
+                        </div>
+                      ),
+                      children: isEditing ? (
+                        <div>
+                          <Input
+                            size="small"
+                            placeholder="Title"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            style={{ marginBottom: 16 }}
+                          />
+                          <TextArea
+                            rows={10}
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            style={{
+                              marginBottom: 16,
+                              fontFamily: "Georgia, serif",
+                              fontSize: "1rem",
+                              lineHeight: 1.8,
+                            }}
+                          />
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <Button
+                              type="primary"
                               size="small"
-                              label="Title"
-                              value={editTitle}
-                              onChange={(e) => setEditTitle(e.target.value)}
-                              sx={{ mb: 2 }}
-                            />
-                            <TextField
-                              fullWidth
-                              multiline
-                              minRows={10}
-                              value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
-                              sx={{
-                                mb: 2,
-                                "& .MuiInputBase-root": {
-                                  fontFamily: "Georgia, serif",
-                                  fontSize: "1rem",
-                                  lineHeight: 1.8,
-                                },
-                              }}
-                            />
-                            <Box sx={{ display: "flex", gap: 1 }}>
-                              <Button
-                                variant="contained"
-                                size="small"
-                                startIcon={<SaveIcon />}
-                                onClick={handleSave}
-                                disabled={saving}
-                              >
-                                {saving ? "Saving..." : "Save"}
-                              </Button>
-                              <Button
-                                size="small"
-                                startIcon={<CloseIcon />}
-                                onClick={cancelEditing}
-                                disabled={saving}
-                              >
-                                Cancel
-                              </Button>
-                            </Box>
-                          </Box>
-                        ) : (
-                          <>
-                            {chapter.summary && (
-                              <Paper
-                                sx={{ p: 2, mb: 2, bgcolor: "action.hover" }}
-                              >
-                                <Typography variant="subtitle2" gutterBottom>
-                                  Summary:
-                                </Typography>
-                                <Typography variant="body2">
-                                  {chapter.summary}
-                                </Typography>
-                              </Paper>
-                            )}
-                            <Typography
-                              variant="body1"
-                              sx={{
-                                whiteSpace: "pre-wrap",
-                                fontFamily: "Georgia, serif",
-                                lineHeight: 1.8,
+                              icon={<SaveOutlined />}
+                              onClick={handleSave}
+                              loading={saving}
+                            >
+                              {saving ? "Saving..." : "Save"}
+                            </Button>
+                            <Button
+                              size="small"
+                              icon={<CloseOutlined />}
+                              onClick={cancelEditing}
+                              disabled={saving}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {chapter.summary && (
+                            <Card
+                              size="small"
+                              style={{
+                                marginBottom: 16,
+                                background: sc.subtleBg,
                               }}
                             >
-                              {chapter.content}
-                            </Typography>
-                          </>
-                        )}
-                      </AccordionDetails>
-                    </Accordion>
-                  );
-                })}
-              </Paper>
+                              <Text
+                                strong
+                                style={{ display: "block", marginBottom: 4 }}
+                              >
+                                Summary:
+                              </Text>
+                              <Text type="secondary">{chapter.summary}</Text>
+                            </Card>
+                          )}
+                          <div
+                            style={{
+                              whiteSpace: "pre-wrap",
+                              fontFamily: "Georgia, serif",
+                              lineHeight: 1.8,
+                            }}
+                          >
+                            {chapter.content}
+                          </div>
+                        </>
+                      ),
+                    };
+                  })}
+                />
+              </Card>
             );
           })
         )}
-      </Box>
+      </div>
 
-      <Dialog
+      <Modal
         open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>Delete Chapter?</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Permanently delete{" "}
-            <strong>
-              Part {deleteTarget?.part_number}, Chapter{" "}
-              {deleteTarget?.chapter_number || 1}
-              {deleteTarget?.title ? ` — ${deleteTarget.title}` : ""}
-            </strong>
-            ? This cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)} disabled={deleting}>
-            Cancel
-          </Button>
+        onCancel={() => setDeleteTarget(null)}
+        title="Delete Chapter?"
+        footer={[
           <Button
-            variant="contained"
-            color="error"
-            onClick={handleDelete}
+            key="cancel"
+            onClick={() => setDeleteTarget(null)}
             disabled={deleting}
           >
+            Cancel
+          </Button>,
+          <Button
+            key="delete"
+            type="primary"
+            danger
+            onClick={handleDelete}
+            loading={deleting}
+          >
             {deleting ? "Deleting..." : "Delete"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+          </Button>,
+        ]}
+        width={400}
+      >
+        <Text>
+          Permanently delete{" "}
+          <Text strong>
+            Part {deleteTarget?.part_number}, Chapter{" "}
+            {deleteTarget?.chapter_number || 1}
+            {deleteTarget?.title ? ` — ${deleteTarget.title}` : ""}
+          </Text>
+          ? This cannot be undone.
+        </Text>
+      </Modal>
+    </div>
   );
 }

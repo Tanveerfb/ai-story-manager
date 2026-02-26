@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Box, Button, Typography, LinearProgress, Paper } from "@mui/material";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import { Card, Typography } from "antd";
+import { CloudUploadOutlined } from "@ant-design/icons";
+import { theme as antdTheme } from "antd";
+
+const { Title, Text } = Typography;
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -15,6 +18,7 @@ export default function FileUpload({
   accept = ".docx,.md,.markdown,.txt,.gdoc",
   maxSize = 52428800, // 50MB
 }: FileUploadProps) {
+  const { token } = antdTheme.useToken();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -72,15 +76,18 @@ export default function FileUpload({
   };
 
   return (
-    <Paper
-      sx={{
-        border: dragActive ? "2px dashed #1976d2" : "2px dashed #ccc",
-        borderRadius: 2,
-        p: 4,
+    <Card
+      style={{
+        border: dragActive
+          ? `2px dashed ${token.colorPrimary}`
+          : `2px dashed ${token.colorBorder}`,
+        borderRadius: 8,
+        padding: 32,
         textAlign: "center",
-        bgcolor: dragActive ? "action.hover" : "background.paper",
+        background: dragActive ? "rgba(22, 119, 255, 0.04)" : undefined,
         cursor: "pointer",
       }}
+      styles={{ body: { padding: 0 } }}
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
       onDragOver={handleDrag}
@@ -94,16 +101,18 @@ export default function FileUpload({
         style={{ display: "none" }}
       />
       <label htmlFor="file-upload" style={{ cursor: "pointer" }}>
-        <CloudUploadIcon sx={{ fontSize: 48, color: "primary.main", mb: 2 }} />
-        <Typography variant="h6" gutterBottom>
+        <CloudUploadOutlined
+          style={{ fontSize: 48, color: token.colorPrimary, marginBottom: 16 }}
+        />
+        <Title level={5} style={{ marginBottom: 8 }}>
           {selectedFile
             ? selectedFile.name
             : "Drop your file here or click to browse"}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
+        </Title>
+        <Text type="secondary">
           Supported format: {accept} (Max size: {maxSize / 1024 / 1024}MB)
-        </Typography>
+        </Text>
       </label>
-    </Paper>
+    </Card>
   );
 }

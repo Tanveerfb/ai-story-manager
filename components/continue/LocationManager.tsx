@@ -1,27 +1,29 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
-  Paper,
+  Card,
   Typography,
-  Box,
-  TextField,
+  Input,
   Button,
   List,
-  ListItem,
-  ListItemText,
-  IconButton,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Tag,
+  Modal,
   Tooltip,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import PlaceIcon from '@mui/icons-material/Place';
+  Select,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EnvironmentOutlined,
+} from "@ant-design/icons";
+import { theme as antdTheme } from "antd";
+import { useThemeMode } from "@/components/ThemeProvider";
+import { getSemanticColors } from "@/lib/theme";
+
+const { Text, Title } = Typography;
+const { TextArea } = Input;
 
 /**
  * Location Manager Component
@@ -41,14 +43,20 @@ interface LocationManagerProps {
   onLocationsChange: () => void;
 }
 
-export default function LocationManager({ locations, onLocationsChange }: LocationManagerProps) {
+export default function LocationManager({
+  locations,
+  onLocationsChange,
+}: LocationManagerProps) {
+  const { token } = antdTheme.useToken();
+  const { mode } = useThemeMode();
+  const sc = getSemanticColors(mode === "dark");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [newLocation, setNewLocation] = useState({
-    name: '',
-    type: 'indoor',
-    description: '',
-    atmosphere: '',
+    name: "",
+    type: "indoor",
+    description: "",
+    atmosphere: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,10 +67,10 @@ export default function LocationManager({ locations, onLocationsChange }: Locati
   const handleOpenCreate = () => {
     setEditingLocation(null);
     setNewLocation({
-      name: '',
-      type: 'indoor',
-      description: '',
-      atmosphere: '',
+      name: "",
+      type: "indoor",
+      description: "",
+      atmosphere: "",
     });
     setDialogOpen(true);
   };
@@ -74,9 +82,9 @@ export default function LocationManager({ locations, onLocationsChange }: Locati
     setEditingLocation(location);
     setNewLocation({
       name: location.name,
-      type: location.type || 'indoor',
-      description: location.description || '',
-      atmosphere: location.atmosphere || '',
+      type: location.type || "indoor",
+      description: location.description || "",
+      atmosphere: location.atmosphere || "",
     });
     setDialogOpen(true);
   };
@@ -95,7 +103,7 @@ export default function LocationManager({ locations, onLocationsChange }: Locati
    */
   const handleSaveLocation = async () => {
     if (!newLocation.name.trim()) {
-      setError('Location name is required');
+      setError("Location name is required");
       return;
     }
 
@@ -105,24 +113,24 @@ export default function LocationManager({ locations, onLocationsChange }: Locati
     try {
       const url = editingLocation
         ? `/api/locations/${editingLocation.id}`
-        : '/api/locations';
-      
-      const method = editingLocation ? 'PUT' : 'POST';
+        : "/api/locations";
+
+      const method = editingLocation ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newLocation),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save location');
+        throw new Error("Failed to save location");
       }
 
       handleCloseDialog();
       onLocationsChange();
     } catch (err: any) {
-      setError(err.message || 'Failed to save location');
+      setError(err.message || "Failed to save location");
     } finally {
       setLoading(false);
     }
@@ -132,165 +140,206 @@ export default function LocationManager({ locations, onLocationsChange }: Locati
    * Deletes a location
    */
   const handleDeleteLocation = async (locationId: string) => {
-    if (!confirm('Are you sure you want to delete this location?')) {
+    if (!confirm("Are you sure you want to delete this location?")) {
       return;
     }
 
     try {
       const response = await fetch(`/api/locations/${locationId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete location');
+        throw new Error("Failed to delete location");
       }
 
       onLocationsChange();
     } catch (err: any) {
-      console.error('Failed to delete location:', err);
+      console.error("Failed to delete location:", err);
     }
   };
 
   return (
-    <Paper sx={{ p: 2, mb: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PlaceIcon color="primary" />
-          <Typography variant="h6">Locations</Typography>
-        </Box>
+    <Card style={{ marginBottom: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <EnvironmentOutlined style={{ color: "#1890ff", fontSize: 18 }} />
+          <Title level={5} style={{ margin: 0 }}>
+            Locations
+          </Title>
+        </div>
         <Tooltip title="Create new location">
           <Button
-            variant="contained"
+            type="primary"
             size="small"
-            startIcon={<AddIcon />}
+            icon={<PlusOutlined />}
             onClick={handleOpenCreate}
           >
             Add
           </Button>
         </Tooltip>
-      </Box>
+      </div>
 
       {locations.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+        <Text
+          type="secondary"
+          style={{ display: "block", padding: "16px 0", textAlign: "center" }}
+        >
           No locations yet. Create your first location to get started!
-        </Typography>
+        </Text>
       ) : (
-        <List dense>
-          {locations.slice(0, 5).map((location) => (
-            <ListItem
+        <List
+          size="small"
+          dataSource={locations.slice(0, 5)}
+          renderItem={(location) => (
+            <List.Item
               key={location.id}
-              secondaryAction={
-                <Box>
-                  <Tooltip title="Edit location">
-                    <IconButton edge="end" size="small" onClick={() => handleOpenEdit(location)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete location">
-                    <IconButton
-                      edge="end"
-                      size="small"
-                      onClick={() => handleDeleteLocation(location.id)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              }
-              sx={{ borderBottom: 1, borderColor: 'divider' }}
+              actions={[
+                <Tooltip title="Edit location" key="edit">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => handleOpenEdit(location)}
+                  />
+                </Tooltip>,
+                <Tooltip title="Delete location" key="delete">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleDeleteLocation(location.id)}
+                  />
+                </Tooltip>,
+              ]}
+              style={{ borderBottom: `1px solid ${sc.border}` }}
             >
-              <ListItemText
-                primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <List.Item.Meta
+                title={
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
                     {location.name}
-                    {location.type && (
-                      <Chip label={location.type} size="small" variant="outlined" />
-                    )}
-                  </Box>
+                    {location.type && <Tag>{location.type}</Tag>}
+                  </div>
                 }
-                secondary={location.description || 'No description'}
+                description={location.description || "No description"}
               />
-            </ListItem>
-          ))}
-        </List>
+            </List.Item>
+          )}
+        />
       )}
 
       {locations.length > 5 && (
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+        <Text
+          type="secondary"
+          style={{
+            marginTop: 8,
+            display: "block",
+            textAlign: "center",
+            fontSize: 12,
+          }}
+        >
           Showing 5 of {locations.length} locations
-        </Typography>
+        </Text>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingLocation ? 'Edit Location' : 'Create New Location'}
-        </DialogTitle>
-        <DialogContent>
-          {error && (
-            <Typography color="error" variant="body2" sx={{ mb: 2 }}>
-              {error}
-            </Typography>
-          )}
-
-          <TextField
-            fullWidth
-            label="Location Name"
-            value={newLocation.name}
-            onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
-            margin="normal"
-            required
-          />
-
-          <TextField
-            fullWidth
-            select
-            label="Type"
-            value={newLocation.type}
-            onChange={(e) => setNewLocation({ ...newLocation, type: e.target.value })}
-            margin="normal"
-            SelectProps={{ native: true }}
+      {/* Create/Edit Modal */}
+      <Modal
+        open={dialogOpen}
+        onCancel={handleCloseDialog}
+        title={editingLocation ? "Edit Location" : "Create New Location"}
+        width={560}
+        footer={[
+          <Button key="cancel" onClick={handleCloseDialog}>
+            Cancel
+          </Button>,
+          <Button
+            key="save"
+            type="primary"
+            onClick={handleSaveLocation}
+            disabled={loading || !newLocation.name.trim()}
+            loading={loading}
           >
-            <option value="indoor">Indoor</option>
-            <option value="outdoor">Outdoor</option>
-            <option value="public">Public Place</option>
-            <option value="private">Private Place</option>
-            <option value="natural">Natural Setting</option>
-            <option value="urban">Urban Setting</option>
-          </TextField>
+            Save
+          </Button>,
+        ]}
+      >
+        {error && (
+          <Text type="danger" style={{ display: "block", marginBottom: 16 }}>
+            {error}
+          </Text>
+        )}
 
-          <TextField
-            fullWidth
-            label="Description"
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 4 }}>
+            Location Name *
+          </label>
+          <Input
+            value={newLocation.name}
+            onChange={(e) =>
+              setNewLocation({ ...newLocation, name: e.target.value })
+            }
+            placeholder="Location Name"
+          />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 4 }}>Type</label>
+          <Select
+            style={{ width: "100%" }}
+            value={newLocation.type}
+            onChange={(value) =>
+              setNewLocation({ ...newLocation, type: value })
+            }
+            options={[
+              { value: "indoor", label: "Indoor" },
+              { value: "outdoor", label: "Outdoor" },
+              { value: "public", label: "Public Place" },
+              { value: "private", label: "Private Place" },
+              { value: "natural", label: "Natural Setting" },
+              { value: "urban", label: "Urban Setting" },
+            ]}
+          />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 4 }}>
+            Description
+          </label>
+          <TextArea
             value={newLocation.description}
-            onChange={(e) => setNewLocation({ ...newLocation, description: e.target.value })}
-            margin="normal"
-            multiline
+            onChange={(e) =>
+              setNewLocation({ ...newLocation, description: e.target.value })
+            }
             rows={3}
             placeholder="Describe the location..."
           />
+        </div>
 
-          <TextField
-            fullWidth
-            label="Atmosphere"
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 4 }}>
+            Atmosphere
+          </label>
+          <Input
             value={newLocation.atmosphere}
-            onChange={(e) => setNewLocation({ ...newLocation, atmosphere: e.target.value })}
-            margin="normal"
+            onChange={(e) =>
+              setNewLocation({ ...newLocation, atmosphere: e.target.value })
+            }
             placeholder="e.g., tense, peaceful, mysterious"
-            helperText="The mood or feeling of this location"
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button
-            onClick={handleSaveLocation}
-            variant="contained"
-            disabled={loading || !newLocation.name.trim()}
-          >
-            {loading ? 'Saving...' : 'Save'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Paper>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            The mood or feeling of this location
+          </Text>
+        </div>
+      </Modal>
+    </Card>
   );
 }

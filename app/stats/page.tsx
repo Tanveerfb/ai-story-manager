@@ -2,23 +2,29 @@
 
 import { useEffect, useState } from "react";
 import {
-  Container,
   Typography,
-  Box,
-  Paper,
-  Grid,
-  CircularProgress,
+  Card,
+  Row,
+  Col,
+  Spin,
   Alert,
-  LinearProgress,
-  Chip,
+  Progress,
+  Tag,
   Divider,
-} from "@mui/material";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import PersonIcon from "@mui/icons-material/Person";
-import PlaceIcon from "@mui/icons-material/Place";
-import CreateIcon from "@mui/icons-material/Create";
-import BarChartIcon from "@mui/icons-material/BarChart";
+} from "antd";
+import {
+  BookOutlined,
+  UserOutlined,
+  EnvironmentOutlined,
+  EditOutlined,
+  BarChartOutlined,
+} from "@ant-design/icons";
+import { theme as antdTheme } from "antd";
 import { useWorld } from "@/components/WorldProvider";
+import { useThemeMode } from "@/components/ThemeProvider";
+import { getSemanticColors } from "@/lib/theme";
+
+const { Title, Text } = Typography;
 
 interface Stats {
   overview: {
@@ -58,20 +64,31 @@ function StatCard({
   value: string | number;
   color?: string;
 }) {
+  const { token } = antdTheme.useToken();
   return (
-    <Paper sx={{ p: 3, textAlign: "center", height: "100%" }}>
-      <Box sx={{ color: color || "primary.main", mb: 1 }}>{icon}</Box>
-      <Typography variant="h4" fontWeight="bold">
+    <Card style={{ textAlign: "center", height: "100%" }}>
+      <div
+        style={{
+          color: color || token.colorPrimary,
+          marginBottom: 8,
+          fontSize: 28,
+        }}
+      >
+        {icon}
+      </div>
+      <Title level={3} style={{ margin: 0 }}>
         {typeof value === "number" ? value.toLocaleString() : value}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {label}
-      </Typography>
-    </Paper>
+      </Title>
+      <Text type="secondary">{label}</Text>
+    </Card>
   );
 }
 
 export default function StatsPage() {
+  const { mode } = useThemeMode();
+  const { token } = antdTheme.useToken();
+  const isDark = mode === "dark";
+  const sc = getSemanticColors(isDark);
   const { worldId } = useWorld();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,18 +116,27 @@ export default function StatsPage() {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }}>Crunching numbers...</Typography>
-      </Container>
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: "32px 16px",
+          textAlign: "center",
+        }}
+      >
+        <Spin size="large" />
+        <div style={{ marginTop: 16 }}>
+          <Text>Crunching numbers...</Text>
+        </div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error">{error}</Alert>
-      </Container>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 16px" }}>
+        <Alert type="error" title={error} showIcon />
+      </div>
     );
   }
 
@@ -144,91 +170,91 @@ export default function StatsPage() {
             : "Epic Novel";
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Story Statistics
-      </Typography>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 16px" }}>
+      <Title level={3}>Story Statistics</Title>
 
       {/* Overview Cards */}
-      <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={6} sm={4} md={2}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 32 }}>
+        <Col xs={12} sm={8} md={4}>
           <StatCard
-            icon={<CreateIcon fontSize="large" />}
+            icon={<EditOutlined />}
             label="Total Words"
             value={overview.totalWords}
           />
-        </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        </Col>
+        <Col xs={12} sm={8} md={4}>
           <StatCard
-            icon={<MenuBookIcon fontSize="large" />}
+            icon={<BookOutlined />}
             label="Chapters"
             value={overview.totalChapters}
-            color="secondary.main"
+            color="#722ed1"
           />
-        </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        </Col>
+        <Col xs={12} sm={8} md={4}>
           <StatCard
-            icon={<BarChartIcon fontSize="large" />}
+            icon={<BarChartOutlined />}
             label="Parts"
             value={overview.totalParts}
-            color="success.main"
+            color="#52c41a"
           />
-        </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        </Col>
+        <Col xs={12} sm={8} md={4}>
           <StatCard
-            icon={<PersonIcon fontSize="large" />}
+            icon={<UserOutlined />}
             label="Characters"
             value={overview.totalCharacters}
-            color="warning.main"
+            color="#faad14"
           />
-        </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        </Col>
+        <Col xs={12} sm={8} md={4}>
           <StatCard
-            icon={<PlaceIcon fontSize="large" />}
+            icon={<EnvironmentOutlined />}
             label="Locations"
             value={overview.totalLocations}
-            color="info.main"
+            color="#13c2c2"
           />
-        </Grid>
-        <Grid item xs={6} sm={4} md={2}>
+        </Col>
+        <Col xs={12} sm={8} md={4}>
           <StatCard
-            icon={<CreateIcon fontSize="large" />}
+            icon={<EditOutlined />}
             label="Avg Words/Ch"
             value={overview.avgWordsPerChapter}
-            color="error.main"
+            color="#f5222d"
           />
-        </Grid>
-      </Grid>
+        </Col>
+      </Row>
 
       {/* Novel classification */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
+      <Card style={{ marginBottom: 32 }}>
+        <Title level={5} style={{ marginTop: 0 }}>
           Story Classification
-        </Typography>
-        <Box
-          sx={{
+        </Title>
+        <div
+          style={{
             display: "flex",
             alignItems: "center",
-            gap: 2,
+            gap: 16,
             flexWrap: "wrap",
           }}
         >
-          <Chip label={novelClass} color="primary" size="medium" />
-          <Typography variant="body2" color="text.secondary">
+          <Tag color="blue" style={{ fontSize: 14, padding: "4px 12px" }}>
+            {novelClass}
+          </Tag>
+          <Text type="secondary">
             ~{estimatedPages} pages (at 250 words/page)
-          </Typography>
-        </Box>
-      </Paper>
+          </Text>
+        </div>
+      </Card>
 
-      <Grid container spacing={3}>
+      <Row gutter={[24, 24]}>
         {/* Words per Part */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: "100%" }}>
-            <Typography variant="h6" gutterBottom>
+        <Col xs={24} md={12}>
+          <Card style={{ height: "100%" }}>
+            <Title level={5} style={{ marginTop: 0 }}>
               Words per Part
-            </Typography>
+            </Title>
             {wordsPerPart.length === 0 ? (
-              <Typography color="text.secondary">No data yet</Typography>
+              <Text type="secondary">No data yet</Text>
             ) : (
               wordsPerPart.map((p) => {
                 const maxWords = Math.max(
@@ -236,143 +262,139 @@ export default function StatsPage() {
                   1,
                 );
                 return (
-                  <Box key={p.part} sx={{ mb: 2 }}>
-                    <Box
-                      sx={{
+                  <div key={p.part} style={{ marginBottom: 16 }}>
+                    <div
+                      style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        mb: 0.5,
+                        marginBottom: 4,
                       }}
                     >
-                      <Typography variant="body2" fontWeight="bold">
-                        Part {p.part}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      <Text strong>Part {p.part}</Text>
+                      <Text type="secondary">
                         {p.words.toLocaleString()} words &middot; {p.chapters}{" "}
                         ch.
-                      </Typography>
-                    </Box>
-                    <LinearProgress
-                      variant="determinate"
-                      value={(p.words / maxWords) * 100}
-                      sx={{ height: 8, borderRadius: 4 }}
+                      </Text>
+                    </div>
+                    <Progress
+                      percent={Math.round((p.words / maxWords) * 100)}
+                      showInfo={false}
+                      strokeLinecap="round"
+                      size={["100%", 8]}
                     />
-                  </Box>
+                  </div>
                 );
               })
             )}
-          </Paper>
-        </Grid>
+          </Card>
+        </Col>
 
         {/* Character Mentions */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: "100%" }}>
-            <Typography variant="h6" gutterBottom>
+        <Col xs={24} md={12}>
+          <Card style={{ height: "100%" }}>
+            <Title level={5} style={{ marginTop: 0 }}>
               Character Mentions
-            </Typography>
+            </Title>
             {characterMentions.length === 0 ? (
-              <Typography color="text.secondary">No characters yet</Typography>
+              <Text type="secondary">No characters yet</Text>
             ) : (
               characterMentions.slice(0, 12).map((c) => (
-                <Box key={c.name} sx={{ mb: 1.5 }}>
-                  <Box
-                    sx={{
+                <div key={c.name} style={{ marginBottom: 12 }}>
+                  <div
+                    style={{
                       display: "flex",
                       justifyContent: "space-between",
-                      mb: 0.5,
+                      marginBottom: 4,
                     }}
                   >
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Typography variant="body2" fontWeight="bold">
-                        {c.name}
-                      </Typography>
-                      <Chip label={c.role} size="small" variant="outlined" />
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {c.count} mentions
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={(c.count / maxMentions) * 100}
-                    color="secondary"
-                    sx={{ height: 6, borderRadius: 3 }}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <Text strong>{c.name}</Text>
+                      <Tag>{c.role}</Tag>
+                    </div>
+                    <Text type="secondary">{c.count} mentions</Text>
+                  </div>
+                  <Progress
+                    percent={Math.round((c.count / maxMentions) * 100)}
+                    showInfo={false}
+                    strokeColor="#722ed1"
+                    strokeLinecap="round"
+                    size={["100%", 6]}
                   />
-                </Box>
+                </div>
               ))
             )}
-          </Paper>
-        </Grid>
+          </Card>
+        </Col>
 
         {/* Role Distribution */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
+        <Col xs={24} md={12}>
+          <Card>
+            <Title level={5} style={{ marginTop: 0 }}>
               Character Roles
-            </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+            </Title>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {roleDistribution.map((r) => (
-                <Chip
-                  key={r.role}
-                  label={`${r.role}: ${r.count}`}
-                  variant="outlined"
-                />
+                <Tag key={r.role}>
+                  {r.role}: {r.count}
+                </Tag>
               ))}
-            </Box>
-          </Paper>
-        </Grid>
+            </div>
+          </Card>
+        </Col>
 
         {/* Chapter Extremes */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
+        <Col xs={24} md={12}>
+          <Card>
+            <Title level={5} style={{ marginTop: 0 }}>
               Chapter Records
-            </Typography>
+            </Title>
             {longestChapter && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Longest Chapter
-                </Typography>
-                <Typography fontWeight="bold">
-                  {longestChapter.title ||
-                    `Part ${longestChapter.part}, Ch. ${longestChapter.chapter}`}
-                </Typography>
-                <Typography variant="body2">
-                  {longestChapter.words?.toLocaleString()} words
-                </Typography>
-              </Box>
+              <div style={{ marginBottom: 16 }}>
+                <Text type="secondary">Longest Chapter</Text>
+                <div>
+                  <Text strong>
+                    {longestChapter.title ||
+                      `Part ${longestChapter.part}, Ch. ${longestChapter.chapter}`}
+                  </Text>
+                </div>
+                <Text>{longestChapter.words?.toLocaleString()} words</Text>
+              </div>
             )}
             {shortestChapter && (
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  Shortest Chapter
-                </Typography>
-                <Typography fontWeight="bold">
-                  {shortestChapter.title ||
-                    `Part ${shortestChapter.part}, Ch. ${shortestChapter.chapter}`}
-                </Typography>
-                <Typography variant="body2">
-                  {shortestChapter.words?.toLocaleString()} words
-                </Typography>
-              </Box>
+              <div>
+                <Text type="secondary">Shortest Chapter</Text>
+                <div>
+                  <Text strong>
+                    {shortestChapter.title ||
+                      `Part ${shortestChapter.part}, Ch. ${shortestChapter.chapter}`}
+                  </Text>
+                </div>
+                <Text>{shortestChapter.words?.toLocaleString()} words</Text>
+              </div>
             )}
-          </Paper>
-        </Grid>
+          </Card>
+        </Col>
 
         {/* Writing Timeline */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
+        <Col xs={24}>
+          <Card>
+            <Title level={5} style={{ marginTop: 0 }}>
               Writing Timeline
-            </Typography>
+            </Title>
             {timeline.length === 0 ? (
-              <Typography color="text.secondary">No data yet</Typography>
+              <Text type="secondary">No data yet</Text>
             ) : (
-              <Box
-                sx={{
+              <div
+                style={{
                   display: "flex",
                   alignItems: "flex-end",
-                  gap: 0.5,
+                  gap: 4,
                   height: 120,
                   overflow: "auto",
                 }}
@@ -381,38 +403,51 @@ export default function StatsPage() {
                   const maxW = Math.max(...timeline.map((x) => x.words), 1);
                   const height = Math.max(4, (t.words / maxW) * 100);
                   return (
-                    <Box
+                    <div
                       key={t.date}
                       title={`${t.date}: ${t.words.toLocaleString()} words`}
-                      sx={{
+                      style={{
                         flex: "1 0 20px",
                         maxWidth: 40,
                         height: `${height}%`,
-                        bgcolor: "primary.main",
+                        backgroundColor: token.colorPrimary,
                         borderRadius: "4px 4px 0 0",
                         minWidth: 8,
-                        "&:hover": { bgcolor: "primary.dark" },
+                        cursor: "pointer",
+                        transition: "background-color 0.2s",
                       }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor =
+                          token.colorPrimaryActive)
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor =
+                          token.colorPrimary)
+                      }
                     />
                   );
                 })}
-              </Box>
+              </div>
             )}
             {timeline.length > 0 && (
-              <Box
-                sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginTop: 8,
+                }}
               >
-                <Typography variant="caption" color="text.secondary">
+                <Text type="secondary" style={{ fontSize: 12 }}>
                   {timeline[0].date}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
+                </Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
                   {timeline[timeline.length - 1].date}
-                </Typography>
-              </Box>
+                </Text>
+              </div>
             )}
-          </Paper>
-        </Grid>
-      </Grid>
-    </Container>
+          </Card>
+        </Col>
+      </Row>
+    </div>
   );
 }

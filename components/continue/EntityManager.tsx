@@ -1,28 +1,29 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
-  Paper,
+  Card,
   Typography,
-  Box,
-  TextField,
+  Input,
   Button,
   List,
-  ListItem,
-  ListItemText,
-  IconButton,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Autocomplete,
+  Tag,
+  Modal,
   Tooltip,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import PersonIcon from '@mui/icons-material/Person';
+  Select,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import { theme as antdTheme } from "antd";
+import { useThemeMode } from "@/components/ThemeProvider";
+import { getSemanticColors } from "@/lib/theme";
+
+const { Text, Title } = Typography;
+const { TextArea } = Input;
 
 /**
  * Entity Manager Component - Character Management
@@ -44,17 +45,25 @@ interface EntityManagerProps {
   onCharactersChange: () => void;
 }
 
-export default function EntityManager({ characters, onCharactersChange }: EntityManagerProps) {
+export default function EntityManager({
+  characters,
+  onCharactersChange,
+}: EntityManagerProps) {
+  const { token } = antdTheme.useToken();
+  const { mode } = useThemeMode();
+  const sc = getSemanticColors(mode === "dark");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
+  const [editingCharacter, setEditingCharacter] = useState<Character | null>(
+    null,
+  );
   const [newCharacter, setNewCharacter] = useState({
-    name: '',
-    role: 'side',
-    personality: '',
+    name: "",
+    role: "side",
+    personality: "",
     traits: [] as string[],
-    description: '',
+    description: "",
   });
-  const [traitsInput, setTraitsInput] = useState('');
+  const [traitsInput, setTraitsInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,13 +73,13 @@ export default function EntityManager({ characters, onCharactersChange }: Entity
   const handleOpenCreate = () => {
     setEditingCharacter(null);
     setNewCharacter({
-      name: '',
-      role: 'side',
-      personality: '',
+      name: "",
+      role: "side",
+      personality: "",
       traits: [],
-      description: '',
+      description: "",
     });
-    setTraitsInput('');
+    setTraitsInput("");
     setDialogOpen(true);
   };
 
@@ -81,12 +90,12 @@ export default function EntityManager({ characters, onCharactersChange }: Entity
     setEditingCharacter(character);
     setNewCharacter({
       name: character.name,
-      role: character.role || 'side',
-      personality: character.personality || '',
+      role: character.role || "side",
+      personality: character.personality || "",
       traits: character.traits || [],
-      description: character.description || '',
+      description: character.description || "",
     });
-    setTraitsInput((character.traits || []).join(', '));
+    setTraitsInput((character.traits || []).join(", "));
     setDialogOpen(true);
   };
 
@@ -104,7 +113,7 @@ export default function EntityManager({ characters, onCharactersChange }: Entity
    */
   const handleSaveCharacter = async () => {
     if (!newCharacter.name.trim()) {
-      setError('Character name is required');
+      setError("Character name is required");
       return;
     }
 
@@ -114,7 +123,7 @@ export default function EntityManager({ characters, onCharactersChange }: Entity
     try {
       // Parse traits from comma-separated string
       const traits = traitsInput
-        .split(',')
+        .split(",")
         .map((t) => t.trim())
         .filter((t) => t.length > 0);
 
@@ -125,24 +134,24 @@ export default function EntityManager({ characters, onCharactersChange }: Entity
 
       const url = editingCharacter
         ? `/api/characters/${editingCharacter.id}`
-        : '/api/characters';
-      
-      const method = editingCharacter ? 'PUT' : 'POST';
+        : "/api/characters";
+
+      const method = editingCharacter ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(characterData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save character');
+        throw new Error("Failed to save character");
       }
 
       handleCloseDialog();
       onCharactersChange();
     } catch (err: any) {
-      setError(err.message || 'Failed to save character');
+      setError(err.message || "Failed to save character");
     } finally {
       setLoading(false);
     }
@@ -152,173 +161,215 @@ export default function EntityManager({ characters, onCharactersChange }: Entity
    * Deletes a character
    */
   const handleDeleteCharacter = async (characterId: string) => {
-    if (!confirm('Are you sure you want to delete this character?')) {
+    if (!confirm("Are you sure you want to delete this character?")) {
       return;
     }
 
     try {
       const response = await fetch(`/api/characters/${characterId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete character');
+        throw new Error("Failed to delete character");
       }
 
       onCharactersChange();
     } catch (err: any) {
-      console.error('Failed to delete character:', err);
+      console.error("Failed to delete character:", err);
     }
   };
 
   return (
-    <Paper sx={{ p: 2, mb: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PersonIcon color="primary" />
-          <Typography variant="h6">Characters</Typography>
-        </Box>
+    <Card style={{ marginBottom: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <UserOutlined style={{ color: "#1890ff", fontSize: 18 }} />
+          <Title level={5} style={{ margin: 0 }}>
+            Characters
+          </Title>
+        </div>
         <Tooltip title="Create new character">
           <Button
-            variant="contained"
+            type="primary"
             size="small"
-            startIcon={<AddIcon />}
+            icon={<PlusOutlined />}
             onClick={handleOpenCreate}
           >
             Add
           </Button>
         </Tooltip>
-      </Box>
+      </div>
 
       {characters.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+        <Text
+          type="secondary"
+          style={{ display: "block", padding: "16px 0", textAlign: "center" }}
+        >
           No characters yet. Create your first character to get started!
-        </Typography>
+        </Text>
       ) : (
-        <List dense>
-          {characters.slice(0, 5).map((character) => (
-            <ListItem
+        <List
+          size="small"
+          dataSource={characters.slice(0, 5)}
+          renderItem={(character) => (
+            <List.Item
               key={character.id}
-              secondaryAction={
-                <Box>
-                  <Tooltip title="Edit character">
-                    <IconButton edge="end" size="small" onClick={() => handleOpenEdit(character)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete character">
-                    <IconButton
-                      edge="end"
-                      size="small"
-                      onClick={() => handleDeleteCharacter(character.id)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              }
-              sx={{ borderBottom: 1, borderColor: 'divider' }}
+              actions={[
+                <Tooltip title="Edit character" key="edit">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => handleOpenEdit(character)}
+                  />
+                </Tooltip>,
+                <Tooltip title="Delete character" key="delete">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleDeleteCharacter(character.id)}
+                  />
+                </Tooltip>,
+              ]}
+              style={{ borderBottom: `1px solid ${sc.border}` }}
             >
-              <ListItemText
-                primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <List.Item.Meta
+                title={
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
                     {character.name}
-                    {character.role && (
-                      <Chip label={character.role} size="small" variant="outlined" />
-                    )}
-                  </Box>
+                    {character.role && <Tag>{character.role}</Tag>}
+                  </div>
                 }
-                secondary={character.personality || 'No description'}
+                description={character.personality || "No description"}
               />
-            </ListItem>
-          ))}
-        </List>
+            </List.Item>
+          )}
+        />
       )}
 
       {characters.length > 5 && (
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+        <Text
+          type="secondary"
+          style={{
+            marginTop: 8,
+            display: "block",
+            textAlign: "center",
+            fontSize: 12,
+          }}
+        >
           Showing 5 of {characters.length} characters
-        </Typography>
+        </Text>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingCharacter ? 'Edit Character' : 'Create New Character'}
-        </DialogTitle>
-        <DialogContent>
-          {error && (
-            <Typography color="error" variant="body2" sx={{ mb: 2 }}>
-              {error}
-            </Typography>
-          )}
-
-          <TextField
-            fullWidth
-            label="Character Name"
-            value={newCharacter.name}
-            onChange={(e) => setNewCharacter({ ...newCharacter, name: e.target.value })}
-            margin="normal"
-            required
-          />
-
-          <TextField
-            fullWidth
-            select
-            label="Role"
-            value={newCharacter.role}
-            onChange={(e) => setNewCharacter({ ...newCharacter, role: e.target.value })}
-            margin="normal"
-            SelectProps={{ native: true }}
+      {/* Create/Edit Modal */}
+      <Modal
+        open={dialogOpen}
+        onCancel={handleCloseDialog}
+        title={editingCharacter ? "Edit Character" : "Create New Character"}
+        width={560}
+        footer={[
+          <Button key="cancel" onClick={handleCloseDialog}>
+            Cancel
+          </Button>,
+          <Button
+            key="save"
+            type="primary"
+            onClick={handleSaveCharacter}
+            disabled={loading || !newCharacter.name.trim()}
+            loading={loading}
           >
-            <option value="main">Main Character</option>
-            <option value="side">Side Character</option>
-            <option value="minor">Minor Character</option>
-          </TextField>
+            Save
+          </Button>,
+        ]}
+      >
+        {error && (
+          <Text type="danger" style={{ display: "block", marginBottom: 16 }}>
+            {error}
+          </Text>
+        )}
 
-          <TextField
-            fullWidth
-            label="Personality"
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 4 }}>
+            Character Name *
+          </label>
+          <Input
+            value={newCharacter.name}
+            onChange={(e) =>
+              setNewCharacter({ ...newCharacter, name: e.target.value })
+            }
+            placeholder="Character Name"
+          />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 4 }}>Role</label>
+          <Select
+            style={{ width: "100%" }}
+            value={newCharacter.role}
+            onChange={(value) =>
+              setNewCharacter({ ...newCharacter, role: value })
+            }
+            options={[
+              { value: "main", label: "Main Character" },
+              { value: "side", label: "Side Character" },
+              { value: "minor", label: "Minor Character" },
+            ]}
+          />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 4 }}>
+            Personality
+          </label>
+          <TextArea
             value={newCharacter.personality}
-            onChange={(e) => setNewCharacter({ ...newCharacter, personality: e.target.value })}
-            margin="normal"
-            multiline
+            onChange={(e) =>
+              setNewCharacter({ ...newCharacter, personality: e.target.value })
+            }
             rows={2}
             placeholder="Brief personality description..."
           />
+        </div>
 
-          <TextField
-            fullWidth
-            label="Traits (comma-separated)"
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 4 }}>
+            Traits (comma-separated)
+          </label>
+          <Input
             value={traitsInput}
             onChange={(e) => setTraitsInput(e.target.value)}
-            margin="normal"
             placeholder="brave, intelligent, stubborn"
-            helperText="Enter character traits separated by commas"
           />
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Enter character traits separated by commas
+          </Text>
+        </div>
 
-          <TextField
-            fullWidth
-            label="Physical Description"
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 4 }}>
+            Physical Description
+          </label>
+          <TextArea
             value={newCharacter.description}
-            onChange={(e) => setNewCharacter({ ...newCharacter, description: e.target.value })}
-            margin="normal"
-            multiline
+            onChange={(e) =>
+              setNewCharacter({ ...newCharacter, description: e.target.value })
+            }
             rows={2}
             placeholder="Physical appearance..."
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button
-            onClick={handleSaveCharacter}
-            variant="contained"
-            disabled={loading || !newCharacter.name.trim()}
-          >
-            {loading ? 'Saving...' : 'Save'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Paper>
+        </div>
+      </Modal>
+    </Card>
   );
 }

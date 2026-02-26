@@ -2,23 +2,22 @@
 
 import { useEffect, useState } from "react";
 import {
-  Container,
   Typography,
-  Box,
-  Paper,
-  Chip,
-  CircularProgress,
+  Spin,
   Alert,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Collapse,
   Tooltip,
-  LinearProgress,
-} from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import PersonIcon from "@mui/icons-material/Person";
+  Tag,
+  Card,
+  theme as antdTheme,
+} from "antd";
+import { useThemeMode } from "@/components/ThemeProvider";
+import { getSemanticColors } from "@/lib/theme";
+import { UserOutlined } from "@ant-design/icons";
 import { useWorld } from "@/components/WorldProvider";
 import { useRouter } from "next/navigation";
+
+const { Title, Text } = Typography;
 
 interface Appearance {
   part_number: number;
@@ -45,6 +44,10 @@ interface ArcData {
 }
 
 export default function ArcsPage() {
+  const { mode } = useThemeMode();
+  const { token } = antdTheme.useToken();
+  const isDark = mode === "dark";
+  const sc = getSemanticColors(isDark);
   const { worldId } = useWorld();
   const router = useRouter();
   const [arcs, setArcs] = useState<ArcData[]>([]);
@@ -74,29 +77,38 @@ export default function ArcsPage() {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }}>Analyzing character arcs...</Typography>
-      </Container>
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: "32px 16px",
+          textAlign: "center",
+        }}
+      >
+        <Spin size="large" />
+        <div style={{ marginTop: 16 }}>
+          <Text>Analyzing character arcs...</Text>
+        </div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error">{error}</Alert>
-      </Container>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 16px" }}>
+        <Alert type="error" title={error} showIcon />
+      </div>
     );
   }
 
   const roleColor = (role: string) => {
     switch (role) {
       case "protagonist":
-        return "primary";
+        return "blue";
       case "antagonist":
-        return "error";
+        return "red";
       case "supporting":
-        return "secondary";
+        return "purple";
       case "bg":
         return "default";
       default:
@@ -104,221 +116,202 @@ export default function ArcsPage() {
     }
   };
 
+  const collapseItems = arcs.map((arc) => {
+    const presencePercent =
+      totalChapters > 0
+        ? Math.round((arc.chapters_present / totalChapters) * 100)
+        : 0;
+
+    return {
+      key: arc.character.id,
+      label: (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            width: "100%",
+          }}
+        >
+          <UserOutlined style={{ color: "rgba(0,0,0,0.45)" }} />
+          <span
+            style={{ fontSize: 16, fontWeight: 500, cursor: "pointer" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/characters/${arc.character.id}`);
+            }}
+            onMouseEnter={(e) =>
+              ((e.target as HTMLElement).style.textDecoration = "underline")
+            }
+            onMouseLeave={(e) =>
+              ((e.target as HTMLElement).style.textDecoration = "none")
+            }
+          >
+            {arc.character.name}
+          </span>
+          <Tag color={roleColor(arc.character.role)}>
+            {arc.character.role || "unassigned"}
+          </Tag>
+          <span style={{ flex: 1 }} />
+          <Text type="secondary" style={{ marginRight: 16 }}>
+            {arc.total_mentions} mentions &middot; {arc.chapters_present}/
+            {totalChapters} chapters ({presencePercent}%)
+          </Text>
+        </div>
+      ),
+      children: (
+        <div>
+          {/* Arc Notes & Goals */}
+          {(arc.character.arc_notes ||
+            arc.character.goals ||
+            arc.character.motivations) && (
+            <Card size="small" style={{ marginBottom: 16 }}>
+              {arc.character.arc_notes && (
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Arc Notes
+                  </Text>
+                  <div>
+                    <Text>{arc.character.arc_notes}</Text>
+                  </div>
+                </div>
+              )}
+              {arc.character.goals && (
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Goals
+                  </Text>
+                  <div>
+                    <Text>{arc.character.goals}</Text>
+                  </div>
+                </div>
+              )}
+              {arc.character.motivations && (
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Motivations
+                  </Text>
+                  <div>
+                    <Text>{arc.character.motivations}</Text>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* Visual Timeline Bar */}
+          <div style={{ marginBottom: 16 }}>
+            <Text strong>Presence Timeline</Text>
+            <div style={{ display: "flex", gap: 0.5, marginTop: 8 }}>
+              {Array.from({ length: totalChapters }, (_, i) => {
+                const appearance = arc.appearances[0]
+                  ? arc.appearances.find((a, idx) => {
+                      return false; // placeholder
+                    })
+                  : null;
+                return null;
+              })}
+            </div>
+            {/* Simple bar representation */}
+            <div style={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+              {arc.appearances.map((app, i) => (
+                <Tooltip
+                  key={i}
+                  title={`${app.title}: ${app.mention_count} mentions`}
+                >
+                  <div
+                    style={{
+                      height: 24,
+                      minWidth: 24,
+                      padding: "0 4px",
+                      backgroundColor:
+                        app.mention_count > 5
+                          ? token.colorPrimary
+                          : app.mention_count > 2
+                            ? "#69b1ff"
+                            : "#e6f4ff",
+                      color: app.mention_count > 2 ? "white" : "inherit",
+                      borderRadius: 4,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                    }}
+                  >
+                    {app.chapter_number}
+                  </div>
+                </Tooltip>
+              ))}
+            </div>
+            {arc.appearances.length > 0 && (
+              <div style={{ marginTop: 4 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Chapters where {arc.character.name} appears (darker = more
+                  mentions)
+                </Text>
+              </div>
+            )}
+          </div>
+
+          {/* Appearance List */}
+          <Text strong>Chapter Appearances</Text>
+          <div style={{ marginTop: 8 }}>
+            {arc.appearances.length === 0 ? (
+              <Text type="secondary">
+                This character hasn&apos;t appeared in any chapters yet.
+              </Text>
+            ) : (
+              arc.appearances.map((app, i) => (
+                <Card key={i} size="small" style={{ marginBottom: 8 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <Text strong>{app.title}</Text>
+                    <Tag>{app.mention_count}x</Tag>
+                  </div>
+                  {app.snippets.slice(0, 2).map((s, j) => (
+                    <div key={j} style={{ marginBottom: 4 }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        &ldquo;...{s}...&rdquo;
+                      </Text>
+                    </div>
+                  ))}
+                </Card>
+              ))
+            )}
+          </div>
+        </div>
+      ),
+    };
+  });
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Character Arcs
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 16px" }}>
+      <Title level={3}>Character Arcs</Title>
+      <Text type="secondary" style={{ display: "block", marginBottom: 24 }}>
         Track how each character appears and develops across the story. Click a
         character name to view their full profile.
-      </Typography>
+      </Text>
 
       {arcs.length === 0 ? (
-        <Paper sx={{ p: 3, textAlign: "center" }}>
-          <Typography color="text.secondary">
+        <Card style={{ textAlign: "center" }}>
+          <Text type="secondary">
             No characters or chapters found yet. Start writing to see character
             arcs develop.
-          </Typography>
-        </Paper>
+          </Text>
+        </Card>
       ) : (
-        arcs.map((arc) => {
-          const presencePercent =
-            totalChapters > 0
-              ? Math.round((arc.chapters_present / totalChapters) * 100)
-              : 0;
-
-          return (
-            <Accordion
-              key={arc.character.id}
-              defaultExpanded={arc.total_mentions > 0}
-            >
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 2,
-                    width: "100%",
-                  }}
-                >
-                  <PersonIcon color="action" />
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      cursor: "pointer",
-                      "&:hover": { textDecoration: "underline" },
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/characters/${arc.character.id}`);
-                    }}
-                  >
-                    {arc.character.name}
-                  </Typography>
-                  <Chip
-                    label={arc.character.role || "unassigned"}
-                    size="small"
-                    color={roleColor(arc.character.role) as any}
-                    variant="outlined"
-                  />
-                  <Box sx={{ flex: 1 }} />
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mr: 2 }}
-                  >
-                    {arc.total_mentions} mentions &middot;{" "}
-                    {arc.chapters_present}/{totalChapters} chapters (
-                    {presencePercent}%)
-                  </Typography>
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                {/* Arc Notes & Goals */}
-                {(arc.character.arc_notes ||
-                  arc.character.goals ||
-                  arc.character.motivations) && (
-                  <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                    {arc.character.arc_notes && (
-                      <Box sx={{ mb: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          Arc Notes
-                        </Typography>
-                        <Typography variant="body2">
-                          {arc.character.arc_notes}
-                        </Typography>
-                      </Box>
-                    )}
-                    {arc.character.goals && (
-                      <Box sx={{ mb: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          Goals
-                        </Typography>
-                        <Typography variant="body2">
-                          {arc.character.goals}
-                        </Typography>
-                      </Box>
-                    )}
-                    {arc.character.motivations && (
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          Motivations
-                        </Typography>
-                        <Typography variant="body2">
-                          {arc.character.motivations}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Paper>
-                )}
-
-                {/* Visual Timeline Bar */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>
-                    Presence Timeline
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 0.5 }}>
-                    {Array.from({ length: totalChapters }, (_, i) => {
-                      // Find appearance at this chapter index
-                      // Chapters are sorted, map index to part/chapter
-                      const appearance = arc.appearances[0]
-                        ? arc.appearances.find((a, idx) => {
-                            // Use index-based matching since we have sorted data
-                            // We need to match against all chapters
-                            return false; // placeholder
-                          })
-                        : null;
-                      return null;
-                    })}
-                  </Box>
-                  {/* Simple bar representation */}
-                  <Box sx={{ display: "flex", gap: "2px", flexWrap: "wrap" }}>
-                    {arc.appearances.map((app, i) => (
-                      <Tooltip
-                        key={i}
-                        title={`${app.title}: ${app.mention_count} mentions`}
-                      >
-                        <Box
-                          sx={{
-                            height: 24,
-                            minWidth: 24,
-                            px: 0.5,
-                            bgcolor:
-                              app.mention_count > 5
-                                ? "primary.main"
-                                : app.mention_count > 2
-                                  ? "primary.light"
-                                  : "primary.100",
-                            color:
-                              app.mention_count > 2 ? "white" : "text.primary",
-                            borderRadius: 0.5,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 11,
-                          }}
-                        >
-                          {app.chapter_number}
-                        </Box>
-                      </Tooltip>
-                    ))}
-                  </Box>
-                  {arc.appearances.length > 0 && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ mt: 0.5 }}
-                    >
-                      Chapters where {arc.character.name} appears (darker = more
-                      mentions)
-                    </Typography>
-                  )}
-                </Box>
-
-                {/* Appearance List */}
-                <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>
-                  Chapter Appearances
-                </Typography>
-                {arc.appearances.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    This character hasn&apos;t appeared in any chapters yet.
-                  </Typography>
-                ) : (
-                  arc.appearances.map((app, i) => (
-                    <Paper key={i} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          mb: 0.5,
-                        }}
-                      >
-                        <Typography variant="subtitle2">{app.title}</Typography>
-                        <Chip
-                          label={`${app.mention_count}x`}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </Box>
-                      {app.snippets.slice(0, 2).map((s, j) => (
-                        <Typography
-                          key={j}
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ fontSize: 12, mb: 0.5 }}
-                        >
-                          &ldquo;...{s}...&rdquo;
-                        </Typography>
-                      ))}
-                    </Paper>
-                  ))
-                )}
-              </AccordionDetails>
-            </Accordion>
-          );
-        })
+        <Collapse
+          defaultActiveKey={arcs
+            .filter((a) => a.total_mentions > 0)
+            .map((a) => a.character.id)}
+          items={collapseItems}
+        />
       )}
-    </Container>
+    </div>
   );
 }

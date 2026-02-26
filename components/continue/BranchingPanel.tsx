@@ -1,32 +1,29 @@
-import { useState } from 'react';
-import {
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
-} from '@mui/material';
-import CallSplitIcon from '@mui/icons-material/CallSplit';
+import { useState } from "react";
+import { Card, Typography, Input, Button, Modal } from "antd";
+import { BranchesOutlined } from "@ant-design/icons";
+
+const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 interface BranchingPanelProps {
   currentDraftId: string | null;
-  onCreateBranch: (branchName: string, prompt: string, sideNotes: string) => void;
+  onCreateBranch: (
+    branchName: string,
+    prompt: string,
+    sideNotes: string,
+  ) => void;
   isLoading: boolean;
 }
 
-export default function BranchingPanel({ 
-  currentDraftId, 
-  onCreateBranch, 
-  isLoading 
+export default function BranchingPanel({
+  currentDraftId,
+  onCreateBranch,
+  isLoading,
 }: BranchingPanelProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [branchName, setBranchName] = useState('');
-  const [branchPrompt, setBranchPrompt] = useState('');
-  const [branchNotes, setBranchNotes] = useState('');
+  const [branchName, setBranchName] = useState("");
+  const [branchPrompt, setBranchPrompt] = useState("");
+  const [branchNotes, setBranchNotes] = useState("");
 
   const handleOpenDialog = () => {
     setDialogOpen(true);
@@ -34,9 +31,9 @@ export default function BranchingPanel({
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setBranchName('');
-    setBranchPrompt('');
-    setBranchNotes('');
+    setBranchName("");
+    setBranchPrompt("");
+    setBranchNotes("");
   };
 
   const handleSubmit = () => {
@@ -48,69 +45,77 @@ export default function BranchingPanel({
 
   return (
     <>
-      <Paper sx={{ p: 3, mt: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Alternative Scenarios
-        </Typography>
-        <Typography variant="body2" color="text.secondary" paragraph>
-          Create a branch to explore different story directions without losing your current progress.
-        </Typography>
+      <Card style={{ padding: 24, marginTop: 24 }}>
+        <Title level={5}>Alternative Scenarios</Title>
+        <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+          Create a branch to explore different story directions without losing
+          your current progress.
+        </Text>
 
         <Button
-          variant="outlined"
-          startIcon={<CallSplitIcon />}
+          icon={<BranchesOutlined />}
           onClick={handleOpenDialog}
           disabled={!currentDraftId || isLoading}
-          fullWidth
+          block
         >
           Create Branch
         </Button>
-      </Paper>
+      </Card>
 
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Story Branch</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Branch Name"
+      <Modal
+        open={dialogOpen}
+        onCancel={handleCloseDialog}
+        title="Create Story Branch"
+        width={600}
+        footer={[
+          <Button key="cancel" onClick={handleCloseDialog}>
+            Cancel
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            onClick={handleSubmit}
+            disabled={!branchName.trim() || !branchPrompt.trim()}
+          >
+            Create Branch
+          </Button>,
+        ]}
+      >
+        <div style={{ marginTop: 16, marginBottom: 16 }}>
+          <Text strong style={{ display: "block", marginBottom: 8 }}>
+            Branch Name
+          </Text>
+          <Input
             placeholder="E.g., 'Alternative ending', 'What if Duke stayed?'"
             value={branchName}
             onChange={(e) => setBranchName(e.target.value)}
-            sx={{ mt: 2, mb: 2 }}
           />
-          
-          <TextField
-            fullWidth
-            multiline
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <Text strong style={{ display: "block", marginBottom: 8 }}>
+            Branch Prompt
+          </Text>
+          <TextArea
             rows={4}
-            label="Branch Prompt"
             placeholder="Describe what happens in this alternative scenario..."
             value={branchPrompt}
             onChange={(e) => setBranchPrompt(e.target.value)}
-            sx={{ mb: 2 }}
           />
-          
-          <TextField
-            fullWidth
-            multiline
+        </div>
+
+        <div>
+          <Text strong style={{ display: "block", marginBottom: 8 }}>
+            Side Notes (Optional)
+          </Text>
+          <TextArea
             rows={2}
-            label="Side Notes (Optional)"
             placeholder="Any additional notes about this branch..."
             value={branchNotes}
             onChange={(e) => setBranchNotes(e.target.value)}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button 
-            onClick={handleSubmit} 
-            variant="contained"
-            disabled={!branchName.trim() || !branchPrompt.trim()}
-          >
-            Create Branch
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </div>
+      </Modal>
     </>
   );
 }

@@ -2,26 +2,24 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Box,
   Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
+  Modal,
+  Input,
   Typography,
-  Chip,
-  IconButton,
+  Tag,
   Tooltip,
   Skeleton,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import PublicIcon from "@mui/icons-material/Public";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+} from "antd";
+import {
+  PlusOutlined,
+  GlobalOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
+import { theme as antdTheme } from "antd";
+
+const { Text } = Typography;
+const { TextArea } = Input;
 
 interface World {
   id: string;
@@ -42,6 +40,7 @@ export default function WorldSwitcher({
   currentWorldId,
   onWorldChange,
 }: WorldSwitcherProps) {
+  const { token } = antdTheme.useToken();
   const [worlds, setWorlds] = useState<World[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -124,56 +123,53 @@ export default function WorldSwitcher({
   const currentWorld = worlds.find((w) => w.id === currentWorldId);
 
   if (loading) {
-    return <Skeleton variant="rounded" width={260} height={40} />;
+    return <Skeleton.Input active style={{ width: 260, height: 40 }} />;
   }
 
   return (
-    <Box
-      sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        flexWrap: "wrap",
+      }}
     >
-      <PublicIcon color="primary" fontSize="small" />
+      <GlobalOutlined style={{ color: token.colorPrimary, fontSize: 16 }} />
 
       {worlds.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
-          No worlds yet
-        </Typography>
+        <Text type="secondary">No worlds yet</Text>
       ) : (
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Story World</InputLabel>
-          <Select
-            value={currentWorldId || ""}
-            label="Story World"
-            onChange={(e) => handleSelect(e.target.value)}
-          >
-            {worlds.map((w) => (
-              <MenuItem key={w.id} value={w.id}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    width: "100%",
-                  }}
-                >
-                  <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                    {w.name}
-                  </Typography>
-                  {w.genre && (
-                    <Chip label={w.genre} size="small" variant="outlined" />
-                  )}
-                </Box>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Select
+          value={currentWorldId || undefined}
+          placeholder="Story World"
+          onChange={handleSelect}
+          style={{ minWidth: 200 }}
+          size="small"
+          options={worlds.map((w) => ({
+            value: w.id,
+            label: (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  width: "100%",
+                }}
+              >
+                <span style={{ flexGrow: 1 }}>{w.name}</span>
+                {w.genre && <Tag style={{ marginRight: 0 }}>{w.genre}</Tag>}
+              </div>
+            ),
+          }))}
+        />
       )}
 
       <Tooltip title="Create new story world">
         <Button
           size="small"
-          startIcon={<AddIcon />}
+          icon={<PlusOutlined />}
           onClick={() => setCreateOpen(true)}
-          variant="outlined"
         >
           New World
         </Button>
@@ -181,91 +177,104 @@ export default function WorldSwitcher({
 
       {currentWorldId && worlds.length > 1 && (
         <Tooltip title="Delete current world">
-          <IconButton
+          <Button
+            type="text"
             size="small"
-            color="error"
+            danger
+            icon={<DeleteOutlined />}
             onClick={() => setDeleteConfirmId(currentWorldId)}
-          >
-            <DeleteOutlineIcon fontSize="small" />
-          </IconButton>
+          />
         </Tooltip>
       )}
 
-      {/* Create Dialog */}
-      <Dialog
+      {/* Create Modal */}
+      <Modal
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Create Story World</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="World Name *"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            sx={{ mt: 2, mb: 2 }}
-            placeholder="e.g. The Shattered Realm, Neo-Tokyo 2087"
-            autoFocus
-          />
-          <TextField
-            fullWidth
-            label="Genre"
-            value={newGenre}
-            onChange={(e) => setNewGenre(e.target.value)}
-            sx={{ mb: 2 }}
-            placeholder="e.g. Dark Fantasy, Sci-Fi Noir, Historical Fiction"
-          />
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            label="Description"
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            placeholder="Describe the tone, setting, rules, and core premise of this world..."
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
+        onCancel={() => setCreateOpen(false)}
+        title="Create Story World"
+        width={600}
+        footer={[
+          <Button key="cancel" onClick={() => setCreateOpen(false)}>
+            Cancel
+          </Button>,
           <Button
-            variant="contained"
+            key="create"
+            type="primary"
             onClick={handleCreate}
             disabled={!newName.trim() || saving}
+            loading={saving}
           >
             {saving ? "Creating..." : "Create World"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Delete Confirm Dialog */}
-      <Dialog
-        open={!!deleteConfirmId}
-        onClose={() => setDeleteConfirmId(null)}
-        maxWidth="xs"
-        fullWidth
+          </Button>,
+        ]}
       >
-        <DialogTitle>Delete World?</DialogTitle>
-        <DialogContent>
-          <Typography>
-            This will permanently delete <strong>{currentWorld?.name}</strong>{" "}
-            and cannot be undone. All story data linked to this world will be
-            orphaned.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            marginTop: 16,
+          }}
+        >
+          <div>
+            <Text strong>World Name *</Text>
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="e.g. The Shattered Realm, Neo-Tokyo 2087"
+              autoFocus
+              style={{ marginTop: 4 }}
+            />
+          </div>
+          <div>
+            <Text strong>Genre</Text>
+            <Input
+              value={newGenre}
+              onChange={(e) => setNewGenre(e.target.value)}
+              placeholder="e.g. Dark Fantasy, Sci-Fi Noir, Historical Fiction"
+              style={{ marginTop: 4 }}
+            />
+          </div>
+          <div>
+            <Text strong>Description</Text>
+            <TextArea
+              rows={3}
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="Describe the tone, setting, rules, and core premise of this world..."
+              style={{ marginTop: 4 }}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirm Modal */}
+      <Modal
+        open={!!deleteConfirmId}
+        onCancel={() => setDeleteConfirmId(null)}
+        title="Delete World?"
+        width={400}
+        footer={[
+          <Button key="cancel" onClick={() => setDeleteConfirmId(null)}>
+            Cancel
+          </Button>,
           <Button
-            variant="contained"
-            color="error"
+            key="delete"
+            type="primary"
+            danger
             onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
           >
             Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+          </Button>,
+        ]}
+      >
+        <Text>
+          This will permanently delete <strong>{currentWorld?.name}</strong> and
+          cannot be undone. All story data linked to this world will be
+          orphaned.
+        </Text>
+      </Modal>
+    </div>
   );
 }
 

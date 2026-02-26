@@ -1,40 +1,33 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
-  Container,
   Typography,
-  Box,
-  Grid,
-  TextField,
+  Input,
   Button,
   Alert,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Paper,
-  Chip,
+  Spin,
+  Modal,
   Card,
-  CardContent,
+  Tag,
   Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  IconButton,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import SaveIcon from '@mui/icons-material/Save';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import BookmarkIcon from '@mui/icons-material/Bookmark';
+  Collapse,
+  Row,
+  Col,
+} from "antd";
+import {
+  SearchOutlined,
+  SaveOutlined,
+  BookOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
+
+const { Title, Text, Paragraph } = Typography;
+const { TextArea } = Input;
 
 interface SearchResult {
   id: string;
-  type: 'event' | 'story_part';
+  type: "event" | "story_part";
   content: string;
   description?: string;
   characters?: string[];
@@ -52,9 +45,9 @@ interface Flashback {
 }
 
 export default function FlashbacksPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [characterFilter, setCharacterFilter] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [characterFilter, setCharacterFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
   const [characters, setCharacters] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -63,8 +56,10 @@ export default function FlashbacksPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
-  const [flashbackTitle, setFlashbackTitle] = useState('');
+  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(
+    null,
+  );
+  const [flashbackTitle, setFlashbackTitle] = useState("");
 
   useEffect(() => {
     fetchInitialData();
@@ -73,9 +68,9 @@ export default function FlashbacksPage() {
   const fetchInitialData = async () => {
     try {
       const [charsRes, locsRes, flashbacksRes] = await Promise.all([
-        fetch('/api/characters'),
-        fetch('/api/locations'),
-        fetch('/api/flashbacks/save'),
+        fetch("/api/characters"),
+        fetch("/api/locations"),
+        fetch("/api/flashbacks/save"),
       ]);
 
       if (charsRes.ok) {
@@ -93,13 +88,13 @@ export default function FlashbacksPage() {
         setSavedFlashbacks(data);
       }
     } catch (error) {
-      console.error('Failed to fetch initial data:', error);
+      console.error("Failed to fetch initial data:", error);
     }
   };
 
   const handleSearch = async () => {
     if (!searchQuery.trim() && !characterFilter && !locationFilter) {
-      setError('Please enter a search query or select filters');
+      setError("Please enter a search query or select filters");
       return;
     }
 
@@ -109,22 +104,24 @@ export default function FlashbacksPage() {
 
     try {
       const params = new URLSearchParams();
-      if (searchQuery.trim()) params.append('query', searchQuery);
-      if (characterFilter) params.append('character', characterFilter);
-      if (locationFilter) params.append('location', locationFilter);
+      if (searchQuery.trim()) params.append("query", searchQuery);
+      if (characterFilter) params.append("character", characterFilter);
+      if (locationFilter) params.append("location", locationFilter);
 
-      const response = await fetch(`/api/flashbacks/search?${params.toString()}`);
+      const response = await fetch(
+        `/api/flashbacks/search?${params.toString()}`,
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Search failed');
+        throw new Error(errorData.error || "Search failed");
       }
 
       const results = await response.json();
       setSearchResults(results);
 
       if (results.length === 0) {
-        setError('No matching scenes found');
+        setError("No matching scenes found");
       }
     } catch (err: any) {
       setError(err.message);
@@ -135,13 +132,13 @@ export default function FlashbacksPage() {
 
   const handleSaveClick = (result: SearchResult) => {
     setSelectedResult(result);
-    setFlashbackTitle('');
+    setFlashbackTitle("");
     setSaveDialogOpen(true);
   };
 
   const handleConfirmSave = async () => {
     if (!selectedResult || !flashbackTitle.trim()) {
-      setError('Please enter a title for the flashback');
+      setError("Please enter a title for the flashback");
       return;
     }
 
@@ -151,9 +148,9 @@ export default function FlashbacksPage() {
     setSuccess(null);
 
     try {
-      const response = await fetch('/api/flashbacks/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/flashbacks/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: flashbackTitle,
           content: selectedResult.content,
@@ -164,10 +161,10 @@ export default function FlashbacksPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save flashback');
+        throw new Error(errorData.error || "Failed to save flashback");
       }
 
-      setSuccess('Flashback saved successfully!');
+      setSuccess("Flashback saved successfully!");
       await fetchInitialData();
     } catch (err: any) {
       setError(err.message);
@@ -177,295 +174,300 @@ export default function FlashbacksPage() {
   };
 
   const handleDeleteFlashback = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this flashback?')) return;
+    if (!confirm("Are you sure you want to delete this flashback?")) return;
 
     setLoading(true);
     setError(null);
 
     try {
       const response = await fetch(`/api/flashbacks/save?id=${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete flashback');
+        throw new Error("Failed to delete flashback");
       }
 
-      setSuccess('Flashback deleted successfully');
+      setSuccess("Flashback deleted successfully");
       await fetchInitialData();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete flashback');
+      setError(err.message || "Failed to delete flashback");
     } finally {
       setLoading(false);
     }
   };
 
+  const flashbackCollapseItems = savedFlashbacks.map((flashback) => ({
+    key: flashback.id,
+    label: (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          width: "100%",
+          alignItems: "center",
+        }}
+      >
+        <Text strong style={{ fontSize: 16 }}>
+          {flashback.title}
+        </Text>
+        <div style={{ display: "flex", gap: 8, marginRight: 16 }}>
+          {flashback.keywords.slice(0, 3).map((keyword, i) => (
+            <Tag key={i}>{keyword}</Tag>
+          ))}
+        </div>
+      </div>
+    ),
+    children: (
+      <div>
+        <Paragraph
+          style={{
+            whiteSpace: "pre-wrap",
+            fontFamily: "Georgia, serif",
+            marginBottom: 16,
+          }}
+        >
+          {flashback.content}
+        </Paragraph>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <Button
+            danger
+            size="small"
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteFlashback(flashback.id)}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    ),
+  }));
+
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Story Flashbacks
-        </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
-          Search for key scenes and moments in your story by keyword, character, or location.
-          Save important scenes as flashbacks for easy reference.
-        </Typography>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ margin: "32px 0" }}>
+        <Title level={3}>Story Flashbacks</Title>
+        <Paragraph type="secondary">
+          Search for key scenes and moments in your story by keyword, character,
+          or location. Save important scenes as flashbacks for easy reference.
+        </Paragraph>
 
         {/* Search Section */}
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Search Scenes
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Search Keywords"
+        <Card style={{ marginBottom: 32 }}>
+          <Title level={5}>Search Scenes</Title>
+          <Row gutter={[16, 16]}>
+            <Col span={24}>
+              <Input
                 placeholder="Enter keywords to search for..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                onPressEnter={handleSearch}
               />
-            </Grid>
-            <Grid item xs={12} md={5}>
-              <FormControl fullWidth>
-                <InputLabel>Filter by Character</InputLabel>
-                <Select
-                  value={characterFilter}
-                  label="Filter by Character"
-                  onChange={(e) => setCharacterFilter(e.target.value)}
-                >
-                  <MenuItem value="">All Characters</MenuItem>
-                  {characters.map((char) => (
-                    <MenuItem key={char.id} value={char.name}>
-                      {char.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={5}>
-              <FormControl fullWidth>
-                <InputLabel>Filter by Location</InputLabel>
-                <Select
-                  value={locationFilter}
-                  label="Filter by Location"
-                  onChange={(e) => setLocationFilter(e.target.value)}
-                >
-                  <MenuItem value="">All Locations</MenuItem>
-                  {locations.map((loc) => (
-                    <MenuItem key={loc.id} value={loc.name}>
-                      {loc.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={2}>
+            </Col>
+            <Col xs={24} md={10}>
+              <Select
+                style={{ width: "100%" }}
+                placeholder="Filter by Character"
+                value={characterFilter || undefined}
+                onChange={(value) => setCharacterFilter(value || "")}
+                allowClear
+                options={[
+                  { value: "", label: "All Characters" },
+                  ...characters.map((char) => ({
+                    value: char.name,
+                    label: char.name,
+                  })),
+                ]}
+              />
+            </Col>
+            <Col xs={24} md={10}>
+              <Select
+                style={{ width: "100%" }}
+                placeholder="Filter by Location"
+                value={locationFilter || undefined}
+                onChange={(value) => setLocationFilter(value || "")}
+                allowClear
+                options={[
+                  { value: "", label: "All Locations" },
+                  ...locations.map((loc) => ({
+                    value: loc.name,
+                    label: loc.name,
+                  })),
+                ]}
+              />
+            </Col>
+            <Col xs={24} md={4}>
               <Button
-                fullWidth
-                variant="contained"
+                block
+                type="primary"
                 size="large"
-                startIcon={<SearchIcon />}
+                icon={<SearchOutlined />}
                 onClick={handleSearch}
-                disabled={loading}
-                sx={{ height: '56px' }}
+                loading={loading}
+                style={{ height: 40 }}
               >
                 Search
               </Button>
-            </Grid>
-          </Grid>
-        </Paper>
+            </Col>
+          </Row>
+        </Card>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
+          <Alert
+            type="error"
+            title={error}
+            showIcon
+            closable
+            onClose={() => setError(null)}
+            style={{ marginBottom: 24 }}
+          />
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 3 }}>
-            {success}
-          </Alert>
+          <Alert
+            type="success"
+            title={success}
+            showIcon
+            closable
+            onClose={() => setSuccess(null)}
+            style={{ marginBottom: 24 }}
+          />
         )}
 
         {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress />
-          </Box>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              margin: "32px 0",
+            }}
+          >
+            <Spin size="large" />
+          </div>
         )}
 
         {/* Search Results */}
         {searchResults.length > 0 && (
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              Search Results ({searchResults.length})
-            </Typography>
-            <Grid container spacing={2}>
+          <div style={{ marginBottom: 32 }}>
+            <Title level={5}>Search Results ({searchResults.length})</Title>
+            <Row gutter={[16, 16]}>
               {searchResults.map((result, index) => (
-                <Grid item xs={12} key={index}>
+                <Col span={24} key={index}>
                   <Card>
-                    <CardContent>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          mb: 2,
-                        }}
-                      >
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Chip
-                            label={result.type === 'event' ? 'Event' : `Part ${result.storyPartNumber}`}
-                            size="small"
-                            color="primary"
-                            sx={{ mb: 1 }}
-                          />
-                          {result.description && (
-                            <Typography variant="subtitle1" fontWeight="bold">
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        marginBottom: 16,
+                      }}
+                    >
+                      <div style={{ flexGrow: 1 }}>
+                        <Tag color="blue" style={{ marginBottom: 8 }}>
+                          {result.type === "event"
+                            ? "Event"
+                            : `Part ${result.storyPartNumber}`}
+                        </Tag>
+                        {result.description && (
+                          <div>
+                            <Text strong style={{ fontSize: 16 }}>
                               {result.description}
-                            </Typography>
-                          )}
-                        </Box>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<SaveIcon />}
-                          onClick={() => handleSaveClick(result)}
-                        >
-                          Save as Flashback
-                        </Button>
-                      </Box>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          whiteSpace: 'pre-wrap',
-                          fontFamily: 'Georgia, serif',
-                          color: 'text.secondary',
+                            </Text>
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        size="small"
+                        icon={<SaveOutlined />}
+                        onClick={() => handleSaveClick(result)}
+                      >
+                        Save as Flashback
+                      </Button>
+                    </div>
+                    <Text
+                      type="secondary"
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        fontFamily: "Georgia, serif",
+                        display: "block",
+                      }}
+                    >
+                      {result.content.slice(0, 500)}
+                      {result.content.length > 500 ? "..." : ""}
+                    </Text>
+                    {(result.characters || result.locations) && (
+                      <div
+                        style={{
+                          marginTop: 16,
+                          display: "flex",
+                          gap: 8,
+                          flexWrap: "wrap",
                         }}
                       >
-                        {result.content.slice(0, 500)}
-                        {result.content.length > 500 ? '...' : ''}
-                      </Typography>
-                      {(result.characters || result.locations) && (
-                        <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                          {result.characters?.map((char, i) => (
-                            <Chip key={i} label={char} size="small" variant="outlined" />
-                          ))}
-                          {result.locations?.map((loc, i) => (
-                            <Chip
-                              key={i}
-                              label={loc}
-                              size="small"
-                              variant="outlined"
-                              color="secondary"
-                            />
-                          ))}
-                        </Box>
-                      )}
-                    </CardContent>
+                        {result.characters?.map((char, i) => (
+                          <Tag key={i}>{char}</Tag>
+                        ))}
+                        {result.locations?.map((loc, i) => (
+                          <Tag key={i} color="purple">
+                            {loc}
+                          </Tag>
+                        ))}
+                      </div>
+                    )}
                   </Card>
-                </Grid>
+                </Col>
               ))}
-            </Grid>
-          </Box>
+            </Row>
+          </div>
         )}
 
         {/* Saved Flashbacks */}
-        <Box>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <BookmarkIcon />
-            Saved Flashbacks ({savedFlashbacks.length})
-          </Typography>
-          {savedFlashbacks.length === 0 ? (
-            <Alert severity="info">
-              No saved flashbacks yet. Search for scenes and save them as flashbacks for quick reference.
-            </Alert>
-          ) : (
-            savedFlashbacks.map((flashback) => (
-              <Accordion key={flashback.id} sx={{ mb: 1 }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                    <Typography variant="h6">{flashback.title}</Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mr: 2 }}>
-                      {flashback.keywords.slice(0, 3).map((keyword, i) => (
-                        <Chip key={i} label={keyword} size="small" />
-                      ))}
-                    </Box>
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Box>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        whiteSpace: 'pre-wrap',
-                        fontFamily: 'Georgia, serif',
-                        mb: 2,
-                      }}
-                    >
-                      {flashback.content}
-                    </Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        size="small"
-                        onClick={() => handleDeleteFlashback(flashback.id)}
-                      >
-                        Delete
-                      </Button>
-                    </Box>
-                  </Box>
-                </AccordionDetails>
-              </Accordion>
-            ))
-          )}
-        </Box>
-      </Box>
-
-      {/* Save Flashback Dialog */}
-      <Dialog
-        open={saveDialogOpen}
-        onClose={() => setSaveDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Save as Flashback</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Flashback Title"
-              placeholder="Enter a descriptive title..."
-              value={flashbackTitle}
-              onChange={(e) => setFlashbackTitle(e.target.value)}
-              autoFocus
-            />
-            {selectedResult && (
-              <Paper sx={{ p: 2, mt: 2, bgcolor: 'background.default' }}>
-                <Typography variant="body2" color="text.secondary">
-                  Preview:
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  {selectedResult.content.slice(0, 200)}...
-                </Typography>
-              </Paper>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleConfirmSave}
-            color="primary"
-            variant="contained"
-            disabled={!flashbackTitle.trim()}
+        <div>
+          <Title
+            level={5}
+            style={{ display: "flex", alignItems: "center", gap: 8 }}
           >
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+            <BookOutlined />
+            Saved Flashbacks ({savedFlashbacks.length})
+          </Title>
+          {savedFlashbacks.length === 0 ? (
+            <Alert
+              type="info"
+              title="No saved flashbacks yet. Search for scenes and save them as flashbacks for quick reference."
+              showIcon
+            />
+          ) : (
+            <Collapse items={flashbackCollapseItems} />
+          )}
+        </div>
+      </div>
+
+      {/* Save Flashback Modal */}
+      <Modal
+        title="Save as Flashback"
+        open={saveDialogOpen}
+        onCancel={() => setSaveDialogOpen(false)}
+        onOk={handleConfirmSave}
+        okText="Save"
+        okButtonProps={{ disabled: !flashbackTitle.trim() }}
+      >
+        <div style={{ marginTop: 16 }}>
+          <Input
+            placeholder="Enter a descriptive title..."
+            value={flashbackTitle}
+            onChange={(e) => setFlashbackTitle(e.target.value)}
+            autoFocus
+          />
+          {selectedResult && (
+            <Card size="small" style={{ marginTop: 16 }}>
+              <Text type="secondary">Preview:</Text>
+              <Paragraph style={{ marginTop: 8, marginBottom: 0 }}>
+                {selectedResult.content.slice(0, 200)}...
+              </Paragraph>
+            </Card>
+          )}
+        </div>
+      </Modal>
+    </div>
   );
 }

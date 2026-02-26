@@ -1,27 +1,26 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
-  Container,
   Typography,
-  Box,
-  Grid,
-  TextField,
   Button,
   Alert,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Paper,
-  Chip,
+  Spin,
+  Modal,
   Card,
-  CardContent,
-  Avatar,
+  Tag,
+  Input,
   Checkbox,
-} from '@mui/material';
-import { useRouter } from 'next/navigation';
+  Avatar,
+  Row,
+  Col,
+  theme as antdTheme,
+} from "antd";
+import { useRouter } from "next/navigation";
+import { useThemeMode } from "@/components/ThemeProvider";
+import { getSemanticColors } from "@/lib/theme";
+
+const { Title, Text } = Typography;
 
 interface Character {
   id: string;
@@ -33,9 +32,13 @@ interface Character {
 }
 
 export default function MergeCharactersPage() {
+  const { mode } = useThemeMode();
+  const { token } = antdTheme.useToken();
+  const isDark = mode === "dark";
+  const sc = getSemanticColors(isDark);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [filteredCharacters, setFilteredCharacters] = useState<Character[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [primaryId, setPrimaryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,7 +56,7 @@ export default function MergeCharactersPage() {
 
     if (searchTerm) {
       filtered = filtered.filter((char) =>
-        char.name.toLowerCase().includes(searchTerm.toLowerCase())
+        char.name.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -62,14 +65,14 @@ export default function MergeCharactersPage() {
 
   const fetchCharacters = async () => {
     try {
-      const response = await fetch('/api/characters');
+      const response = await fetch("/api/characters");
       if (response.ok) {
         const data = await response.json();
         setCharacters(data);
         setFilteredCharacters(data);
       }
     } catch (error) {
-      console.error('Failed to fetch characters:', error);
+      console.error("Failed to fetch characters:", error);
     }
   };
 
@@ -95,12 +98,12 @@ export default function MergeCharactersPage() {
 
   const handleMergeClick = () => {
     if (selectedIds.length < 2) {
-      setError('Please select at least 2 characters to merge');
+      setError("Please select at least 2 characters to merge");
       return;
     }
 
     if (!primaryId) {
-      setError('Please set a primary character');
+      setError("Please set a primary character");
       return;
     }
 
@@ -116,10 +119,10 @@ export default function MergeCharactersPage() {
     try {
       const duplicateIds = selectedIds.filter((id) => id !== primaryId);
 
-      const response = await fetch('/api/characters/merge', {
-        method: 'POST',
+      const response = await fetch("/api/characters/merge", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           primaryCharacterId: primaryId,
@@ -129,7 +132,7 @@ export default function MergeCharactersPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Merge failed');
+        throw new Error(errorData.error || "Merge failed");
       }
 
       const result = await response.json();
@@ -152,236 +155,237 @@ export default function MergeCharactersPage() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'main':
-        return 'primary';
-      case 'side':
-        return 'secondary';
+      case "main":
+        return "blue";
+      case "side":
+        return "purple";
       default:
-        return 'default';
+        return "default";
     }
   };
 
   const primaryCharacter = characters.find((c) => c.id === primaryId);
   const duplicateCharacters = characters.filter(
-    (c) => selectedIds.includes(c.id) && c.id !== primaryId
+    (c) => selectedIds.includes(c.id) && c.id !== primaryId,
   );
 
   const canMerge = selectedIds.length >= 2 && primaryId !== null;
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Merge Characters
-        </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
-          Select duplicate characters to merge. Choose one as the primary character to keep,
-          and the others will be merged into it and deleted.
-        </Typography>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ marginTop: 32, marginBottom: 32 }}>
+        <Title level={2}>Merge Characters</Title>
+        <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+          Select duplicate characters to merge. Choose one as the primary
+          character to keep, and the others will be merged into it and deleted.
+        </Text>
 
-        <Box sx={{ mb: 3 }}>
-          <TextField
-            fullWidth
-            label="Search by name"
+        <div style={{ marginBottom: 24 }}>
+          <Input
+            placeholder="Search by name"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ mb: 2 }}
+            style={{ marginBottom: 16 }}
           />
 
           {selectedIds.length > 0 && (
-            <Paper sx={{ p: 2, mb: 2 }}>
-              <Typography variant="h6" gutterBottom>
+            <Card style={{ marginBottom: 16 }}>
+              <Title level={5} style={{ marginBottom: 8 }}>
                 Selected Characters ({selectedIds.length})
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              </Title>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {selectedIds.map((id) => {
                   const char = characters.find((c) => c.id === id);
                   return char ? (
-                    <Chip
+                    <Tag
                       key={id}
-                      label={char.name}
-                      onDelete={() => toggleSelection(id)}
-                      color={id === primaryId ? 'primary' : 'default'}
-                    />
+                      closable
+                      onClose={() => toggleSelection(id)}
+                      color={id === primaryId ? "blue" : "default"}
+                    >
+                      {char.name}
+                    </Tag>
                   ) : null;
                 })}
-              </Box>
-            </Paper>
+              </div>
+            </Card>
           )}
 
           <Button
-            variant="contained"
+            type="primary"
             size="large"
-            fullWidth
+            block
             onClick={handleMergeClick}
             disabled={!canMerge || loading}
-            sx={{ mb: 2 }}
+            loading={loading}
+            style={{ marginBottom: 16 }}
           >
-            {loading ? (
-              <>
-                <CircularProgress size={24} sx={{ mr: 2 }} />
-                Merging...
-              </>
-            ) : (
-              'Merge Selected Characters'
-            )}
+            {loading ? "Merging..." : "Merge Selected Characters"}
           </Button>
-        </Box>
+        </div>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
+          <Alert
+            type="error"
+            title={error}
+            style={{ marginBottom: 24 }}
+            showIcon
+          />
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 3 }}>
-            {success}
-          </Alert>
+          <Alert
+            type="success"
+            title={success}
+            style={{ marginBottom: 24 }}
+            showIcon
+          />
         )}
 
         {filteredCharacters.length === 0 ? (
-          <Typography color="text.secondary">
+          <Text type="secondary">
             No characters found. Import a story to extract characters.
-          </Typography>
+          </Text>
         ) : (
-          <Grid container spacing={3}>
+          <Row gutter={[24, 24]}>
             {filteredCharacters.map((character) => {
               const isSelected = selectedIds.includes(character.id);
               const isPrimary = character.id === primaryId;
 
               return (
-                <Grid item xs={12} sm={6} md={4} key={character.id}>
+                <Col xs={24} sm={12} md={8} key={character.id}>
                   <Card
-                    sx={{
-                      cursor: 'pointer',
+                    hoverable
+                    style={{
+                      cursor: "pointer",
                       border: isPrimary
-                        ? '3px solid #1976d2'
+                        ? `3px solid ${token.colorPrimary}`
                         : isSelected
-                        ? '2px solid #1976d2'
-                        : '1px solid transparent',
-                      '&:hover': { boxShadow: 6 },
+                          ? `2px solid ${token.colorPrimary}`
+                          : `1px solid ${sc.border}`,
                     }}
                   >
-                    <CardContent>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          mb: 2,
-                        }}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        marginBottom: 16,
+                      }}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onChange={() => toggleSelection(character.id)}
+                        style={{ marginRight: 8 }}
+                      />
+                      <Avatar
+                        src={character.avatar_url}
+                        alt={character.name}
+                        size={56}
+                        style={{ marginRight: 16 }}
                       >
-                        <Checkbox
-                          checked={isSelected}
-                          onChange={() => toggleSelection(character.id)}
-                        />
-                        <Avatar
-                          src={character.avatar_url}
-                          alt={character.name}
-                          sx={{ width: 56, height: 56, mr: 2 }}
-                        >
-                          {character.name[0]}
-                        </Avatar>
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="h6" component="div">
-                            {character.name}
-                          </Typography>
-                          <Chip
-                            label={character.role}
-                            size="small"
-                            color={getRoleColor(character.role)}
-                          />
-                          {isPrimary && (
-                            <Chip
-                              label="PRIMARY"
-                              size="small"
-                              color="primary"
-                              sx={{ ml: 1 }}
-                            />
-                          )}
-                        </Box>
-                      </Box>
+                        {character.name[0]}
+                      </Avatar>
+                      <div style={{ flex: 1 }}>
+                        <Text strong style={{ fontSize: 16, display: "block" }}>
+                          {character.name}
+                        </Text>
+                        <Tag color={getRoleColor(character.role)}>
+                          {character.role}
+                        </Tag>
+                        {isPrimary && (
+                          <Tag color="blue" style={{ marginLeft: 4 }}>
+                            PRIMARY
+                          </Tag>
+                        )}
+                      </div>
+                    </div>
 
-                      {character.description && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ mb: 1 }}
-                        >
-                          {character.description.slice(0, 100)}
-                          {character.description.length > 100 ? '...' : ''}
-                        </Typography>
-                      )}
+                    {character.description && (
+                      <Text
+                        type="secondary"
+                        style={{ display: "block", marginBottom: 8 }}
+                      >
+                        {character.description.slice(0, 100)}
+                        {character.description.length > 100 ? "..." : ""}
+                      </Text>
+                    )}
 
-                      {isSelected && !isPrimary && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          fullWidth
-                          onClick={() => handleSetPrimary(character.id)}
-                        >
-                          Set as Primary
-                        </Button>
-                      )}
-                    </CardContent>
+                    {isSelected && !isPrimary && (
+                      <Button
+                        size="small"
+                        block
+                        onClick={() => handleSetPrimary(character.id)}
+                      >
+                        Set as Primary
+                      </Button>
+                    )}
                   </Card>
-                </Grid>
+                </Col>
               );
             })}
-          </Grid>
+          </Row>
         )}
-      </Box>
+      </div>
 
       {/* Confirmation Dialog */}
-      <Dialog
+      <Modal
+        title="Confirm Character Merge"
         open={confirmDialogOpen}
-        onClose={handleCancelMerge}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Confirm Character Merge</DialogTitle>
-        <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            This action cannot be undone. The duplicate characters will be
-            permanently deleted.
-          </Alert>
-
-          {primaryCharacter && (
-            <Paper sx={{ p: 2, mb: 2, bgcolor: 'success.light' }}>
-              <Typography variant="subtitle1" fontWeight="bold">
-                Primary Character (KEEP)
-              </Typography>
-              <Typography variant="h6">{primaryCharacter.name}</Typography>
-              <Typography variant="body2">
-                Role: {primaryCharacter.role}
-              </Typography>
-            </Paper>
-          )}
-
-          <Paper sx={{ p: 2, bgcolor: 'error.light' }}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Characters to Delete ({duplicateCharacters.length})
-            </Typography>
-            {duplicateCharacters.map((char) => (
-              <Typography key={char.id} variant="body2">
-                • {char.name}
-              </Typography>
-            ))}
-          </Paper>
-
-          <Typography variant="body2" sx={{ mt: 2 }}>
-            All data from duplicate characters will be merged into the primary
-            character, and all relationships will be updated to point to the
-            primary character.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelMerge}>Cancel</Button>
-          <Button onClick={handleConfirmMerge} color="primary" variant="contained">
+        onCancel={handleCancelMerge}
+        width={600}
+        footer={[
+          <Button key="cancel" onClick={handleCancelMerge}>
+            Cancel
+          </Button>,
+          <Button key="confirm" type="primary" onClick={handleConfirmMerge}>
             Confirm Merge
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+          </Button>,
+        ]}
+      >
+        <Alert
+          type="warning"
+          title="This action cannot be undone. The duplicate characters will be permanently deleted."
+          style={{ marginBottom: 16 }}
+          showIcon
+        />
+
+        {primaryCharacter && (
+          <Card
+            style={{
+              marginBottom: 16,
+              backgroundColor: sc.successBg,
+              borderColor: sc.successBorder,
+            }}
+          >
+            <Text strong style={{ display: "block" }}>
+              Primary Character (KEEP)
+            </Text>
+            <Title level={5} style={{ margin: "4px 0" }}>
+              {primaryCharacter.name}
+            </Title>
+            <Text type="secondary">Role: {primaryCharacter.role}</Text>
+          </Card>
+        )}
+
+        <Card
+          style={{ backgroundColor: sc.errorBg, borderColor: sc.errorBorder }}
+        >
+          <Text strong style={{ display: "block" }}>
+            Characters to Delete ({duplicateCharacters.length})
+          </Text>
+          {duplicateCharacters.map((char) => (
+            <Text key={char.id} style={{ display: "block" }}>
+              • {char.name}
+            </Text>
+          ))}
+        </Card>
+
+        <Text type="secondary" style={{ display: "block", marginTop: 16 }}>
+          All data from duplicate characters will be merged into the primary
+          character, and all relationships will be updated to point to the
+          primary character.
+        </Text>
+      </Modal>
+    </div>
   );
 }

@@ -11,7 +11,16 @@ body {
 }
 
 body {
-  font-family: 'Roboto', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  background: #f0f2f5;
+  transition: background 0.3s ease;
+}
+
+/* Dark mode — triggered by ThemeProvider adding .dark to <html> */
+html.dark body {
+  background: #13131f;
 }
 
 a {
@@ -19,6 +28,35 @@ a {
   text-decoration: none;
 }
 
+/* Ant Design overrides */
+.ant-layout {
+  min-height: 100vh;
+  background: transparent !important;
+}
+
+/* Cards: remove the forced full-height so they size naturally */
+.ant-card {
+  height: auto;
+}
+
+/* Dark-mode card styling: visible border for separation */
+html.dark .ant-card {
+  border-color: #35355a;
+}
+
+/* Scrollbar styling for glass sidebar */
+.glass-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.glass-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.glass-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+}
+
+/* Conversation styling */
 .conversation-user {
   background-color: #e3f2fd;
   padding: 12px;
@@ -39,4 +77,11 @@ a {
 
 .dark .conversation-ai {
   background-color: #2a2a2a;
+}
+
+/* Mobile navigation overlay */
+@media (max-width: 991px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
 }

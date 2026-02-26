@@ -1,20 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Container,
-  Typography,
-  Box,
-  Paper,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Grid,
-  Chip,
-  Card,
-  CardContent,
-} from "@mui/material";
+import { Typography, Card, Select, Row, Col, Tag } from "antd";
+
+const { Title, Text } = Typography;
 
 export default function TimelinePage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -50,113 +39,103 @@ export default function TimelinePage() {
     }
   };
 
-  const getEventColor = (
-    type: string,
-  ): "primary" | "secondary" | "error" | "default" => {
+  const getEventColor = (type: string): string => {
     switch (type) {
       case "dialogue":
-        return "primary";
+        return "blue";
       case "action":
-        return "secondary";
+        return "purple";
       case "revelation":
-        return "error";
+        return "red";
       default:
         return "default";
     }
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: { xs: 2, sm: 4 } }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{ fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
-        >
-          Events Timeline
-        </Typography>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ marginTop: 16, marginBottom: 16 }}>
+        <Title level={3}>Events Timeline</Title>
 
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Filter by Event Type</InputLabel>
-              <Select
-                value={eventTypeFilter}
-                label="Filter by Event Type"
-                onChange={(e) => setEventTypeFilter(e.target.value)}
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="dialogue">Dialogue</MenuItem>
-                <MenuItem value="action">Action</MenuItem>
-                <MenuItem value="revelation">Revelation</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} md={8}>
+            <Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 4 }}
+            >
+              Filter by Event Type
+            </Text>
+            <Select
+              style={{ width: "100%" }}
+              value={eventTypeFilter}
+              onChange={(value) => setEventTypeFilter(value)}
+              options={[
+                { value: "", label: "All" },
+                { value: "dialogue", label: "Dialogue" },
+                { value: "action", label: "Action" },
+                { value: "revelation", label: "Revelation" },
+              ]}
+            />
+          </Col>
+        </Row>
 
         {filteredEvents.length === 0 ? (
-          <Paper sx={{ p: 3, textAlign: "center" }}>
-            <Typography color="text.secondary">
+          <Card style={{ textAlign: "center" }}>
+            <Text type="secondary">
               No events found. Import a story to extract events.
-            </Typography>
-          </Paper>
+            </Text>
+          </Card>
         ) : (
-          <Grid container spacing={2}>
-            {filteredEvents.map((event, index) => (
-              <Grid item xs={12} key={event.id}>
+          <Row gutter={[16, 16]}>
+            {filteredEvents.map((event) => (
+              <Col xs={24} key={event.id}>
                 <Card>
-                  <CardContent>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 2,
-                        mb: 2,
-                      }}
-                    >
-                      <Chip
-                        label={event.event_type}
-                        size="small"
-                        color={getEventColor(event.event_type)}
-                      />
-                      {event.timestamp_in_story && (
-                        <Typography variant="caption" color="text.secondary">
-                          {event.timestamp_in_story}
-                        </Typography>
-                      )}
-                    </Box>
-                    <Typography variant="h6" gutterBottom>
-                      {event.description}
-                    </Typography>
-                    {event.content && (
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        paragraph
-                      >
-                        {event.content}
-                      </Typography>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <Tag color={getEventColor(event.event_type)}>
+                      {event.event_type}
+                    </Tag>
+                    {event.timestamp_in_story && (
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {event.timestamp_in_story}
+                      </Text>
                     )}
-                    <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-                      {event.characters && (
-                        <Typography variant="caption">
-                          Character: {event.characters.name}
-                        </Typography>
-                      )}
-                      {event.locations && (
-                        <Typography variant="caption">
-                          Location: {event.locations.name}
-                        </Typography>
-                      )}
-                    </Box>
-                  </CardContent>
+                  </div>
+                  <Title level={5} style={{ marginBottom: 8 }}>
+                    {event.description}
+                  </Title>
+                  {event.content && (
+                    <Text
+                      type="secondary"
+                      style={{ display: "block", marginBottom: 16 }}
+                    >
+                      {event.content}
+                    </Text>
+                  )}
+                  <div style={{ display: "flex", gap: 16, marginTop: 16 }}>
+                    {event.characters && (
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        Character: {event.characters.name}
+                      </Text>
+                    )}
+                    {event.locations && (
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        Location: {event.locations.name}
+                      </Text>
+                    )}
+                  </div>
                 </Card>
-              </Grid>
+              </Col>
             ))}
-          </Grid>
+          </Row>
         )}
-      </Box>
-    </Container>
+      </div>
+    </div>
   );
 }

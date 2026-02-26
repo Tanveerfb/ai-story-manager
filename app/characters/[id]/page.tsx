@@ -3,53 +3,38 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import {
-  Container,
   Typography,
-  Box,
-  Paper,
+  Card,
   Tabs,
-  Tab,
-  Chip,
+  Tag,
   Avatar,
-  Grid,
+  Row,
+  Col,
   Button,
-  CircularProgress,
-  TextField,
-  Collapse,
+  Spin,
+  Input,
   Alert,
-  IconButton,
   Tooltip,
   Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from "@mui/material";
-import BrushIcon from "@mui/icons-material/Brush";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import SaveIcon from "@mui/icons-material/Save";
+  Modal,
+  Select,
+} from "antd";
+import {
+  HighlightOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  SaveOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div hidden={value !== index} {...other}>
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+const { Title, Text, Paragraph } = Typography;
+const { TextArea } = Input;
 
 export default function CharacterDetailPage() {
   const params = useParams();
   const [character, setCharacter] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [tabValue, setTabValue] = useState(0);
+  const [activeTab, setActiveTab] = useState("overview");
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -301,100 +286,475 @@ export default function CharacterDetailPage() {
   };
 
   if (loading) {
-    return <Typography>Loading...</Typography>;
+    return (
+      <div style={{ textAlign: "center", padding: 48 }}>
+        <Spin size="large" />
+      </div>
+    );
   }
 
   if (!character) {
-    return <Typography>Character not found</Typography>;
+    return <Text>Character not found</Text>;
   }
 
   // Other characters for relationship picker (exclude self)
   const otherCharacters = allCharacters.filter((c) => c.id !== character.id);
 
+  const tabItems = [
+    {
+      key: "overview",
+      label: "Overview",
+      children: (
+        <div style={{ padding: 24 }}>
+          <Title level={5}>Description</Title>
+          <TextArea
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Physical appearance, key identifying features..."
+            style={{ marginBottom: 24 }}
+          />
+
+          <Title level={5}>Background</Title>
+          <TextArea
+            rows={3}
+            value={background}
+            onChange={(e) => setBackground(e.target.value)}
+            placeholder="Character history, backstory..."
+            style={{ marginBottom: 24 }}
+          />
+
+          <Title level={5}>Goals</Title>
+          <TextArea
+            rows={2}
+            value={goals}
+            onChange={(e) => setGoals(e.target.value)}
+            placeholder="What does this character want?"
+          />
+
+          {character.first_appearance_part && (
+            <Text type="secondary" style={{ display: "block", marginTop: 16 }}>
+              First appeared in Part {character.first_appearance_part}
+            </Text>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "traits",
+      label: "Traits",
+      children: (
+        <div style={{ padding: 24 }}>
+          <Title level={5}>Personality</Title>
+          <TextArea
+            rows={2}
+            value={personality}
+            onChange={(e) => setPersonality(e.target.value)}
+            placeholder="Describe the character's personality..."
+            style={{ marginBottom: 24 }}
+          />
+
+          <Title level={5}>Character Traits</Title>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 4,
+              marginBottom: 8,
+            }}
+          >
+            {traits.map((trait, i) => (
+              <Tag
+                key={i}
+                color="blue"
+                closable
+                onClose={() => removeTrait(traits, setTraits, i)}
+              >
+                {trait}
+              </Tag>
+            ))}
+            {traits.length === 0 && (
+              <Text type="secondary">No traits yet.</Text>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+            <Input
+              size="small"
+              placeholder="Add a trait..."
+              value={newTrait}
+              onChange={(e) => setNewTrait(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addTrait(traits, setTraits, newTrait, () => setNewTrait(""));
+                }
+              }}
+              style={{ width: 200 }}
+            />
+            <Button
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() =>
+                addTrait(traits, setTraits, newTrait, () => setNewTrait(""))
+              }
+            >
+              Add
+            </Button>
+          </div>
+
+          <Divider />
+
+          <Title level={5}>Physical Traits</Title>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 4,
+              marginBottom: 8,
+            }}
+          >
+            {physicalTraits.map((trait, i) => (
+              <Tag
+                key={i}
+                color="purple"
+                closable
+                onClose={() =>
+                  removeTrait(physicalTraits, setPhysicalTraits, i)
+                }
+              >
+                {trait}
+              </Tag>
+            ))}
+            {physicalTraits.length === 0 && (
+              <Text type="secondary">No physical traits yet.</Text>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Input
+              size="small"
+              placeholder="Add a physical trait..."
+              value={newPhysicalTrait}
+              onChange={(e) => setNewPhysicalTrait(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addTrait(
+                    physicalTraits,
+                    setPhysicalTraits,
+                    newPhysicalTrait,
+                    () => setNewPhysicalTrait(""),
+                  );
+                }
+              }}
+              style={{ width: 200 }}
+            />
+            <Button
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() =>
+                addTrait(
+                  physicalTraits,
+                  setPhysicalTraits,
+                  newPhysicalTrait,
+                  () => setNewPhysicalTrait(""),
+                )
+              }
+            >
+              Add
+            </Button>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "behavior",
+      label: "Behavior",
+      children: (
+        <div style={{ padding: 24 }}>
+          {[
+            {
+              label: "Behavior & Reactions",
+              value: behaviorNotes,
+              setter: setBehaviorNotes,
+              placeholder:
+                "How does this character react to stress, conflict, surprise?",
+            },
+            {
+              label: "Speech Style",
+              value: speechPatterns,
+              setter: setSpeechPatterns,
+              placeholder:
+                "Formal, casual, uses slang, talks slowly, stutters...",
+            },
+            {
+              label: "Fears",
+              value: fears,
+              setter: setFears,
+              placeholder: "What scares this character?",
+            },
+            {
+              label: "Motivations",
+              value: motivations,
+              setter: setMotivations,
+              placeholder: "What drives this character forward?",
+            },
+            {
+              label: "Story Arc Notes",
+              value: arcNotes,
+              setter: setArcNotes,
+              placeholder: "How should this character develop over the story?",
+            },
+          ].map(({ label, value, setter, placeholder }) => (
+            <div key={label} style={{ marginBottom: 24 }}>
+              <Title level={5}>{label}</Title>
+              <TextArea
+                rows={2}
+                value={value}
+                onChange={(e) => setter(e.target.value)}
+                placeholder={placeholder}
+              />
+            </div>
+          ))}
+
+          {/* Voice Profile Section */}
+          <div style={{ marginTop: 32, marginBottom: 16 }}>
+            <Title level={4}>Voice Profile</Title>
+            <Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 16 }}
+            >
+              These fields shape how the AI writes dialogue for this character.
+            </Text>
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <Title level={5}>Dialogue Style</Title>
+            <TextArea
+              rows={2}
+              value={dialogueStyle}
+              onChange={(e) => setDialogueStyle(e.target.value)}
+              placeholder="e.g. Short clipped sentences, lots of questions, poetic and flowery, sarcastic undertone..."
+            />
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <Title level={5}>Vocabulary Level</Title>
+            <Input
+              value={vocabularyLevel}
+              onChange={(e) => setVocabularyLevel(e.target.value)}
+              placeholder="e.g. Academic, street slang, archaic/medieval, child-like, technical jargon..."
+            />
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <Title level={5}>Catchphrases</Title>
+            <Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 8 }}
+            >
+              Signature phrases or expressions this character often uses.
+            </Text>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
+                marginBottom: 8,
+              }}
+            >
+              {catchphrases.map((phrase, i) => (
+                <Tag
+                  key={i}
+                  closable
+                  onClose={() =>
+                    setCatchphrases(catchphrases.filter((_, idx) => idx !== i))
+                  }
+                >
+                  {phrase}
+                </Tag>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Input
+                size="small"
+                value={newCatchphrase}
+                onChange={(e) => setNewCatchphrase(e.target.value)}
+                placeholder='Add a catchphrase, e.g. "By the old gods..."'
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newCatchphrase.trim()) {
+                    setCatchphrases([...catchphrases, newCatchphrase.trim()]);
+                    setNewCatchphrase("");
+                  }
+                }}
+                style={{ flex: 1 }}
+              />
+              <Button
+                size="small"
+                disabled={!newCatchphrase.trim()}
+                onClick={() => {
+                  setCatchphrases([...catchphrases, newCatchphrase.trim()]);
+                  setNewCatchphrase("");
+                }}
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "relationships",
+      label: "Relationships",
+      children: (
+        <div style={{ padding: 24 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 16,
+            }}
+          >
+            <Title level={5} style={{ margin: 0 }}>
+              Relationships
+            </Title>
+            <Button
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => setNewRelDialog(true)}
+            >
+              Add Relationship
+            </Button>
+          </div>
+
+          {relationships && relationships.length > 0 ? (
+            relationships.map((rel: any) => {
+              // Find the other character's name
+              const otherId =
+                rel.character_1_id === character.id
+                  ? rel.character_2_id
+                  : rel.character_1_id;
+              const other = allCharacters.find((c) => c.id === otherId);
+              return (
+                <Card key={rel.id} size="small" style={{ marginBottom: 16 }}>
+                  <div style={{ display: "flex", gap: 16 }}>
+                    <div style={{ flexGrow: 1 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <Tag color="blue">
+                          {rel.relationship_type || "unknown"}
+                        </Tag>
+                        <Text strong>{other?.name || "Unknown character"}</Text>
+                      </div>
+                      {rel.description && (
+                        <Text type="secondary">{rel.description}</Text>
+                      )}
+                    </div>
+                    <Tooltip title="Remove relationship">
+                      <Button
+                        type="text"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={() => setDeleteRelTarget(rel.id)}
+                      />
+                    </Tooltip>
+                  </div>
+                </Card>
+              );
+            })
+          ) : (
+            <Text type="secondary">No relationships recorded.</Text>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: { xs: 2, sm: 4 } }}>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ marginTop: 16, marginBottom: 32 }}>
         {/* Alerts */}
         {success && (
           <Alert
-            severity="success"
-            sx={{ mb: 2 }}
+            type="success"
+            title={success}
+            closable
             onClose={() => setSuccess(null)}
-          >
-            {success}
-          </Alert>
+            style={{ marginBottom: 16 }}
+          />
         )}
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
+          <Alert
+            type="error"
+            title={error}
+            closable
+            onClose={() => setError(null)}
+            style={{ marginBottom: 16 }}
+          />
         )}
 
         {/* Header card */}
-        <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
-          <Grid container spacing={2}>
-            <Grid item xs="auto">
-              <Box sx={{ position: "relative", display: "inline-block" }}>
+        <Card style={{ marginBottom: 24 }}>
+          <Row gutter={16}>
+            <Col flex="none">
+              <div style={{ position: "relative", display: "inline-block" }}>
                 <Avatar
                   src={character.avatar_url}
                   alt={character.name}
-                  sx={{
-                    width: { xs: 100, sm: 160 },
-                    height: { xs: 100, sm: 160 },
-                  }}
+                  size={160}
+                  style={{ minWidth: 100 }}
                 >
                   {character.name[0]}
                 </Avatar>
-              </Box>
-            </Grid>
-            <Grid item xs>
-              <Typography
-                variant="h4"
-                gutterBottom
-                sx={{ fontSize: { xs: "1.4rem", sm: "2.125rem" } }}
-              >
+              </div>
+            </Col>
+            <Col flex="auto">
+              <Title level={3} style={{ marginTop: 0 }}>
                 {character.name}
-              </Typography>
-              <Box sx={{ display: "flex", gap: 0.5, mb: 2 }}>
+              </Title>
+              <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
                 {(["main", "side", "bg"] as const).map((r) => (
-                  <Chip
+                  <Tag
                     key={r}
-                    label={
-                      r === "bg"
-                        ? "Background"
-                        : r.charAt(0).toUpperCase() + r.slice(1)
-                    }
-                    color={role === r ? "primary" : "default"}
-                    variant={role === r ? "filled" : "outlined"}
+                    color={role === r ? "blue" : undefined}
+                    style={{ cursor: "pointer" }}
                     onClick={() => setRole(r)}
-                    clickable
-                  />
+                  >
+                    {r === "bg"
+                      ? "Background"
+                      : r.charAt(0).toUpperCase() + r.slice(1)}
+                  </Tag>
                 ))}
-              </Box>
+              </div>
               {character.description && (
-                <Typography variant="body1" paragraph>
-                  {character.description}
-                </Typography>
+                <Paragraph>{character.description}</Paragraph>
               )}
 
               {/* Portrait generation */}
-              <Box
-                sx={{
+              <div
+                style={{
                   display: "flex",
                   flexWrap: "wrap",
-                  gap: 1,
+                  gap: 8,
                   alignItems: "center",
-                  mt: 1,
+                  marginTop: 8,
                 }}
               >
                 <Button
-                  variant="outlined"
                   size="small"
-                  startIcon={
+                  icon={
                     portraitLoading ? (
-                      <CircularProgress size={14} />
+                      <LoadingOutlined spin />
                     ) : (
-                      <BrushIcon />
+                      <HighlightOutlined />
                     )
                   }
                   onClick={handleGeneratePortrait}
@@ -408,533 +768,129 @@ export default function CharacterDetailPage() {
                 </Button>
                 <Button
                   size="small"
-                  variant="text"
+                  type="text"
                   onClick={() => setShowCustomPrompt((v) => !v)}
                 >
                   {showCustomPrompt ? "Hide custom prompt" : "Custom prompt"}
                 </Button>
-              </Box>
-              <Collapse in={showCustomPrompt}>
-                <TextField
-                  size="small"
-                  fullWidth
-                  multiline
-                  rows={2}
-                  placeholder="e.g. long silver hair, red eyes, school uniform, confident pose"
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  sx={{ mt: 1, maxWidth: 480 }}
-                  helperText="Override the auto-generated prompt with your own SD description"
-                />
-              </Collapse>
+              </div>
+              {showCustomPrompt && (
+                <div style={{ marginTop: 8 }}>
+                  <TextArea
+                    rows={2}
+                    placeholder="e.g. long silver hair, red eyes, school uniform, confident pose"
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    style={{ maxWidth: 480 }}
+                  />
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Override the auto-generated prompt with your own SD
+                      description
+                    </Text>
+                  </div>
+                </div>
+              )}
               {portraitError && (
                 <Alert
-                  severity="error"
-                  sx={{ mt: 1 }}
+                  type="error"
+                  title={portraitError}
+                  closable
                   onClose={() => setPortraitError(null)}
-                >
-                  {portraitError}
-                </Alert>
+                  style={{ marginTop: 8 }}
+                />
               )}
-            </Grid>
-          </Grid>
-        </Paper>
+            </Col>
+          </Row>
+        </Card>
 
         {/* Tabs */}
-        <Paper>
-          <Box
-            sx={{
+        <Card styles={{ body: { padding: 0 } }}>
+          <div
+            style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              px: 2,
-              pt: 1,
+              paddingRight: 16,
             }}
           >
-            <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
-              <Tab label="Overview" />
-              <Tab label="Traits" />
-              <Tab label="Behavior" />
-              <Tab label="Relationships" />
-            </Tabs>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={saving ? <CircularProgress size={14} /> : <SaveIcon />}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              Save
-            </Button>
-          </Box>
-
-          {/* Tab 0: Overview */}
-          <TabPanel value={tabValue} index={0}>
-            <Typography variant="h6" gutterBottom>
-              Description
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              minRows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Physical appearance, key identifying features..."
-              sx={{ mb: 3 }}
-            />
-
-            <Typography variant="h6" gutterBottom>
-              Background
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              minRows={3}
-              value={background}
-              onChange={(e) => setBackground(e.target.value)}
-              placeholder="Character history, backstory..."
-              sx={{ mb: 3 }}
-            />
-
-            <Typography variant="h6" gutterBottom>
-              Goals
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              minRows={2}
-              value={goals}
-              onChange={(e) => setGoals(e.target.value)}
-              placeholder="What does this character want?"
-            />
-
-            {character.first_appearance_part && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                First appeared in Part {character.first_appearance_part}
-              </Typography>
-            )}
-          </TabPanel>
-
-          {/* Tab 1: Traits */}
-          <TabPanel value={tabValue} index={1}>
-            <Typography variant="h6" gutterBottom>
-              Personality
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              minRows={2}
-              value={personality}
-              onChange={(e) => setPersonality(e.target.value)}
-              placeholder="Describe the character's personality..."
-              sx={{ mb: 3 }}
-            />
-
-            <Typography variant="h6" gutterBottom>
-              Character Traits
-            </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1 }}>
-              {traits.map((trait, i) => (
-                <Chip
-                  key={i}
-                  label={trait}
-                  color="primary"
-                  variant="outlined"
-                  onDelete={() => removeTrait(traits, setTraits, i)}
-                />
-              ))}
-              {traits.length === 0 && (
-                <Typography variant="body2" color="text.secondary">
-                  No traits yet.
-                </Typography>
-              )}
-            </Box>
-            <Box sx={{ display: "flex", gap: 1, mb: 3 }}>
-              <TextField
-                size="small"
-                placeholder="Add a trait..."
-                value={newTrait}
-                onChange={(e) => setNewTrait(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addTrait(traits, setTraits, newTrait, () =>
-                      setNewTrait(""),
-                    );
-                  }
-                }}
-              />
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={() =>
-                  addTrait(traits, setTraits, newTrait, () => setNewTrait(""))
-                }
-              >
-                Add
-              </Button>
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
-
-            <Typography variant="h6" gutterBottom>
-              Physical Traits
-            </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1 }}>
-              {physicalTraits.map((trait, i) => (
-                <Chip
-                  key={i}
-                  label={trait}
-                  color="secondary"
-                  variant="outlined"
-                  onDelete={() =>
-                    removeTrait(physicalTraits, setPhysicalTraits, i)
-                  }
-                />
-              ))}
-              {physicalTraits.length === 0 && (
-                <Typography variant="body2" color="text.secondary">
-                  No physical traits yet.
-                </Typography>
-              )}
-            </Box>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <TextField
-                size="small"
-                placeholder="Add a physical trait..."
-                value={newPhysicalTrait}
-                onChange={(e) => setNewPhysicalTrait(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addTrait(
-                      physicalTraits,
-                      setPhysicalTraits,
-                      newPhysicalTrait,
-                      () => setNewPhysicalTrait(""),
-                    );
-                  }
-                }}
-              />
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={() =>
-                  addTrait(
-                    physicalTraits,
-                    setPhysicalTraits,
-                    newPhysicalTrait,
-                    () => setNewPhysicalTrait(""),
-                  )
-                }
-              >
-                Add
-              </Button>
-            </Box>
-          </TabPanel>
-
-          {/* Tab 2: Behavior */}
-          <TabPanel value={tabValue} index={2}>
-            {[
-              {
-                label: "Behavior & Reactions",
-                value: behaviorNotes,
-                setter: setBehaviorNotes,
-                placeholder:
-                  "How does this character react to stress, conflict, surprise?",
-              },
-              {
-                label: "Speech Style",
-                value: speechPatterns,
-                setter: setSpeechPatterns,
-                placeholder:
-                  "Formal, casual, uses slang, talks slowly, stutters...",
-              },
-              {
-                label: "Fears",
-                value: fears,
-                setter: setFears,
-                placeholder: "What scares this character?",
-              },
-              {
-                label: "Motivations",
-                value: motivations,
-                setter: setMotivations,
-                placeholder: "What drives this character forward?",
-              },
-              {
-                label: "Story Arc Notes",
-                value: arcNotes,
-                setter: setArcNotes,
-                placeholder:
-                  "How should this character develop over the story?",
-              },
-            ].map(({ label, value, setter, placeholder }) => (
-              <Box key={label} sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  {label}
-                </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  minRows={2}
-                  value={value}
-                  onChange={(e) => setter(e.target.value)}
-                  placeholder={placeholder}
-                />
-              </Box>
-            ))}
-
-            {/* Voice Profile Section */}
-            <Box sx={{ mt: 4, mb: 2 }}>
-              <Typography variant="h5" gutterBottom>
-                Voice Profile
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                These fields shape how the AI writes dialogue for this
-                character.
-              </Typography>
-            </Box>
-
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Dialogue Style
-              </Typography>
-              <TextField
-                fullWidth
-                multiline
-                minRows={2}
-                value={dialogueStyle}
-                onChange={(e) => setDialogueStyle(e.target.value)}
-                placeholder="e.g. Short clipped sentences, lots of questions, poetic and flowery, sarcastic undertone..."
-              />
-            </Box>
-
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Vocabulary Level
-              </Typography>
-              <TextField
-                fullWidth
-                value={vocabularyLevel}
-                onChange={(e) => setVocabularyLevel(e.target.value)}
-                placeholder="e.g. Academic, street slang, archaic/medieval, child-like, technical jargon..."
-              />
-            </Box>
-
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Catchphrases
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Signature phrases or expressions this character often uses.
-              </Typography>
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 1 }}>
-                {catchphrases.map((phrase, i) => (
-                  <Chip
-                    key={i}
-                    label={phrase}
-                    onDelete={() =>
-                      setCatchphrases(
-                        catchphrases.filter((_, idx) => idx !== i),
-                      )
-                    }
-                  />
-                ))}
-              </Box>
-              <Box sx={{ display: "flex", gap: 1 }}>
-                <TextField
-                  size="small"
-                  value={newCatchphrase}
-                  onChange={(e) => setNewCatchphrase(e.target.value)}
-                  placeholder='Add a catchphrase, e.g. "By the old gods..."'
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newCatchphrase.trim()) {
-                      setCatchphrases([...catchphrases, newCatchphrase.trim()]);
-                      setNewCatchphrase("");
-                    }
-                  }}
-                  sx={{ flex: 1 }}
-                />
+            <Tabs
+              activeKey={activeTab}
+              onChange={(key) => setActiveTab(key)}
+              items={tabItems}
+              style={{ flex: 1 }}
+              tabBarExtraContent={
                 <Button
-                  variant="outlined"
+                  type="primary"
                   size="small"
-                  disabled={!newCatchphrase.trim()}
-                  onClick={() => {
-                    setCatchphrases([...catchphrases, newCatchphrase.trim()]);
-                    setNewCatchphrase("");
-                  }}
+                  icon={saving ? <LoadingOutlined spin /> : <SaveOutlined />}
+                  onClick={handleSave}
+                  disabled={saving}
                 >
-                  Add
+                  Save
                 </Button>
-              </Box>
-            </Box>
-          </TabPanel>
+              }
+            />
+          </div>
+        </Card>
+      </div>
 
-          {/* Tab 3: Relationships */}
-          <TabPanel value={tabValue} index={3}>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 2,
-              }}
-            >
-              <Typography variant="h6">Relationships</Typography>
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={() => setNewRelDialog(true)}
-              >
-                Add Relationship
-              </Button>
-            </Box>
-
-            {relationships && relationships.length > 0 ? (
-              relationships.map((rel: any) => {
-                // Find the other character's name
-                const otherId =
-                  rel.character_1_id === character.id
-                    ? rel.character_2_id
-                    : rel.character_1_id;
-                const other = allCharacters.find((c) => c.id === otherId);
-                return (
-                  <Paper
-                    key={rel.id}
-                    sx={{ p: 2, mb: 2, display: "flex", gap: 2 }}
-                  >
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          mb: 0.5,
-                        }}
-                      >
-                        <Chip
-                          label={rel.relationship_type || "unknown"}
-                          size="small"
-                          color="primary"
-                        />
-                        <Typography
-                          variant="subtitle1"
-                          sx={{ fontWeight: 600 }}
-                        >
-                          {other?.name || "Unknown character"}
-                        </Typography>
-                      </Box>
-                      {rel.description && (
-                        <Typography variant="body2" color="text.secondary">
-                          {rel.description}
-                        </Typography>
-                      )}
-                    </Box>
-                    <Tooltip title="Remove relationship">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => setDeleteRelTarget(rel.id)}
-                      >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Paper>
-                );
-              })
-            ) : (
-              <Typography color="text.secondary">
-                No relationships recorded.
-              </Typography>
-            )}
-          </TabPanel>
-        </Paper>
-      </Box>
-
-      {/* Add Relationship Dialog */}
-      <Dialog
+      {/* Add Relationship Modal */}
+      <Modal
+        title="Add Relationship"
         open={newRelDialog}
-        onClose={() => setNewRelDialog(false)}
-        maxWidth="xs"
-        fullWidth
+        onCancel={() => setNewRelDialog(false)}
+        onOk={handleAddRelationship}
+        okText="Add"
+        okButtonProps={{ disabled: !newRelCharId || !newRelType || saving }}
+        width={400}
       >
-        <DialogTitle>Add Relationship</DialogTitle>
-        <DialogContent>
-          <TextField
-            select
-            fullWidth
-            label="Character"
-            value={newRelCharId}
-            onChange={(e) => setNewRelCharId(e.target.value)}
-            sx={{ mt: 1, mb: 2 }}
-            SelectProps={{ native: true }}
-          >
-            <option value="">Select a character...</option>
-            {otherCharacters.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </TextField>
-          <TextField
-            fullWidth
-            label="Relationship type"
+        <div style={{ marginBottom: 16 }}>
+          <Text>Character</Text>
+          <Select
+            style={{ width: "100%", marginTop: 4 }}
+            placeholder="Select a character..."
+            value={newRelCharId || undefined}
+            onChange={(value) => setNewRelCharId(value)}
+            options={otherCharacters.map((c) => ({
+              value: c.id,
+              label: c.name,
+            }))}
+          />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <Text>Relationship type</Text>
+          <Input
+            style={{ marginTop: 4 }}
             placeholder="e.g. romantic, friendship, rivalry, family, mentor"
             value={newRelType}
             onChange={(e) => setNewRelType(e.target.value)}
-            sx={{ mb: 2 }}
           />
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
-            label="Description (optional)"
+        </div>
+        <div>
+          <Text>Description (optional)</Text>
+          <TextArea
+            rows={2}
+            style={{ marginTop: 4 }}
             placeholder="Describe the dynamic between them..."
             value={newRelDesc}
             onChange={(e) => setNewRelDesc(e.target.value)}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNewRelDialog(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleAddRelationship}
-            disabled={!newRelCharId || !newRelType || saving}
-          >
-            Add
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </div>
+      </Modal>
 
-      {/* Delete Relationship Dialog */}
-      <Dialog
+      {/* Delete Relationship Modal */}
+      <Modal
+        title="Remove Relationship?"
         open={!!deleteRelTarget}
-        onClose={() => setDeleteRelTarget(null)}
-        maxWidth="xs"
-        fullWidth
+        onCancel={() => setDeleteRelTarget(null)}
+        onOk={handleDeleteRelationship}
+        okText="Remove"
+        okButtonProps={{ danger: true, disabled: saving }}
+        width={400}
       >
-        <DialogTitle>Remove Relationship?</DialogTitle>
-        <DialogContent>
-          <Typography>
-            This will permanently remove this relationship. Continue?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteRelTarget(null)}>Cancel</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDeleteRelationship}
-            disabled={saving}
-          >
-            Remove
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+        <Text>This will permanently remove this relationship. Continue?</Text>
+      </Modal>
+    </div>
   );
 }

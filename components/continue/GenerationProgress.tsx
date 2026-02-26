@@ -1,4 +1,6 @@
-import { Box, LinearProgress, Typography, Chip } from '@mui/material';
+import { Progress, Typography, Tag } from "antd";
+
+const { Text } = Typography;
 
 interface GenerationProgressProps {
   isGenerating: boolean;
@@ -6,46 +8,47 @@ interface GenerationProgressProps {
   contextNotes?: string[];
 }
 
-export default function GenerationProgress({ 
-  isGenerating, 
+export default function GenerationProgress({
+  isGenerating,
   status,
-  contextNotes 
+  contextNotes,
 }: GenerationProgressProps) {
   if (!isGenerating && !contextNotes?.length) {
     return null;
   }
 
   return (
-    <Box sx={{ mb: 3 }}>
+    <div style={{ marginBottom: 24 }}>
       {isGenerating && (
         <>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 2 }}>
+          <div
+            style={{ display: "flex", alignItems: "center", marginBottom: 8 }}
+          >
+            <Text type="secondary" style={{ marginRight: 16 }}>
               {status}
-            </Typography>
-          </Box>
-          <LinearProgress />
+            </Text>
+          </div>
+          <Progress percent={100} status="active" showInfo={false} />
         </>
       )}
-      
+
       {contextNotes && contextNotes.length > 0 && (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="caption" color="text.secondary" gutterBottom>
+        <div style={{ marginTop: 16 }}>
+          <Text
+            type="secondary"
+            style={{ fontSize: 12, display: "block", marginBottom: 8 }}
+          >
             Context Notes Detected:
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+          </Text>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {contextNotes.map((note, idx) => (
-              <Chip 
-                key={idx} 
-                label={note} 
-                size="small" 
-                color="primary" 
-                variant="outlined" 
-              />
+              <Tag key={idx} color="blue">
+                {note}
+              </Tag>
             ))}
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }
