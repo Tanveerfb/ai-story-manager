@@ -21,7 +21,8 @@
     "next": "^16.1.6",
     "ollama": "^0.6.3",
     "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "react-dom": "^18.3.0",
+    "supabase": "^2.76.15"
   },
   "devDependencies": {
     "@types/formidable": "^3.4.0",

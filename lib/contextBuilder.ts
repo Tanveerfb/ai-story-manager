@@ -23,6 +23,7 @@ interface Relationship {
 
 interface StoryPart {
   part_number: number;
+  chapter_number?: number;
   title?: string;
   content: string;
   summary?: string;
@@ -35,15 +36,14 @@ export function buildStoryContext(
 ): string {
   let context = "";
 
-  // Add recent story parts
+  // Add recent story parts — labelled as background knowledge only
   if (recentParts.length > 0) {
-    context += "=== RECENT STORY ===\n\n";
+    context +=
+      "=== STORY SO FAR (background knowledge — do NOT recap, summarize, or reference these events in your output) ===\n\n";
     for (const part of recentParts) {
-      context += `Part ${part.part_number}${part.title ? ": " + part.title : ""}\n`;
-      if (part.summary) {
-        context += `Summary: ${part.summary}\n`;
-      }
-      context += `\n${part.content}\n\n---\n\n`;
+      const chLabel = part.chapter_number ? ` Ch.${part.chapter_number}` : "";
+      context += `--- Part ${part.part_number}${chLabel} ---\n`;
+      context += `${part.content}\n\n`;
     }
   }
 

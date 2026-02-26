@@ -18,72 +18,57 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   ToggleButtonGroup,
   ToggleButton,
   Slider,
   CircularProgress,
+  Collapse,
+  LinearProgress,
 } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import SaveIcon from "@mui/icons-material/Save";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ClearIcon from "@mui/icons-material/Clear";
 import AddIcon from "@mui/icons-material/Add";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import InfoIcon from "@mui/icons-material/Info";
-import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import RepeatIcon from "@mui/icons-material/Repeat";
+import StopIcon from "@mui/icons-material/Stop";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
 
 import GenerationProgress from "@/components/continue/GenerationProgress";
-import FeedbackPanel from "@/components/continue/FeedbackPanel";
-import HistoryPanel from "@/components/continue/HistoryPanel";
-import BranchingPanel from "@/components/continue/BranchingPanel";
-import SideNotesPanel from "@/components/continue/SideNotesPanel";
 import ModelSelector from "@/components/continue/ModelSelector";
 import EntityManager from "@/components/continue/EntityManager";
 import LocationManager from "@/components/continue/LocationManager";
-import WorldSwitcher from "@/components/WorldSwitcher";
+import { useWorld } from "@/components/WorldProvider";
 import { DEFAULT_AI_MODEL } from "@/lib/constants";
 
 export default function ContinuePage() {
-  // Basic state
+  const { worldId } = useWorld();
+
+  // Core state
   const [userPrompt, setUserPrompt] = useState("");
   const [characterFocus, setCharacterFocus] = useState("");
   const [characters, setCharacters] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL); // Use constant for default model
-  const [currentWorldId, setCurrentWorldId] = useState<string | null>(null);
-  const [currentWorldName, setCurrentWorldName] = useState<string>("");
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL);
   const [loading, setLoading] = useState(false);
   const [continuation, setContinuation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Generation Style state (new feature)
+  // Generation controls
   const [generationStyle, setGenerationStyle] = useState<"strict" | "creative">(
     "strict",
-  ); // Default to 'strict'
-  const [maxTokens, setMaxTokens] = useState(600); // Default max tokens
+  );
+  const [maxTokens, setMaxTokens] = useState(600);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Advanced state
+  // Status
   const [status, setStatus] = useState("Ready");
   const [contextNotes, setContextNotes] = useState<string[]>([]);
-  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
-  const [sideNotes, setSideNotes] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [sceneType, setSceneType] = useState("");
-  const [showPreviousContext, setShowPreviousContext] = useState(true);
-  const [recentParts, setRecentParts] = useState<any[]>([]);
 
-  // Recent events summary state
-  const [recentEventsSummary, setRecentEventsSummary] = useState<string | null>(
-    null,
-  );
-  const [summaryLoading, setSummaryLoading] = useState(false);
-
-  // Story memory state
+  // Story memory
   const [storyMemory, setStoryMemory] = useState<{
     content: string;
     part_count: number;
@@ -92,63 +77,73 @@ export default function ContinuePage() {
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [memoryExpanded, setMemoryExpanded] = useState(false);
 
+  // Part/Chapter selector
+  const [availableParts, setAvailableParts] = useState<number[]>([]);
+  const [selectedPartNumber, setSelectedPartNumber] = useState<number | "new">(
+    "new",
+  );
+
+  // Auto-continue state
+  const [autoContinueCount, setAutoContinueCount] = useState(3);
+  const [autoContinueRunning, setAutoContinueRunning] = useState(false);
+  const [autoContinueProgress, setAutoContinueProgress] = useState(0);
+  const [autoContinueStop, setAutoContinueStop] = useState(false);
+
+  // Consistency checker state
+  const [consistencyLoading, setConsistencyLoading] = useState(false);
+  const [consistencyResult, setConsistencyResult] = useState<{
+    issues: {
+      type: string;
+      severity: string;
+      description: string;
+      quote: string;
+      suggestion: string;
+    }[];
+    summary: string;
+  } | null>(null);
+
   useEffect(() => {
     fetchCharacters();
     fetchLocations();
-    fetchRecentParts();
-    fetchRecentEventsSummary();
+    fetchAvailableParts();
     fetchStoryMemory();
-  }, []);
+  }, [worldId]);
 
   const fetchCharacters = async () => {
     try {
-      const response = await fetch("/api/characters");
-      if (response.ok) {
-        const data = await response.json();
-        setCharacters(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch characters:", error);
+      const response = await fetch(
+        `/api/characters${worldId ? `?world_id=${worldId}` : ""}`,
+      );
+      if (response.ok) setCharacters(await response.json());
+    } catch (e) {
+      console.error("Failed to fetch characters:", e);
     }
   };
 
   const fetchLocations = async () => {
     try {
-      const response = await fetch("/api/locations");
-      if (response.ok) {
-        const data = await response.json();
-        setLocations(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch locations:", error);
+      const response = await fetch(
+        `/api/locations${worldId ? `?world_id=${worldId}` : ""}`,
+      );
+      if (response.ok) setLocations(await response.json());
+    } catch (e) {
+      console.error("Failed to fetch locations:", e);
     }
   };
 
-  const fetchRecentParts = async () => {
+  const fetchAvailableParts = async () => {
     try {
-      const response = await fetch("/api/story-parts");
+      const response = await fetch(
+        `/api/story-parts?action=list-parts${worldId ? `&world_id=${worldId}` : ""}`,
+      );
       if (response.ok) {
         const data = await response.json();
-        setRecentParts(data.slice(-3));
+        const nums: number[] = data.partNumbers || [];
+        setAvailableParts(nums);
+        setSelectedPartNumber(nums.length > 0 ? nums[nums.length - 1] : "new");
       }
-    } catch (error) {
-      console.error("Failed to fetch recent parts:", error);
-    }
-  };
-
-  const fetchRecentEventsSummary = async () => {
-    setSummaryLoading(true);
-    try {
-      const response = await fetch("/api/story-parts?action=summarize&limit=3");
-      if (response.ok) {
-        const data = await response.json();
-        setRecentEventsSummary(data.summary);
-      }
-    } catch (error) {
-      console.error("Failed to fetch summary:", error);
-      setRecentEventsSummary("Unable to generate summary at this time.");
-    } finally {
-      setSummaryLoading(false);
+    } catch (e) {
+      console.error("Failed to fetch available parts:", e);
     }
   };
 
@@ -160,7 +155,7 @@ export default function ContinuePage() {
         setStoryMemory(data.memory);
       }
     } catch {
-      // No memory yet — silent
+      // No memory yet
     }
   };
 
@@ -176,9 +171,7 @@ export default function ContinuePage() {
         const data = await res.json();
         setStoryMemory(data.memory);
         setMemoryExpanded(true);
-        setSuccess(
-          "Story memory generated — AI will use this to keep context.",
-        );
+        setSuccess("Story memory generated.");
       } else {
         const err = await res.json();
         setError(err.error || "Failed to generate memory");
@@ -199,6 +192,8 @@ export default function ContinuePage() {
     }
   };
 
+  // ─── Generation ───
+
   const handleGenerate = async () => {
     if (!userPrompt.trim()) {
       setError("Please enter a prompt");
@@ -208,7 +203,7 @@ export default function ContinuePage() {
     setLoading(true);
     setError(null);
     setContinuation(null);
-    setStatus("Generating story continuation...");
+    setStatus("Generating...");
 
     try {
       const response = await fetch("/api/continue", {
@@ -218,9 +213,10 @@ export default function ContinuePage() {
           action: "generate",
           userPrompt,
           characterFocus: characterFocus || null,
-          model: selectedModel, // Include selected model
-          generationStyle, // Include generation style
-          maxTokens, // Include max tokens
+          model: selectedModel,
+          generationStyle,
+          maxTokens,
+          worldId,
         }),
       });
 
@@ -232,7 +228,7 @@ export default function ContinuePage() {
       const result = await response.json();
       setContinuation(result.continuation);
       setContextNotes(result.contextNotes || []);
-      setStatus("Generation complete");
+      setStatus("Done");
     } catch (err: any) {
       setError(err.message);
       setStatus("Ready");
@@ -241,131 +237,7 @@ export default function ContinuePage() {
     }
   };
 
-  const handleRevise = async (revisionInstructions: string) => {
-    if (!currentDraftId) {
-      // If no draft exists yet, treat this as a new generation with revision instructions
-      handleGenerateWithInstructions(revisionInstructions);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setStatus("Revising based on your feedback...");
-
-    try {
-      const response = await fetch("/api/continue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "revise",
-          draftId: currentDraftId,
-          revisionInstructions,
-          generationStyle, // Include generation style
-          maxTokens, // Include max tokens
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Revision failed");
-      }
-
-      const result = await response.json();
-      setContinuation(result.continuation);
-      setStatus("Revision complete");
-
-      // Refresh history if draft exists
-      if (currentDraftId) {
-        await fetchHistory(currentDraftId);
-      }
-    } catch (err: any) {
-      setError(err.message);
-      setStatus("Ready");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerateWithInstructions = async (
-    revisionInstructions: string,
-  ) => {
-    if (!userPrompt.trim()) {
-      setError("Please enter a prompt first");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setStatus("Generating with your instructions...");
-
-    try {
-      const response = await fetch("/api/continue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "generate",
-          userPrompt,
-          characterFocus: characterFocus || null,
-          revisionInstructions,
-          generationStyle, // Include generation style
-          maxTokens, // Include max tokens
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Generation failed");
-      }
-
-      const result = await response.json();
-      setContinuation(result.continuation);
-      setContextNotes(result.contextNotes || []);
-      setStatus("Generation complete");
-    } catch (err: any) {
-      setError(err.message);
-      setStatus("Ready");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSaveDraft = async () => {
-    if (!continuation) return;
-
-    setLoading(true);
-    setError(null);
-    setStatus("Saving draft...");
-
-    try {
-      const response = await fetch("/api/continue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "save-draft",
-          userPrompt,
-          characterFocus: characterFocus || null,
-          generatedContent: continuation, // Include the edited content
-          tags,
-          sideNotes,
-          sceneType,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save draft");
-      }
-
-      const result = await response.json();
-      setCurrentDraftId(result.draft.id);
-      setSuccess("Draft saved successfully!");
-      setStatus("Ready");
-    } catch (err: any) {
-      setError(err.message || "Failed to save draft");
-      setStatus("Ready");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ─── Insert into Story ───
 
   const handleInsertIntoStory = async () => {
     if (!continuation) return;
@@ -374,8 +246,8 @@ export default function ContinuePage() {
     setError(null);
 
     try {
-      // Step 1: Extract & merge entities first
-      setStatus("Extracting characters and locations...");
+      // Step 1: Extract & merge entities
+      setStatus("Extracting entities...");
 
       let entitySummary = "";
       try {
@@ -388,29 +260,91 @@ export default function ContinuePage() {
         if (extractResponse.ok) {
           const extracted = await extractResponse.json();
 
-          const entityExists = (list: any[], name: string) =>
-            list.some((item) => item.name.toLowerCase() === name.toLowerCase());
+          const findExisting = (list: any[], name: string) =>
+            list.find((item) => item.name.toLowerCase() === name.toLowerCase());
 
           let addedChars = 0;
+          let updatedChars = 0;
           let addedLocs = 0;
+          let addedRels = 0;
 
           for (const char of extracted.characters || []) {
-            if (!entityExists(characters, char.name)) {
+            const existing = findExisting(characters, char.name);
+            if (!existing) {
               const r = await fetch("/api/characters", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(char),
+                body: JSON.stringify({ ...char, world_id: worldId }),
               });
               if (r.ok) addedChars++;
+            } else {
+              const mergedTraits = Array.isArray(existing.traits)
+                ? [...existing.traits]
+                : [];
+              for (const t of char.traits || []) {
+                if (
+                  !mergedTraits.some(
+                    (m: string) => m.toLowerCase() === t.toLowerCase(),
+                  )
+                ) {
+                  mergedTraits.push(t);
+                }
+              }
+
+              const updates: any = { traits: mergedTraits };
+              if (
+                char.personality &&
+                (!existing.personality ||
+                  String(existing.personality).length <
+                    String(char.personality).length)
+              ) {
+                updates.personality = char.personality;
+              }
+              if (
+                char.description &&
+                (!existing.description ||
+                  existing.description.length < char.description.length)
+              ) {
+                updates.description = char.description;
+              }
+              if (char.goals && !existing.goals) {
+                updates.goals = char.goals;
+              }
+
+              const r = await fetch(`/api/characters/${existing.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updates),
+              });
+              if (r.ok) updatedChars++;
+            }
+          }
+
+          for (const rel of extracted.relationships || []) {
+            const char1 = findExisting(characters, rel.character_1);
+            const char2 = findExisting(characters, rel.character_2);
+            if (char1 && char2) {
+              const r = await fetch("/api/characters?action=add-relationship", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  character_1_id: char1.id,
+                  character_2_id: char2.id,
+                  relationship_type:
+                    rel.relationship_type || rel.type || "unknown",
+                  description: rel.dynamic || rel.description || "",
+                }),
+              });
+              if (r.ok) addedRels++;
             }
           }
 
           for (const loc of extracted.locations || []) {
-            if (!entityExists(locations, loc.name)) {
+            if (!findExisting(locations, loc.name)) {
               const r = await fetch("/api/locations", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(loc),
+                body: JSON.stringify({ ...loc, world_id: worldId }),
               });
               if (r.ok) addedLocs++;
             }
@@ -421,159 +355,74 @@ export default function ContinuePage() {
 
           const parts = [];
           if (addedChars > 0)
-            parts.push(`${addedChars} character${addedChars > 1 ? "s" : ""}`);
+            parts.push(
+              `${addedChars} new character${addedChars > 1 ? "s" : ""}`,
+            );
+          if (updatedChars > 0) parts.push(`${updatedChars} updated`);
+          if (addedRels > 0)
+            parts.push(`${addedRels} relationship${addedRels > 1 ? "s" : ""}`);
           if (addedLocs > 0)
             parts.push(`${addedLocs} location${addedLocs > 1 ? "s" : ""}`);
-          if (parts.length > 0)
-            entitySummary = ` (added ${parts.join(" and ")})`;
+          if (parts.length > 0) entitySummary = ` (${parts.join(", ")})`;
         }
       } catch {
         // Entity extraction failing should not block story insertion
       }
 
       // Step 2: Insert the story part
-      setStatus("Inserting into story...");
+      setStatus("Saving to story...");
 
-      const partsResponse = await fetch("/api/story-parts");
-      const parts = await partsResponse.json();
-      const nextPartNumber =
-        parts.length > 0
-          ? Math.max(...parts.map((p: any) => p.part_number)) + 1
-          : 1;
+      const partsResponse = await fetch(
+        `/api/story-parts${worldId ? `?world_id=${worldId}` : ""}`,
+      );
+      const allParts = await partsResponse.json();
+
+      let partNumber: number;
+      let chapterNumber: number;
+
+      if (selectedPartNumber === "new" || availableParts.length === 0) {
+        partNumber =
+          allParts.length > 0
+            ? Math.max(...allParts.map((p: any) => p.part_number)) + 1
+            : 1;
+        chapterNumber = 1;
+      } else {
+        partNumber = selectedPartNumber as number;
+        const chaptersInPart = allParts.filter(
+          (p: any) => p.part_number === partNumber,
+        );
+        chapterNumber =
+          chaptersInPart.length > 0
+            ? Math.max(
+                ...chaptersInPart.map((p: any) => p.chapter_number || 1),
+              ) + 1
+            : 1;
+      }
 
       const response = await fetch("/api/story-parts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          part_number: nextPartNumber,
-          title: `Part ${nextPartNumber}`,
+          part_number: partNumber,
+          chapter_number: chapterNumber,
+          title: `Part ${partNumber} — Chapter ${chapterNumber}`,
           content: continuation,
           word_count: continuation.split(/\s+/).length,
+          world_id: worldId,
         }),
       });
 
       if (!response.ok) throw new Error("Failed to insert into story");
 
-      setSuccess(`Story part ${nextPartNumber} saved${entitySummary}.`);
-      handleClear();
+      setSuccess(
+        `Part ${partNumber}, Chapter ${chapterNumber} saved${entitySummary}.`,
+      );
+      setContinuation(null);
+      setContextNotes([]);
       setStatus("Ready");
-      fetchRecentParts();
+      fetchAvailableParts();
     } catch (err: any) {
       setError(err.message || "Failed to insert into story");
-      setStatus("Ready");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleExtractEntities = async () => {
-    if (!continuation) return;
-
-    setLoading(true);
-    setError(null);
-    setStatus("Extracting characters and locations...");
-
-    try {
-      // Extract entities from the generated content
-      const extractResponse = await fetch("/api/extract-entities", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: continuation }),
-      });
-
-      if (!extractResponse.ok) {
-        throw new Error("Failed to extract entities");
-      }
-
-      const extracted = await extractResponse.json();
-
-      let addedCharacters = 0;
-      let addedLocations = 0;
-      let skippedCharacters = 0;
-      let skippedLocations = 0;
-
-      // Helper function to check if entity exists (case-insensitive)
-      const entityExists = (list: any[], name: string) => {
-        return list.some(
-          (item) => item.name.toLowerCase() === name.toLowerCase(),
-        );
-      };
-
-      // Add new characters
-      if (extracted.characters && extracted.characters.length > 0) {
-        for (const char of extracted.characters) {
-          if (!entityExists(characters, char.name)) {
-            // Add new character
-            const response = await fetch("/api/characters", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(char),
-            });
-
-            if (response.ok) {
-              addedCharacters++;
-            }
-          } else {
-            skippedCharacters++;
-          }
-        }
-      }
-
-      // Add new locations
-      if (extracted.locations && extracted.locations.length > 0) {
-        for (const loc of extracted.locations) {
-          if (!entityExists(locations, loc.name)) {
-            // Add new location
-            const response = await fetch("/api/locations", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(loc),
-            });
-
-            if (response.ok) {
-              addedLocations++;
-            }
-          } else {
-            skippedLocations++;
-          }
-        }
-      }
-
-      // Refresh character and location lists
-      await fetchCharacters();
-      await fetchLocations();
-
-      // Build detailed success message
-      const totalAdded = addedCharacters + addedLocations;
-      const totalSkipped = skippedCharacters + skippedLocations;
-
-      if (totalAdded > 0) {
-        let message = "Successfully extracted and added ";
-        const parts = [];
-        if (addedCharacters > 0)
-          parts.push(
-            `${addedCharacters} character${addedCharacters > 1 ? "s" : ""}`,
-          );
-        if (addedLocations > 0)
-          parts.push(
-            `${addedLocations} location${addedLocations > 1 ? "s" : ""}`,
-          );
-        message += parts.join(" and ");
-        if (totalSkipped > 0) {
-          message += ` (${totalSkipped} already existed)`;
-        }
-        message += "!";
-        setSuccess(message);
-      } else if (totalSkipped > 0) {
-        setSuccess(
-          `Found ${totalSkipped} entities that already exist in your database.`,
-        );
-      } else {
-        setSuccess("No new entities found in the generated content.");
-      }
-      setStatus("Ready");
-    } catch (err: any) {
-      setError(err.message || "Failed to extract entities");
       setStatus("Ready");
     } finally {
       setLoading(false);
@@ -587,103 +436,132 @@ export default function ContinuePage() {
     setSuccess(null);
   };
 
-  const handleRetry = () => {
-    handleGenerate();
-  };
-
-  const fetchHistory = async (draftId: string) => {
-    try {
-      const response = await fetch("/api/continue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "get-history",
-          draftId,
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setHistory(result.history || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch history:", error);
-    }
-  };
-
-  const handleRestoreHistory = (entry: any) => {
-    setContinuation(entry.generated_content);
-    setUserPrompt(entry.user_prompt);
-  };
-
-  const handleCreateBranch = async (
-    branchName: string,
-    branchPrompt: string,
-    branchNotes: string,
-  ) => {
-    if (!currentDraftId) {
-      setError("Please save a draft first before creating branches");
+  // ─── Auto-Continue ───
+  const handleAutoContinue = async () => {
+    if (!userPrompt.trim()) {
+      setError("Please enter a prompt first");
       return;
     }
-
-    setLoading(true);
+    setAutoContinueRunning(true);
+    setAutoContinueStop(false);
+    setAutoContinueProgress(0);
     setError(null);
-    setStatus("Creating branch...");
 
+    for (let i = 0; i < autoContinueCount; i++) {
+      if (autoContinueStop) break;
+      setAutoContinueProgress(i + 1);
+      setStatus(
+        `Auto-continue: generating chapter ${i + 1} of ${autoContinueCount}...`,
+      );
+
+      try {
+        // Generate
+        const genRes = await fetch("/api/continue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "generate",
+            userPrompt:
+              i === 0
+                ? userPrompt
+                : `Continue the story naturally from where the previous chapter left off. ${userPrompt}`,
+            characterFocus: characterFocus || null,
+            model: selectedModel,
+            generationStyle,
+            maxTokens,
+            worldId,
+          }),
+        });
+
+        if (!genRes.ok) {
+          const errData = await genRes.json();
+          throw new Error(errData.error || "Generation failed");
+        }
+
+        const genResult = await genRes.json();
+        const text = genResult.continuation;
+        if (!text) throw new Error("Empty generation");
+
+        // Auto-insert
+        setStatus(`Auto-continue: inserting chapter ${i + 1}...`);
+
+        // Extract entities
+        try {
+          await fetch("/api/extract-entities", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+        } catch {}
+
+        // Determine part/chapter
+        const partsRes = await fetch(
+          `/api/story-parts?action=list-parts${worldId ? `&world_id=${worldId}` : ""}`,
+        );
+        let partNumber = 1;
+        let chapterNumber = 1;
+        if (partsRes.ok) {
+          const partsData = await partsRes.json();
+          if (partsData.length > 0) {
+            const lastPart = partsData[partsData.length - 1];
+            partNumber = lastPart.part_number;
+            chapterNumber = (lastPart.max_chapter || 0) + 1;
+          }
+        }
+
+        // Insert
+        const insertRes = await fetch("/api/story-parts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: text,
+            part_number: partNumber,
+            chapter_number: chapterNumber,
+            world_id: worldId,
+          }),
+        });
+
+        if (!insertRes.ok) throw new Error("Failed to insert chapter");
+      } catch (err: any) {
+        setError(`Auto-continue stopped at chapter ${i + 1}: ${err.message}`);
+        break;
+      }
+    }
+
+    setAutoContinueRunning(false);
+    setStatus("Ready");
+    setSuccess(
+      `Auto-continue finished! Generated ${autoContinueProgress} chapter(s).`,
+    );
+    fetchAvailableParts();
+  };
+
+  // ─── Consistency Check ───
+  const handleConsistencyCheck = async () => {
+    if (!continuation) return;
+    setConsistencyLoading(true);
+    setConsistencyResult(null);
     try {
-      const response = await fetch("/api/continue", {
+      const res = await fetch("/api/continue-story/consistency", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "branch",
-          draftId: currentDraftId,
-          branchName,
-          userPrompt: branchPrompt,
-          characterFocus: characterFocus || null,
-          sideNotes: branchNotes,
+          text: continuation,
+          worldId,
+          model: selectedModel,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to create branch");
-      }
-
-      const result = await response.json();
-      setSuccess(`Branch "${branchName}" created successfully!`);
-      setStatus("Ready");
+      if (!res.ok) throw new Error("Consistency check failed");
+      const result = await res.json();
+      setConsistencyResult(result);
     } catch (err: any) {
-      setError(err.message || "Failed to create branch");
-      setStatus("Ready");
+      setError(err.message);
     } finally {
-      setLoading(false);
+      setConsistencyLoading(false);
     }
   };
 
-  const promptTemplates = [
-    {
-      label: "Continue from cliffhanger",
-      prompt: "Continue from the cliffhanger, building tension",
-    },
-    {
-      label: "Describe character's reaction",
-      prompt: characterFocus
-        ? `Describe ${characterFocus}'s emotional reaction to recent events`
-        : "Describe the main character's emotional reaction to recent events",
-    },
-    {
-      label: "Add dialogue scene",
-      prompt: "Write a dialogue-heavy scene that reveals character motivations",
-    },
-    {
-      label: "Describe setting",
-      prompt: "Provide rich, atmospheric description of the current setting",
-    },
-    {
-      label: "Plot twist",
-      prompt:
-        "Introduce an unexpected plot development that changes everything",
-    },
-  ];
+  // ─── Render ───
 
   return (
     <Container
@@ -691,75 +569,61 @@ export default function ContinuePage() {
       disableGutters
       sx={{ px: { xs: 1, sm: 2, md: 3 } }}
     >
-      <Box sx={{ my: { xs: 2, sm: 4 } }}>
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
-          <AutoAwesomeIcon
-            sx={{
-              fontSize: { xs: 28, sm: 40 },
-              flexShrink: 0,
-              color: "primary.main",
-            }}
-          />
-          <Box sx={{ minWidth: 0 }}>
+      <Box sx={{ my: { xs: 2, sm: 3 } }}>
+        {/* Header row */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mb: 2,
+            flexWrap: "wrap",
+            gap: 1,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <AutoAwesomeIcon color="primary" />
             <Typography
-              variant="h4"
+              variant="h5"
               component="h1"
-              gutterBottom
-              sx={{ fontSize: { xs: "1.4rem", sm: "2.125rem" } }}
+              sx={{ fontWeight: 700, fontSize: { xs: "1.3rem", sm: "1.5rem" } }}
             >
-              AI-First Story Creation
-            </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ display: { xs: "none", sm: "block" } }}
-            >
-              Create stories from scratch with AI assistance - build narrative,
-              entities, and locations live
+              Continue Story
             </Typography>
           </Box>
-        </Box>
-
-        {/* World Switcher */}
-        <Box sx={{ mb: 3 }}>
-          <WorldSwitcher
-            currentWorldId={currentWorldId}
-            onWorldChange={(id, name) => {
-              setCurrentWorldId(id);
-              setCurrentWorldName(name);
-            }}
+          <ModelSelector
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
+            disabled={loading}
           />
         </Box>
 
-        {/* AI Story Memory */}
-        <Paper variant="outlined" sx={{ mb: 3, overflow: "hidden" }}>
+        {/* Story Memory — compact bar */}
+        <Paper
+          variant="outlined"
+          sx={{
+            mb: 2,
+            overflow: "hidden",
+            borderColor: storyMemory ? "primary.main" : "divider",
+          }}
+        >
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               px: 2,
-              py: 1.5,
+              py: 1,
               cursor: storyMemory ? "pointer" : "default",
-              bgcolor: storyMemory ? "background.default" : "transparent",
             }}
             onClick={() => storyMemory && setMemoryExpanded((v) => !v)}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <AutoAwesomeIcon
-                fontSize="small"
-                color={storyMemory ? "primary" : "disabled"}
-              />
-              <Typography
-                variant="subtitle2"
-                color={storyMemory ? "text.primary" : "text.secondary"}
-              >
-                {storyMemory
-                  ? `AI Story Memory — ${storyMemory.part_count} parts condensed`
-                  : "AI Story Memory — not generated yet"}
-              </Typography>
-            </Box>
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {storyMemory
+                ? `Story Memory active — ${storyMemory.part_count} parts condensed`
+                : "Story Memory — not generated"}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
               {storyMemory && (
                 <Button
                   size="small"
@@ -768,228 +632,107 @@ export default function ContinuePage() {
                     e.stopPropagation();
                     handleClearMemory();
                   }}
-                  sx={{ minWidth: 0, px: 1 }}
+                  sx={{ minWidth: 0, px: 1, py: 0 }}
                 >
                   Clear
                 </Button>
               )}
               <Button
                 size="small"
-                variant={storyMemory ? "outlined" : "contained"}
+                variant={storyMemory ? "text" : "outlined"}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleGenerateMemory();
                 }}
                 disabled={memoryLoading}
-                startIcon={
-                  memoryLoading ? <CircularProgress size={14} /> : undefined
-                }
+                sx={{ py: 0 }}
               >
                 {memoryLoading
                   ? "Generating…"
                   : storyMemory
                     ? "Regenerate"
-                    : "Generate Memory"}
+                    : "Generate"}
               </Button>
+              {storyMemory && (
+                <IconButton size="small">
+                  {memoryExpanded ? (
+                    <ExpandLessIcon fontSize="small" />
+                  ) : (
+                    <ExpandMoreIcon fontSize="small" />
+                  )}
+                </IconButton>
+              )}
             </Box>
           </Box>
-          {memoryExpanded && storyMemory && (
+          <Collapse in={memoryExpanded && !!storyMemory}>
             <Box
               sx={{
                 px: 2,
-                pb: 2,
+                pb: 1.5,
                 borderTop: "1px solid",
                 borderColor: "divider",
               }}
             >
               <Typography
-                variant="caption"
-                color="text.secondary"
-                display="block"
-                sx={{ mt: 1, mb: 0.5 }}
-              >
-                Condensed on{" "}
-                {new Date(storyMemory.generated_at).toLocaleString()}
-              </Typography>
-              <Typography
                 variant="body2"
-                sx={{ whiteSpace: "pre-wrap", color: "text.secondary" }}
+                sx={{
+                  whiteSpace: "pre-wrap",
+                  color: "text.secondary",
+                  mt: 1,
+                  fontSize: "0.8rem",
+                }}
               >
-                {storyMemory.content}
+                {storyMemory?.content}
               </Typography>
             </Box>
-          )}
+          </Collapse>
         </Paper>
 
-        {/* Info Alert */}
-        <Alert severity="info" icon={<InfoIcon />} sx={{ mb: 3 }}>
-          <strong>Welcome to AI-First Authoring:</strong> Start with an empty
-          canvas and let AI help you create. Use [ --- note ] markers for
-          in-context instructions. Create characters and locations on the fly.
-          Switch between models to find your perfect creative partner.
-        </Alert>
-
-        {/* Recent Events Summary */}
-        {summaryLoading ? (
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <CircularProgress size={24} />
-              <Typography variant="body1" color="text.secondary">
-                Generating summary of recent events...
-              </Typography>
-            </Box>
-          </Paper>
-        ) : (
-          recentEventsSummary && (
-            <Paper
-              sx={{
-                p: 3,
-                mb: 3,
-                bgcolor: "background.default",
-                border: "1px solid",
-                borderColor: "divider",
-              }}
-            >
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
-                <AutoAwesomeIcon fontSize="small" color="primary" />
-                Recent Events Summary
-              </Typography>
-              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                {recentEventsSummary}
-              </Typography>
-            </Paper>
-          )
-        )}
-
-        <Grid container spacing={3}>
-          {/* Left Column - Main Editor */}
+        <Grid container spacing={2}>
+          {/* ─── Main Column ─── */}
           <Grid item xs={12} lg={8}>
-            {/* Previous Context */}
-            {showPreviousContext && recentParts.length > 0 && (
-              <Accordion sx={{ mb: 3 }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="h6">Recent Story Context</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  {recentParts.map((part) => (
-                    <Box key={part.id} sx={{ mb: 2 }}>
-                      <Typography variant="subtitle2" color="primary">
-                        Part {part.part_number}: {part.title || "Untitled"}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ mt: 1 }}
-                      >
-                        {part.summary || part.content.substring(0, 200) + "..."}
-                      </Typography>
-                    </Box>
-                  ))}
-                </AccordionDetails>
-              </Accordion>
-            )}
-
-            {/* Main Prompt Input */}
-            <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Your Prompt
-              </Typography>
-
-              {/* Model Selector */}
-              <ModelSelector
-                selectedModel={selectedModel}
-                onModelChange={setSelectedModel}
-                disabled={loading}
-              />
-
-              {/* Generation Style Controls - NEW FEATURE */}
-              <Box sx={{ mt: 2, mb: 2 }}>
-                <Typography
-                  variant="subtitle2"
-                  gutterBottom
-                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                >
-                  Generation Style
-                  <Tooltip title="Reword: AI renders your exact narrative intent as prose — no inventions, no extras. AI expands: AI uses your prompt as a starting point and builds naturally from there.">
-                    <InfoIcon fontSize="small" color="action" />
-                  </Tooltip>
-                </Typography>
+            {/* Prompt Card */}
+            <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}>
+              {/* Generation style toggle + character focus — single row */}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  mb: 2,
+                  flexWrap: "wrap",
+                }}
+              >
                 <ToggleButtonGroup
                   value={generationStyle}
                   exclusive
-                  onChange={(e, newValue) => {
-                    if (newValue !== null) {
-                      setGenerationStyle(newValue);
-                    }
-                  }}
+                  onChange={(_, v) => v && setGenerationStyle(v)}
                   disabled={loading}
                   size="small"
-                  sx={{ mb: 2 }}
                 >
-                  <ToggleButton value="strict">Reword my intent</ToggleButton>
+                  <ToggleButton value="strict">
+                    <Tooltip title="AI renders your exact narrative intent as prose — no inventions">
+                      <span>Reword</span>
+                    </Tooltip>
+                  </ToggleButton>
                   <ToggleButton value="creative">
-                    AI expands freely
+                    <Tooltip title="AI uses your prompt as a starting point and expands freely">
+                      <span>Expand</span>
+                    </Tooltip>
                   </ToggleButton>
                 </ToggleButtonGroup>
 
-                <Typography variant="caption" gutterBottom display="block">
-                  Max Tokens: {maxTokens}
-                </Typography>
-                <Slider
-                  value={maxTokens}
-                  onChange={(e, newValue) => setMaxTokens(newValue as number)}
-                  min={100}
-                  max={3000}
-                  step={50}
-                  disabled={loading}
-                  marks={[
-                    { value: 100, label: "100" },
-                    { value: 300, label: "300" },
-                    { value: 500, label: "500" },
-                    { value: 1500, label: "1500" },
-                    { value: 3000, label: "3000" },
-                  ]}
-                  valueLabelDisplay="auto"
-                  sx={{ maxWidth: 400 }}
-                />
-              </Box>
-
-              <TextField
-                fullWidth
-                multiline
-                rows={6}
-                placeholder={
-                  characterFocus
-                    ? `You are playing as ${characterFocus}. Describe what ${characterFocus} does, says, thinks, or experiences next.\n\nThe AI will write it from ${characterFocus}'s POV and portray all other characters based on their saved profiles.\n\nExample: "${characterFocus} walks into the room and notices something feels wrong. She scans the faces around her."`
-                    : generationStyle === "strict"
-                      ? `Describe your narrative intent — what you want to happen next. The AI will render it as story prose without adding anything extra.\n\nExample: "Rhea enters the marketplace for the first time. She is overwhelmed by the noise and smells but tries to appear calm."\n\nUse [ --- note ] for inline instructions.`
-                      : `Describe what should happen next in the story...\n\nUse [ --- ] markers for in-context notes, e.g.:\n[ --- Make this scene intense and emotional ]\nDuke confronts the villain...`
-                }
-                label={
-                  characterFocus
-                    ? `Playing as ${characterFocus}`
-                    : "Your Prompt"
-                }
-                value={userPrompt}
-                onChange={(e) => setUserPrompt(e.target.value)}
-                disabled={loading}
-                InputLabelProps={{ shrink: true }}
-              />
-
-              <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
-                <FormControl sx={{ minWidth: { xs: "100%", sm: 200 } }}>
-                  <InputLabel>Play as Character</InputLabel>
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <InputLabel>Play as</InputLabel>
                   <Select
                     value={characterFocus}
-                    label="Play as Character"
+                    label="Play as"
                     onChange={(e) => setCharacterFocus(e.target.value)}
                     disabled={loading}
                   >
-                    <MenuItem value="">None</MenuItem>
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
                     {characters.map((char) => (
                       <MenuItem key={char.id} value={char.name}>
                         {char.name}
@@ -999,34 +742,103 @@ export default function ContinuePage() {
                 </FormControl>
 
                 <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  sx={{
+                    ml: "auto",
+                    textTransform: "none",
+                    color: "text.secondary",
+                  }}
+                >
+                  {showAdvanced ? "Hide settings" : "Settings"}
+                </Button>
+              </Box>
+
+              {/* Advanced settings (collapsible) */}
+              <Collapse in={showAdvanced}>
+                <Box sx={{ mb: 2, pl: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Max Tokens: {maxTokens}
+                  </Typography>
+                  <Slider
+                    value={maxTokens}
+                    onChange={(_, v) => setMaxTokens(v as number)}
+                    min={100}
+                    max={3000}
+                    step={50}
+                    disabled={loading}
+                    marks={[
+                      { value: 100, label: "100" },
+                      { value: 600, label: "600" },
+                      { value: 1500, label: "1500" },
+                      { value: 3000, label: "3000" },
+                    ]}
+                    valueLabelDisplay="auto"
+                    sx={{ maxWidth: 400 }}
+                  />
+                </Box>
+              </Collapse>
+
+              {/* Prompt text area */}
+              <TextField
+                fullWidth
+                multiline
+                rows={5}
+                placeholder={
+                  characterFocus
+                    ? `Playing as ${characterFocus}. Describe what they do, say, or experience next...`
+                    : generationStyle === "strict"
+                      ? "Describe what happens next — the AI will render it as prose without adding anything extra."
+                      : "Describe what should happen next — the AI will expand on it creatively..."
+                }
+                value={userPrompt}
+                onChange={(e) => setUserPrompt(e.target.value)}
+                disabled={loading}
+                sx={{
+                  "& .MuiInputBase-root": {
+                    fontSize: "0.95rem",
+                    lineHeight: 1.6,
+                  },
+                }}
+              />
+
+              {/* Action buttons */}
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  mt: 2,
+                  alignItems: "center",
+                }}
+              >
+                <Button
                   variant="contained"
-                  size="large"
                   onClick={handleGenerate}
                   disabled={loading || !userPrompt.trim()}
                   startIcon={<AutoAwesomeIcon />}
-                  sx={{ flex: 1, minWidth: { xs: "100%", sm: 160 } }}
+                  sx={{ px: 3 }}
                 >
                   Generate
                 </Button>
-
-                <Tooltip title="Retry generation">
+                <Tooltip title="Retry">
                   <span>
                     <IconButton
-                      onClick={handleRetry}
+                      onClick={handleGenerate}
                       disabled={loading || !userPrompt.trim()}
                       color="primary"
+                      size="small"
                     >
                       <RefreshIcon />
                     </IconButton>
                   </span>
                 </Tooltip>
-
                 <Tooltip title="Clear output">
                   <span>
                     <IconButton
                       onClick={handleClear}
                       disabled={loading || !continuation}
-                      color="secondary"
+                      size="small"
                     >
                       <ClearIcon />
                     </IconButton>
@@ -1034,28 +846,68 @@ export default function ContinuePage() {
                 </Tooltip>
               </Box>
 
-              {/* Prompt Templates */}
-              <Box sx={{ mt: 2 }}>
+              {/* Auto-Continue Section */}
+              <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <RepeatIcon color="action" />
+                  <Typography variant="subtitle2" sx={{ flex: 1 }}>
+                    Auto-Continue
+                  </Typography>
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Chapters"
+                    value={autoContinueCount}
+                    onChange={(e) =>
+                      setAutoContinueCount(
+                        Math.max(1, Math.min(20, Number(e.target.value) || 1)),
+                      )
+                    }
+                    sx={{ width: 100 }}
+                    inputProps={{ min: 1, max: 20 }}
+                    disabled={autoContinueRunning}
+                  />
+                  {autoContinueRunning ? (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<StopIcon />}
+                      onClick={() => setAutoContinueStop(true)}
+                    >
+                      Stop
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outlined"
+                      startIcon={<RepeatIcon />}
+                      onClick={handleAutoContinue}
+                      disabled={loading || !userPrompt.trim()}
+                    >
+                      Auto-Write
+                    </Button>
+                  )}
+                </Box>
+                {autoContinueRunning && (
+                  <Box sx={{ mt: 1 }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={(autoContinueProgress / autoContinueCount) * 100}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      Chapter {autoContinueProgress} of {autoContinueCount}
+                    </Typography>
+                  </Box>
+                )}
                 <Typography
                   variant="caption"
                   color="text.secondary"
-                  gutterBottom
+                  display="block"
+                  sx={{ mt: 0.5 }}
                 >
-                  Quick Templates:
+                  Generates and auto-inserts multiple chapters sequentially
+                  using your prompt as the base direction.
                 </Typography>
-                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 1 }}>
-                  {promptTemplates.map((template, idx) => (
-                    <Chip
-                      key={idx}
-                      label={template.label}
-                      size="small"
-                      onClick={() => setUserPrompt(template.prompt)}
-                      disabled={loading}
-                      clickable
-                    />
-                  ))}
-                </Box>
-              </Box>
+              </Paper>
             </Paper>
 
             {/* Generation Progress */}
@@ -1065,21 +917,20 @@ export default function ContinuePage() {
               contextNotes={contextNotes}
             />
 
-            {/* Errors and Success Messages */}
+            {/* Alerts */}
             {error && (
               <Alert
                 severity="error"
-                sx={{ mb: 3 }}
+                sx={{ mb: 2 }}
                 onClose={() => setError(null)}
               >
                 {error}
               </Alert>
             )}
-
             {success && (
               <Alert
                 severity="success"
-                sx={{ mb: 3 }}
+                sx={{ mb: 2 }}
                 onClose={() => setSuccess(null)}
               >
                 {success}
@@ -1088,68 +939,25 @@ export default function ContinuePage() {
 
             {/* Generated Output */}
             {continuation && (
-              <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    mb: 2,
-                    flexWrap: "wrap",
-                    gap: 1,
-                  }}
-                >
-                  <Typography variant="h6">Generated Continuation</Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<PersonAddIcon />}
-                      onClick={handleExtractEntities}
-                      disabled={loading}
-                      size="small"
-                      color="secondary"
-                    >
-                      Extract Entities
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<SaveIcon />}
-                      onClick={handleSaveDraft}
-                      disabled={loading}
-                      size="small"
-                    >
-                      Save Draft
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<AddIcon />}
-                      onClick={handleInsertIntoStory}
-                      disabled={loading}
-                      size="small"
-                    >
-                      Insert into Story
-                    </Button>
-                  </Box>
-                </Box>
-
-                <Divider sx={{ mb: 2 }} />
-
+              <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}>
                 <Typography
-                  variant="body2"
+                  variant="subtitle2"
                   color="text.secondary"
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 1.5 }}
                 >
-                  Edit the text below as needed:
+                  Generated — edit as needed, then insert into your story:
                 </Typography>
 
                 <TextField
                   fullWidth
                   multiline
-                  minRows={15}
+                  minRows={12}
                   value={continuation}
                   onChange={(e) => setContinuation(e.target.value)}
                   variant="outlined"
                   disabled={loading}
                   sx={{
+                    mb: 2,
                     "& .MuiInputBase-root": {
                       fontFamily: "Georgia, serif",
                       fontSize: "1rem",
@@ -1157,56 +965,152 @@ export default function ContinuePage() {
                     },
                   }}
                 />
-              </Paper>
-            )}
 
-            {/* Feedback Panel - Only show when there's generated content */}
-            {continuation && (
-              <FeedbackPanel
-                onSubmitFeedback={handleRevise}
-                isLoading={loading}
-              />
+                <Divider sx={{ mb: 2 }} />
+
+                {/* Insert controls */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <FormControl size="small" sx={{ minWidth: 150 }}>
+                    <InputLabel>Insert into</InputLabel>
+                    <Select
+                      value={selectedPartNumber}
+                      label="Insert into"
+                      onChange={(e) =>
+                        setSelectedPartNumber(
+                          e.target.value === "new"
+                            ? "new"
+                            : Number(e.target.value),
+                        )
+                      }
+                      disabled={loading}
+                    >
+                      {availableParts.map((num) => (
+                        <MenuItem key={num} value={num}>
+                          Part {num}
+                        </MenuItem>
+                      ))}
+                      <MenuItem value="new">
+                        <em>+ New Part</em>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ flex: 1 }}
+                  >
+                    {selectedPartNumber === "new"
+                      ? "Creates new part, Chapter 1"
+                      : `Adds next chapter to Part ${selectedPartNumber}`}
+                  </Typography>
+
+                  <Button
+                    variant="outlined"
+                    startIcon={
+                      consistencyLoading ? (
+                        <CircularProgress size={16} />
+                      ) : (
+                        <FactCheckIcon />
+                      )
+                    }
+                    onClick={handleConsistencyCheck}
+                    disabled={loading || consistencyLoading}
+                  >
+                    Check Consistency
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleInsertIntoStory}
+                    disabled={loading}
+                  >
+                    Insert into Story
+                  </Button>
+                </Box>
+
+                {/* Consistency Results */}
+                {consistencyResult && (
+                  <Box sx={{ mt: 2 }}>
+                    <Alert
+                      severity={
+                        consistencyResult.issues.length === 0
+                          ? "success"
+                          : "warning"
+                      }
+                      sx={{ mb: 1 }}
+                    >
+                      {consistencyResult.summary}
+                    </Alert>
+                    {consistencyResult.issues.map((issue, i) => (
+                      <Paper key={i} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            mb: 0.5,
+                          }}
+                        >
+                          <Chip
+                            label={issue.type}
+                            size="small"
+                            color={
+                              issue.severity === "high"
+                                ? "error"
+                                : issue.severity === "medium"
+                                  ? "warning"
+                                  : "default"
+                            }
+                          />
+                          <Chip
+                            label={issue.severity}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </Box>
+                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                          {issue.description}
+                        </Typography>
+                        {issue.quote && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ fontStyle: "italic", mb: 0.5 }}
+                          >
+                            &ldquo;{issue.quote}&rdquo;
+                          </Typography>
+                        )}
+                        {issue.suggestion && (
+                          <Typography variant="body2" color="primary">
+                            Suggestion: {issue.suggestion}
+                          </Typography>
+                        )}
+                      </Paper>
+                    ))}
+                  </Box>
+                )}
+              </Paper>
             )}
           </Grid>
 
-          {/* Right Column - Sidebar Tools */}
+          {/* ─── Sidebar ─── */}
           <Grid item xs={12} lg={4}>
-            {/* Entity Manager - Characters */}
             <EntityManager
               characters={characters}
               onCharactersChange={fetchCharacters}
             />
-
-            {/* Location Manager */}
             <LocationManager
               locations={locations}
               onLocationsChange={fetchLocations}
             />
-
-            {/* Side Notes & Tags */}
-            <SideNotesPanel
-              notes={sideNotes}
-              onNotesChange={setSideNotes}
-              tags={tags}
-              onTagsChange={setTags}
-              sceneType={sceneType}
-              onSceneTypeChange={setSceneType}
-            />
-
-            {/* Branching */}
-            <BranchingPanel
-              currentDraftId={currentDraftId}
-              onCreateBranch={handleCreateBranch}
-              isLoading={loading}
-            />
-
-            {/* History */}
-            {currentDraftId && (
-              <HistoryPanel
-                history={history}
-                onRestore={handleRestoreHistory}
-              />
-            )}
           </Grid>
         </Grid>
       </Box>

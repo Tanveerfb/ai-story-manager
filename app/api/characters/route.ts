@@ -13,13 +13,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get("role");
     const id = searchParams.get("id");
+    const worldId = searchParams.get("world_id") || undefined;
 
     if (id) {
       const character = await getCharacterById(id);
       return NextResponse.json(character);
     }
 
-    const characters = await getCharacters(role || undefined);
+    const characters = await getCharacters(role || undefined, worldId);
     return NextResponse.json(characters);
   } catch (error: any) {
     return NextResponse.json(
@@ -37,6 +38,76 @@ export async function POST(request: NextRequest) {
     // Handle extraction from story parts
     if (action === "extract") {
       return await handleExtractFromStory();
+    }
+
+    // Handle adding a relationship between two characters
+    if (action === "add-relationship") {
+      const body = await request.json();
+      const { character_1_id, character_2_id, relationship_type, description } =
+        body;
+
+      if (!character_1_id || !character_2_id) {
+        return NextResponse.json(
+          { error: "Both character IDs are required" },
+          { status: 400 },
+        );
+      }
+
+      // Check if relationship already exists (either direction)
+      const { data: existing } = await supabase
+        .from("relationships")
+        .select("id")
+        .or(
+          `and(character_1_id.eq.${character_1_id},character_2_id.eq.${character_2_id}),and(character_1_id.eq.${character_2_id},character_2_id.eq.${character_1_id})`,
+        )
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        // Update existing relationship if new description is longer
+        const { data, error } = await supabase
+          .from("relationships")
+          .update({
+            relationship_type: relationship_type || undefined,
+            description: description || undefined,
+          })
+          .eq("id", existing[0].id)
+          .select()
+          .single();
+        if (error) throw error;
+        return NextResponse.json(data);
+      }
+
+      const { data, error } = await supabase
+        .from("relationships")
+        .insert({
+          character_1_id,
+          character_2_id,
+          relationship_type: relationship_type || "unknown",
+          description: description || "",
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return NextResponse.json(data);
+    }
+
+    // Handle deleting a relationship
+    if (action === "delete-relationship") {
+      const { searchParams: sp } = new URL(request.url);
+      const relId = sp.get("id");
+      if (!relId) {
+        return NextResponse.json(
+          { error: "Relationship ID is required" },
+          { status: 400 },
+        );
+      }
+      const { error } = await supabase
+        .from("relationships")
+        .delete()
+        .eq("id", relId);
+      if (error) throw error;
+      return NextResponse.json({ success: true });
     }
 
     // Normal character creation

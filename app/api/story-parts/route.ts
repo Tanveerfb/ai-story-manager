@@ -7,8 +7,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
     const limit = searchParams.get("limit");
+    const worldId = searchParams.get("world_id") || undefined;
 
-    const parts = await getStoryParts();
+    const parts = await getStoryParts(undefined, worldId);
+
+    // Return list of distinct part numbers for the Part selector dropdown
+    if (action === "list-parts") {
+      const partNumbers = [
+        ...new Set(parts.map((p: any) => p.part_number)),
+      ].sort((a, b) => a - b);
+      return NextResponse.json({ partNumbers });
+    }
 
     // If action is summarize, generate a summary of recent parts
     if (action === "summarize") {
@@ -23,7 +32,10 @@ export async function GET(request: NextRequest) {
 
       // Combine recent parts content for summarization
       const combinedContent = recentParts
-        .map((part: any) => `Part ${part.part_number}: ${part.content}`)
+        .map(
+          (part: any) =>
+            `Part ${part.part_number} Ch ${part.chapter_number || 1}: ${part.content}`,
+        )
         .join("\n\n");
 
       const summary = await generateStorySummary(combinedContent);

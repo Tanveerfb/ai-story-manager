@@ -5,7 +5,9 @@ import { extractEntities } from "@/lib/ollama";
 
 export async function GET(request: NextRequest) {
   try {
-    const locations = await getLocations();
+    const { searchParams } = new URL(request.url);
+    const worldId = searchParams.get("world_id") || undefined;
+    const locations = await getLocations(worldId);
     return NextResponse.json(locations);
   } catch (error: any) {
     return NextResponse.json(

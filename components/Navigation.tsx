@@ -13,6 +13,8 @@ import {
   AppBar,
   Box,
   Typography,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import HomeIcon from "@mui/icons-material/Home";
@@ -28,8 +30,14 @@ import Brightness7Icon from "@mui/icons-material/Brightness7";
 import MergeTypeIcon from "@mui/icons-material/MergeType";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
 import MovieFilterIcon from "@mui/icons-material/MovieFilter";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import SearchIcon from "@mui/icons-material/Search";
+import ViewKanbanIcon from "@mui/icons-material/ViewKanban";
+import PublicIcon from "@mui/icons-material/Public";
+import ShowChartIcon from "@mui/icons-material/ShowChart";
 import { useRouter } from "next/navigation";
 import { useThemeMode } from "./ThemeProvider";
+import { useWorld } from "./WorldProvider";
 
 const drawerWidth = 240;
 
@@ -43,7 +51,11 @@ const menuItems = [
   { text: "Characters", icon: <PeopleIcon />, path: "/characters" },
   { text: "Locations", icon: <PlaceIcon />, path: "/locations" },
   { text: "Story Viewer", icon: <MenuBookIcon />, path: "/story" },
+  { text: "Scene Planner", icon: <ViewKanbanIcon />, path: "/scenes" },
+  { text: "Character Arcs", icon: <ShowChartIcon />, path: "/arcs" },
   { text: "Timeline", icon: <TimelineIcon />, path: "/timeline" },
+  { text: "Search", icon: <SearchIcon />, path: "/search" },
+  { text: "Statistics", icon: <BarChartIcon />, path: "/stats" },
   { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
 ];
 
@@ -55,6 +67,7 @@ export default function Navigation({
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const { mode, toggleTheme } = useThemeMode();
+  const { worldId, worldName, worlds, switchWorld } = useWorld();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -72,6 +85,32 @@ export default function Navigation({
           AI Authoring Suite
         </Typography>
       </Toolbar>
+      {/* World Selector */}
+      {worlds.length > 0 && (
+        <Box sx={{ px: 2, pb: 1 }}>
+          <Box
+            sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}
+          >
+            <PublicIcon fontSize="small" color="primary" />
+            <Typography variant="caption" color="text.secondary">
+              Story World
+            </Typography>
+          </Box>
+          <Select
+            fullWidth
+            size="small"
+            value={worldId || ""}
+            onChange={(e) => switchWorld(e.target.value)}
+            sx={{ fontSize: "0.85rem" }}
+          >
+            {worlds.map((w) => (
+              <MenuItem key={w.id} value={w.id}>
+                {w.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </Box>
+      )}
       <List>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>

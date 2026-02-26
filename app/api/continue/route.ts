@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
       model, // Add model parameter for AI model selection
       generationStyle, // Add generation style parameter ('strict' or 'creative')
       maxTokens, // Add max tokens parameter for generation control
+      worldId, // World filter
     } = await request.json();
 
     // Handle different actions
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
           model,
           generationStyle,
           maxTokens,
+          worldId,
         );
 
       case "revise":
@@ -135,6 +137,7 @@ export async function POST(request: NextRequest) {
           model,
           generationStyle,
           maxTokens,
+          worldId,
         );
     }
   } catch (error: any) {
@@ -154,6 +157,7 @@ async function generateContinuation(
   model?: string,
   generationStyle: "strict" | "creative" = DEFAULT_GENERATION_STYLE,
   maxTokens: number = DEFAULT_MAX_TOKENS,
+  worldId?: string,
 ): Promise<{ continuation: string; contextNotes: string[] }> {
   if (!userPrompt) {
     throw new Error("User prompt is required");
@@ -163,7 +167,7 @@ async function generateContinuation(
   const { cleanPrompt, contextNotes } = parseContextMarkers(userPrompt);
 
   // Fetch ALL story parts — smart selection based on count
-  const allParts = await getStoryParts();
+  const allParts = await getStoryParts(undefined, worldId);
 
   // Fetch AI story memory (condensed summary of older parts)
   const { data: memoryRow } = await supabase
@@ -189,7 +193,7 @@ async function generateContinuation(
   }
 
   // Fetch all characters with full profiles
-  const characters = await getCharacters();
+  const characters = await getCharacters(undefined, worldId);
 
   // Fetch relationships
   const { data: relationships } = await supabase
@@ -231,6 +235,12 @@ async function generateContinuation(
         lines.push(`Behavior/Reactions: ${playedChar.behavior_notes}`);
       if (playedChar.speech_patterns)
         lines.push(`Speech Style: ${playedChar.speech_patterns}`);
+      if (playedChar.dialogue_style)
+        lines.push(`Dialogue Style: ${playedChar.dialogue_style}`);
+      if (playedChar.vocabulary_level)
+        lines.push(`Vocabulary: ${playedChar.vocabulary_level}`);
+      if (playedChar.catchphrases?.length)
+        lines.push(`Catchphrases: ${playedChar.catchphrases.join(", ")}`);
       if (playedChar.fears) lines.push(`Fears: ${playedChar.fears}`);
       if (playedChar.motivations)
         lines.push(`Motivations: ${playedChar.motivations}`);
@@ -251,6 +261,12 @@ async function generateContinuation(
           if (c.personality) parts.push(`  Personality: ${c.personality}`);
           if (c.behavior_notes) parts.push(`  Behavior: ${c.behavior_notes}`);
           if (c.speech_patterns) parts.push(`  Speech: ${c.speech_patterns}`);
+          if (c.dialogue_style)
+            parts.push(`  Dialogue Style: ${c.dialogue_style}`);
+          if (c.vocabulary_level)
+            parts.push(`  Vocabulary: ${c.vocabulary_level}`);
+          if (c.catchphrases?.length)
+            parts.push(`  Catchphrases: ${c.catchphrases.join(", ")}`);
           return parts.join("\n");
         })
         .join("\n\n");
@@ -283,6 +299,7 @@ async function handleGenerate(
   model?: string,
   generationStyle: "strict" | "creative" = DEFAULT_GENERATION_STYLE,
   maxTokens: number = DEFAULT_MAX_TOKENS,
+  worldId?: string,
 ) {
   try {
     const result = await generateContinuation(
@@ -292,6 +309,7 @@ async function handleGenerate(
       model,
       generationStyle,
       maxTokens,
+      worldId,
     );
     return NextResponse.json({
       ...result,

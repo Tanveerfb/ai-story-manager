@@ -291,33 +291,37 @@ ${otherCharacterProfiles}
   const sceneType = isOpening ? "opening scene" : "next scene";
 
   if (generationStyle === "strict") {
-    // STRICT = prose reword. The author's words are the entire truth of the scene.
-    // The AI's job is a skilled editor: improve the wording, not add to the story.
-    system = `You are a prose editor. Your only job is to take the author's exact words and rewrite them as polished, immersive narrative prose.
+    // STRICT = prose reword. The author's prompt is directions for the next segment.
+    // The AI elaborates it into polished prose — never adds content or wraps up.
+    system = `You are a prose ghostwriter for an ongoing story. The author gives you directions for what happens next. Your job is to turn those directions into polished, immersive narrative prose.
 
 HARD RULES — no exceptions:
-1. ONLY what the author wrote exists. Every character, event, and detail must come directly from their text.
-2. Do NOT invent plot, situations, conflicts, or events the author did not write.
-3. Do NOT introduce any character not named in the author's text or the story context.
-4. Do NOT resolve, advance, or extend the story beyond what the author described.
-5. Do NOT add backstory, speculation about the future, or off-page events.
-6. Rewrite in close third-person prose. Stay grounded in the moment the author described.
-7. Aim for approximately ${strictWordBudget} words — complete your sentences, but do not pad.${povBlock}${otherCharsBlock}${
+1. ONLY what the author wrote exists. Every character, action, and detail must come from their directions.
+2. Do NOT invent plot, situations, conflicts, dialogue, or events the author did not describe.
+3. Do NOT introduce any character not named in the author's directions or the story context.
+4. Do NOT resolve, conclude, or wrap up anything. The story continues after your output — you are writing the MIDDLE, never an ending.
+5. Do NOT recap, summarize, or reference previous story parts. The reader already read them. Start directly in the new moment.
+6. Do NOT add backstory, reflection on past events, or speculation about the future.
+7. Write in close third-person prose. Stay grounded in the present moment the author described.
+8. Aim for approximately ${strictWordBudget} words — complete your sentences, but do not pad.
+9. Your output is ONE segment of a longer narrative. End mid-flow if needed — the next prompt will pick up where you stop.${povBlock}${otherCharsBlock}${
       UNRESTRICTED_MODE
         ? `\n\nCONTENT: Write what the author directs, in full. Never fade to black, skip, soften, or imply anything the author wrote explicitly. No warnings.`
         : ""
     }`;
   } else {
-    // CREATIVE = scene writer with full freedom to expand.
-    system = `You are a novel/manga scene writer continuing a story with creative freedom.
-Use the character and story context provided. Expand naturally from the author's direction.
+    // CREATIVE = elaboration with freedom to add atmosphere and detail, but still no conclusions.
+    system = `You are a ghostwriter continuing an ongoing story. The author gives you directions for the next segment. Elaborate and expand their directions into rich, immersive prose.
 
 PROSE RULES:
-- Write an actual ${sceneType} in the present moment. NOT a summary or synopsis.
-- Use close third-person or first-person. The reader should be INSIDE the scene.
-- Write in sensory, grounded prose: what is seen, heard, felt right now.
-- BANNED PHRASES: "as the story unfolded", "as the tale began", "would become", "in the end", "the final chapter", "her story would be", "it became clear that". These are synopsis language — forbidden.
-- Aim for approximately ${wordBudget} words.${isOpening ? "\n- This is the FIRST scene. Introduce the character through action or sensation, not narrator biography." : ""}${povBlock}${otherCharsBlock}${
+- Write the next segment of a continuous narrative. This is NOT a standalone story — it has no beginning and no ending.
+- Start directly in the action. Do NOT open with a recap, summary, or reference to what happened before.
+- Use close third-person or first-person. The reader should be INSIDE the moment.
+- Write in sensory, grounded prose: what is seen, heard, felt, said right now.
+- NEVER conclude, resolve, or wrap up. Your output ends mid-narrative — the next prompt picks up where you stop.
+- Do NOT add moral lessons, reflections on the journey, or any sense of finality.
+- BANNED PHRASES: "as the story unfolded", "as the tale began", "would become", "in the end", "the final chapter", "her story would be", "it became clear that", "little did they know", "and so", "from that day on", "as the day came to a close". These signal endings or synopsis — forbidden.
+- Aim for approximately ${wordBudget} words.${isOpening ? "\n- This is the FIRST segment. Drop the reader into the moment through action or sensation, not narrator summary." : ""}${povBlock}${otherCharsBlock}${
       UNRESTRICTED_MODE
         ? `\n\nCONTENT: Write what the author directs, in full. Never fade to black, skip, or soften a scene. No warnings.`
         : ""
@@ -326,12 +330,12 @@ PROSE RULES:
 
   const sceneLabel =
     generationStyle === "strict"
-      ? "REWORD AS PROSE — use only what is written below, nothing else"
+      ? "AUTHOR'S DIRECTIONS (rewrite as prose — do not add anything, do not recap previous parts)"
       : isOpening
-        ? "OPENING SCENE — expand into Chapter 1"
-        : "STORY DIRECTION — continue creatively";
+        ? "AUTHOR'S DIRECTIONS FOR THE OPENING (elaborate into prose — no recap, no conclusion)"
+        : "AUTHOR'S DIRECTIONS FOR THE NEXT SEGMENT (elaborate into prose — no recap, no conclusion)";
 
-  const prompt = `${context ? `Story Context:\n${context}\n\n` : ""}${sceneLabel}:\n${userPrompt}`;
+  const prompt = `${context ? `${context}\n\n` : ""}${sceneLabel}:\n${userPrompt}`;
 
   try {
     const response = await generateText({

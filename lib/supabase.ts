@@ -20,15 +20,15 @@ export const supabase = createClient(
 
 // Helper functions for common queries
 
-export async function getStoryParts(limit?: number) {
-  const query = supabase
+export async function getStoryParts(limit?: number, worldId?: string) {
+  let query = supabase
     .from("story_parts")
     .select("*")
-    .order("part_number", { ascending: true });
+    .order("part_number", { ascending: true })
+    .order("chapter_number", { ascending: true });
 
-  if (limit) {
-    query.limit(limit);
-  }
+  if (worldId) query = query.eq("world_id", worldId);
+  if (limit) query = query.limit(limit);
 
   const { data, error } = await query;
 
@@ -36,15 +36,14 @@ export async function getStoryParts(limit?: number) {
   return data;
 }
 
-export async function getCharacters(roleFilter?: string) {
+export async function getCharacters(roleFilter?: string, worldId?: string) {
   let query = supabase
     .from("characters")
     .select("*")
     .order("name", { ascending: true });
 
-  if (roleFilter) {
-    query = query.eq("role", roleFilter);
-  }
+  if (roleFilter) query = query.eq("role", roleFilter);
+  if (worldId) query = query.eq("world_id", worldId);
 
   const { data, error } = await query;
 
@@ -58,22 +57,43 @@ export async function getCharacterById(id: string) {
     .select(
       `
       *,
-      character_traits (*),
-      relationships:relationships!character_1_id (*)
+      character_traits (*)
     `,
     )
     .eq("id", id)
     .single();
 
   if (error) throw error;
-  return data;
+
+  // Fetch relationships in both directions
+  const { data: rels1 } = await supabase
+    .from("relationships")
+    .select("*")
+    .eq("character_1_id", id);
+
+  const { data: rels2 } = await supabase
+    .from("relationships")
+    .select("*")
+    .eq("character_2_id", id);
+
+  // Deduplicate by id
+  const relMap = new Map<string, any>();
+  for (const r of [...(rels1 || []), ...(rels2 || [])]) {
+    relMap.set(r.id, r);
+  }
+
+  return { ...data, relationships: Array.from(relMap.values()) };
 }
 
-export async function getLocations() {
-  const { data, error } = await supabase
+export async function getLocations(worldId?: string) {
+  let query = supabase
     .from("locations")
     .select("*")
     .order("name", { ascending: true });
+
+  if (worldId) query = query.eq("world_id", worldId);
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data;
@@ -106,6 +126,7 @@ export async function getEvents(filters?: {
 
 export async function insertStoryPart(storyPart: {
   part_number: number;
+  chapter_number?: number;
   title?: string;
   content: string;
   word_count?: number;
