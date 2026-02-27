@@ -396,7 +396,8 @@ export default function StatsPage() {
                   alignItems: "flex-end",
                   gap: 4,
                   height: 120,
-                  overflow: "auto",
+                  overflowX: "auto",
+                  WebkitOverflowScrolling: "touch",
                 }}
               >
                 {timeline.map((t) => {

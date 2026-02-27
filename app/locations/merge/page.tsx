@@ -14,7 +14,6 @@ import {
   Tag,
   Checkbox,
   Tabs,
-  List,
   theme as antdTheme,
 } from "antd";
 import { DeleteOutlined, MergeCellsOutlined } from "@ant-design/icons";
@@ -434,17 +433,31 @@ export default function LocationsMergePage() {
                       Possible Duplicates (
                       {(group.similarityScore * 100).toFixed(0)}% similar)
                     </Title>
-                    <List
-                      dataSource={group.locations}
-                      renderItem={(loc) => (
-                        <List.Item key={loc.id}>
-                          <List.Item.Meta
-                            title={loc.name}
-                            description={loc.description}
-                          />
-                        </List.Item>
-                      )}
-                    />
+                    <div style={{ margin: "12px 0" }}>
+                      {group.locations.map((loc) => (
+                        <div
+                          key={loc.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            padding: "10px 0",
+                            borderBottom: "1px solid rgba(0,0,0,0.06)",
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <Text strong style={{ display: "block" }}>
+                              {loc.name}
+                            </Text>
+                            {loc.description && (
+                              <Text type="secondary" style={{ fontSize: 13 }}>
+                                {loc.description}
+                              </Text>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                     <Button
                       type="primary"
                       onClick={() => handleSelectSuggestedGroup(group)}

@@ -389,7 +389,7 @@ export default function CharacterDetailPage() {
                   addTrait(traits, setTraits, newTrait, () => setNewTrait(""));
                 }
               }}
-              style={{ width: 200 }}
+              style={{ flex: 1, minWidth: 0, maxWidth: 200 }}
             />
             <Button
               size="small"
@@ -446,7 +446,7 @@ export default function CharacterDetailPage() {
                   );
                 }
               }}
-              style={{ width: 200 }}
+              style={{ flex: 1, minWidth: 0, maxWidth: 200 }}
             />
             <Button
               size="small"
@@ -703,9 +703,16 @@ export default function CharacterDetailPage() {
 
         {/* Header card */}
         <Card style={{ marginBottom: 24 }}>
-          <Row gutter={16}>
-            <Col flex="none">
-              <div style={{ position: "relative", display: "inline-block" }}>
+          <Row gutter={[16, 16]} align="top" wrap>
+            <Col xs={24} sm={6} md={5} lg={4}>
+              <div
+                style={{
+                  position: "relative",
+                  display: "inline-block",
+                  textAlign: "center",
+                  width: "100%",
+                }}
+              >
                 <Avatar
                   src={character.avatar_url}
                   alt={character.name}
@@ -716,7 +723,7 @@ export default function CharacterDetailPage() {
                 </Avatar>
               </div>
             </Col>
-            <Col flex="auto">
+            <Col xs={24} sm={18} md={19} lg={20}>
               <Title level={3} style={{ marginTop: 0 }}>
                 {character.name}
               </Title>

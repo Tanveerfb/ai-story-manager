@@ -85,3 +85,45 @@ html.dark .ant-card {
     display: none !important;
   }
 }
+
+/* Mobile-responsive overrides */
+@media (max-width: 576px) {
+  /* Reduce card padding on small screens */
+  .ant-card-body {
+    padding: 12px !important;
+  }
+
+  /* Table horizontal scroll */
+  .ant-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modal full width on mobile */
+  .ant-modal {
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px auto !important;
+  }
+
+  /* Tabs scroll on mobile */
+  .ant-tabs-nav {
+    margin-bottom: 0 !important;
+  }
+
+  .ant-tabs-tab {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+
+  /* Segmented control compact */
+  .ant-segmented-item-label {
+    padding: 0 8px !important;
+    min-height: 28px !important;
+    line-height: 28px !important;
+  }
+
+  /* Collapse panel padding */
+  .ant-collapse-content-box {
+    padding: 8px !important;
+  }
+}

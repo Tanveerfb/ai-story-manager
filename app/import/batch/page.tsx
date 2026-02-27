@@ -7,7 +7,6 @@ import {
   Alert,
   Card,
   Checkbox,
-  List,
   Tag,
   InputNumber,
   Progress,
@@ -243,48 +242,52 @@ export default function BatchImportPage() {
                 </div>
               )}
 
-              <List
-                dataSource={files}
-                renderItem={(fileWithStatus, index) => (
-                  <List.Item
-                    actions={
-                      !loading
-                        ? [
-                            <Button
-                              key="delete"
-                              type="text"
-                              danger
-                              icon={<DeleteOutlined />}
-                              onClick={() => removeFile(index)}
-                            />,
-                          ]
-                        : undefined
-                    }
+              <div>
+                {files.map((fileWithStatus, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "12px 16px",
+                      borderBottom: "1px solid rgba(0,0,0,0.06)",
+                    }}
                   >
-                    <List.Item.Meta
-                      avatar={getStatusIcon(fileWithStatus.status)}
-                      title={fileWithStatus.file.name}
-                      description={
-                        <>
-                          Part {startingPartNumber + index}
-                          {fileWithStatus.error && (
-                            <Text type="danger" style={{ display: "block" }}>
-                              Error: {fileWithStatus.error}
-                            </Text>
-                          )}
-                          {fileWithStatus.extracted && (
-                            <Text type="secondary" style={{ display: "block" }}>
-                              Extracted: {fileWithStatus.extracted.characters}{" "}
-                              chars, {fileWithStatus.extracted.locations} locs,{" "}
-                              {fileWithStatus.extracted.events} events
-                            </Text>
-                          )}
-                        </>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
+                    <div style={{ flexShrink: 0 }}>
+                      {getStatusIcon(fileWithStatus.status)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Text strong style={{ display: "block" }}>
+                        {fileWithStatus.file.name}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 13 }}>
+                        Part {startingPartNumber + index}
+                        {fileWithStatus.error && (
+                          <Text type="danger" style={{ display: "block" }}>
+                            Error: {fileWithStatus.error}
+                          </Text>
+                        )}
+                        {fileWithStatus.extracted && (
+                          <Text type="secondary" style={{ display: "block" }}>
+                            Extracted: {fileWithStatus.extracted.characters}{" "}
+                            chars, {fileWithStatus.extracted.locations} locs,{" "}
+                            {fileWithStatus.extracted.events} events
+                          </Text>
+                        )}
+                      </Text>
+                    </div>
+                    {!loading && (
+                      <Button
+                        type="text"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => removeFile(index)}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
             </Card>
           )}
 

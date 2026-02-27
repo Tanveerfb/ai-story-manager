@@ -6,7 +6,6 @@ import {
   Typography,
   Input,
   Button,
-  List,
   Tag,
   Modal,
   Tooltip,
@@ -195,46 +194,55 @@ export default function LocationManager({
           No locations yet. Create your first location to get started!
         </Text>
       ) : (
-        <List
-          size="small"
-          dataSource={locations.slice(0, 5)}
-          renderItem={(location) => (
-            <List.Item
+        <div>
+          {locations.slice(0, 5).map((location) => (
+            <div
               key={location.id}
-              actions={[
-                <Tooltip title="Edit location" key="edit">
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => handleOpenEdit(location)}
-                  />
-                </Tooltip>,
-                <Tooltip title="Delete location" key="delete">
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    onClick={() => handleDeleteLocation(location.id)}
-                  />
-                </Tooltip>,
-              ]}
-              style={{ borderBottom: `1px solid ${sc.border}` }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 0",
+                borderBottom: `1px solid ${sc.border}`,
+              }}
             >
-              <List.Item.Meta
-                title={
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
-                  >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Text strong style={{ fontSize: 14 }}>
                     {location.name}
-                    {location.type && <Tag>{location.type}</Tag>}
-                  </div>
-                }
-                description={location.description || "No description"}
-              />
-            </List.Item>
-          )}
-        />
+                  </Text>
+                  {location.type && <Tag>{location.type}</Tag>}
+                </div>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  {location.description || "No description"}
+                </Text>
+              </div>
+              <Tooltip title="Edit location">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => handleOpenEdit(location)}
+                />
+              </Tooltip>
+              <Tooltip title="Delete location">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleDeleteLocation(location.id)}
+                />
+              </Tooltip>
+            </div>
+          ))}
+        </div>
       )}
 
       {locations.length > 5 && (

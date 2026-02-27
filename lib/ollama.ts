@@ -188,6 +188,258 @@ Ignore generic pronouns: you, she, he, I, me, they, boyfriend, girlfriend, narra
   }
 }
 
+/**
+ * Extract detailed character profiles from story text.
+ * Designed for the "Extract from Story Parts" feature.
+ * Returns ALL character fields the DB supports.
+ */
+export async function extractCharacterProfiles(
+  text: string,
+  existingCharacterNames: string[] = [],
+): Promise<any[]> {
+  const existingList =
+    existingCharacterNames.length > 0
+      ? `\nKNOWN CHARACTERS ALREADY IN DATABASE (update these if they appear): ${existingCharacterNames.join(", ")}`
+      : "";
+
+  const system = `You are a strict literary analyst. Extract EVERY named character from this story text.
+You must ONLY report details that are EXPLICITLY stated or directly shown in the text. DO NOT invent, assume, or fill in gaps.
+
+CRITICAL RULES:
+- Extract ALL named characters. Even if a character only appears once, include them.
+- A character is anyone with a proper name (capitalized). E.g. "Aria", "Jason", "Dr. Wells".
+- ONLY include details that are DIRECTLY stated, described, or clearly shown through dialogue/action in the text.
+- If a physical trait is NOT described in the text, do NOT guess it. Leave the field as null or empty.
+- If personality is not clearly demonstrated, leave it null. Do NOT invent personality traits.
+- If background, goals, fears, or motivations are not mentioned or clearly implied by the text, set them to null.
+- Use EXACT quotes or close paraphrases from the text when filling in description and behavior_notes.
+- For speech_patterns and dialogue_style, ONLY fill these if the character actually speaks in the text.
+- Catchphrases must be actual repeated phrases from dialogue, not invented ones.
+- It is BETTER to leave a field null than to make something up. Accuracy is more important than completeness.
+- Do NOT project common tropes or archetypes onto characters. Only report what the text says.${existingList}
+
+Ignore generic references: you, she, he, I, narrator, boyfriend, girlfriend, babe, baby, etc.${
+    UNRESTRICTED_MODE
+      ? `\nExtract all character details accurately, including mature or sensitive content without filtering.`
+      : ""
+  }
+
+Return ONLY valid JSON array. Use null for any field where the text does NOT provide clear evidence:
+[
+  {
+    "name": "CharacterName",
+    "role": "main|side|minor|bg",
+    "personality": "ONLY if clearly demonstrated in text, otherwise null",
+    "traits": ["ONLY traits shown through actions/text, not assumed"],
+    "physical_traits": ["ONLY appearance details explicitly described in text"],
+    "description": "physical appearance ONLY as described in text, otherwise null",
+    "background": "backstory ONLY if revealed in text, otherwise null",
+    "goals": "ONLY if stated or clearly shown, otherwise null",
+    "behavior_notes": "ONLY reactions/behaviors actually shown in text, otherwise null",
+    "speech_patterns": "ONLY if character speaks in text, otherwise null",
+    "fears": "ONLY if stated or clearly shown, otherwise null",
+    "motivations": "ONLY if stated or clearly shown, otherwise null",
+    "arc_notes": "development shown in THIS text, otherwise null",
+    "dialogue_style": "ONLY if character speaks in text, otherwise null",
+    "vocabulary_level": "ONLY if character speaks enough to determine, otherwise null",
+    "catchphrases": ["ONLY actual repeated quotes from dialogue"]
+  }
+]`;
+
+  // Use more of the text by sending up to 5000 chars
+  const textToAnalyze = text.substring(0, 5000);
+
+  const prompt = `Extract ALL named characters from this story text. ONLY include details that are EXPLICITLY written in the text — do NOT invent or assume anything:\n\n${textToAnalyze}\n\nJSON array of characters (use null for fields not supported by the text):`;
+
+  try {
+    const response = await generateText({
+      prompt,
+      system,
+      format: "json",
+      num_ctx: Math.max(NUM_CTX, 4096),
+      temperature: 0.2,
+      num_predict: 2000,
+    });
+
+    console.log(
+      "🤖 Character extraction raw response length:",
+      response.length,
+    );
+    console.log(
+      "🤖 Character extraction raw response (first 1000):",
+      response.substring(0, 1000),
+    );
+
+    let parsed: any = null;
+
+    // Try direct JSON parse first
+    try {
+      parsed = JSON.parse(response);
+    } catch (parseErr) {
+      console.warn(
+        "⚠️ Direct JSON parse failed, trying to extract JSON from response...",
+      );
+      // Try to find JSON array or object in the response text
+      const arrayMatch = response.match(/\[[\s\S]*\]/);
+      const objectMatch = response.match(/\{[\s\S]*\}/);
+
+      if (arrayMatch) {
+        try {
+          parsed = JSON.parse(arrayMatch[0]);
+        } catch {
+          console.warn("⚠️ Array extraction parse also failed");
+        }
+      }
+
+      if (!parsed && objectMatch) {
+        try {
+          parsed = JSON.parse(objectMatch[0]);
+        } catch {
+          console.warn("⚠️ Object extraction parse also failed");
+        }
+      }
+
+      if (!parsed) {
+        console.error(
+          "❌ Could not parse any JSON from response:",
+          response.substring(0, 500),
+        );
+        return [];
+      }
+    }
+
+    // Handle if AI wraps the array in an object
+    if (parsed && !Array.isArray(parsed)) {
+      // FIRST: check if this is a single character object (has a "name" property)
+      // This must come before the generic array finder, because a character
+      // object has array fields like "traits" that would be incorrectly picked up.
+      if (parsed.name && typeof parsed.name === "string") {
+        console.log(
+          "📦 AI returned single character object, wrapping in array",
+        );
+        parsed = [parsed];
+      } else {
+        // Try common wrapper keys that contain character arrays
+        const arrayKeys = [
+          "characters",
+          "results",
+          "data",
+          "people",
+          "profiles",
+        ];
+        for (const key of arrayKeys) {
+          if (parsed[key] && Array.isArray(parsed[key])) {
+            parsed = parsed[key];
+            break;
+          }
+        }
+        // Fallback: find any array property whose elements look like character objects
+        if (!Array.isArray(parsed)) {
+          const keys = Object.keys(parsed);
+          for (const key of keys) {
+            if (
+              Array.isArray(parsed[key]) &&
+              parsed[key].length > 0 &&
+              typeof parsed[key][0] === "object" &&
+              parsed[key][0] !== null &&
+              parsed[key][0].name
+            ) {
+              parsed = parsed[key];
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (!Array.isArray(parsed)) {
+      console.error(
+        "❌ Expected array but got:",
+        typeof parsed,
+        JSON.stringify(parsed).substring(0, 300),
+      );
+      return [];
+    }
+
+    console.log(`✅ Parsed ${parsed.length} characters from AI response`);
+
+    const EXCLUDE = [
+      "you",
+      "your",
+      "yours",
+      "i",
+      "me",
+      "my",
+      "mine",
+      "myself",
+      "he",
+      "him",
+      "his",
+      "she",
+      "her",
+      "hers",
+      "they",
+      "them",
+      "their",
+      "we",
+      "us",
+      "our",
+      "narrator",
+      "boyfriend",
+      "girlfriend",
+      "lover",
+      "partner",
+      "friend",
+      "stranger",
+      "babe",
+      "baby",
+      "darling",
+      "sweetheart",
+      "honey",
+      "chatgpt",
+      "gpt",
+      "ai",
+    ];
+
+    return parsed
+      .filter((char: any) => {
+        const name = (char.name || "").toLowerCase().trim();
+        return name.length > 1 && !EXCLUDE.includes(name);
+      })
+      .map((char: any) => ({
+        name: char.name?.trim() || "Unknown",
+        role: char.role?.trim() || "side",
+        personality:
+          typeof char.personality === "string" ? char.personality.trim() : null,
+        traits: Array.isArray(char.traits)
+          ? char.traits.map((t: any) => String(t).trim()).filter(Boolean)
+          : [],
+        physical_traits: Array.isArray(char.physical_traits)
+          ? char.physical_traits
+              .map((t: any) => String(t).trim())
+              .filter(Boolean)
+          : [],
+        description: char.description?.trim() || null,
+        background: char.background?.trim() || null,
+        goals: char.goals?.trim() || null,
+        behavior_notes: char.behavior_notes?.trim() || null,
+        speech_patterns: char.speech_patterns?.trim() || null,
+        fears: char.fears?.trim() || null,
+        motivations: char.motivations?.trim() || null,
+        arc_notes: char.arc_notes?.trim() || null,
+        dialogue_style: char.dialogue_style?.trim() || null,
+        vocabulary_level: char.vocabulary_level?.trim() || null,
+        catchphrases: Array.isArray(char.catchphrases)
+          ? char.catchphrases.map((c: any) => String(c).trim()).filter(Boolean)
+          : [],
+      }));
+  } catch (error: any) {
+    console.error("❌ Character profile extraction error:", error.message);
+    console.error("❌ Stack:", error.stack);
+    return [];
+  }
+}
+
 export async function generateStorySummary(text: string): Promise<string> {
   const system = `Create a 2 paragraph summary covering main characters, plot, and themes.`;
 
@@ -249,6 +501,7 @@ export async function continueStory(
   maxTokens: number = 300,
   playAsCharacterProfile?: string | null,
   otherCharacterProfiles?: string | null,
+  temperature?: number | null,
 ): Promise<string> {
   const wordBudget = Math.round(maxTokens / 1.3);
 
@@ -342,7 +595,7 @@ PROSE RULES:
       prompt,
       system,
       num_ctx: NUM_CTX,
-      temperature: generationStyle === "strict" ? 0.45 : 0.82,
+      temperature: temperature ?? (generationStyle === "strict" ? 0.45 : 0.82),
       num_predict: maxTokens,
       model,
     });

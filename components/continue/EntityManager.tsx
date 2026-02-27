@@ -6,7 +6,6 @@ import {
   Typography,
   Input,
   Button,
-  List,
   Tag,
   Modal,
   Tooltip,
@@ -216,46 +215,55 @@ export default function EntityManager({
           No characters yet. Create your first character to get started!
         </Text>
       ) : (
-        <List
-          size="small"
-          dataSource={characters.slice(0, 5)}
-          renderItem={(character) => (
-            <List.Item
+        <div>
+          {characters.slice(0, 5).map((character) => (
+            <div
               key={character.id}
-              actions={[
-                <Tooltip title="Edit character" key="edit">
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => handleOpenEdit(character)}
-                  />
-                </Tooltip>,
-                <Tooltip title="Delete character" key="delete">
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    onClick={() => handleDeleteCharacter(character.id)}
-                  />
-                </Tooltip>,
-              ]}
-              style={{ borderBottom: `1px solid ${sc.border}` }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 0",
+                borderBottom: `1px solid ${sc.border}`,
+              }}
             >
-              <List.Item.Meta
-                title={
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
-                  >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Text strong style={{ fontSize: 14 }}>
                     {character.name}
-                    {character.role && <Tag>{character.role}</Tag>}
-                  </div>
-                }
-                description={character.personality || "No description"}
-              />
-            </List.Item>
-          )}
-        />
+                  </Text>
+                  {character.role && <Tag>{character.role}</Tag>}
+                </div>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  {character.personality || "No description"}
+                </Text>
+              </div>
+              <Tooltip title="Edit character">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => handleOpenEdit(character)}
+                />
+              </Tooltip>
+              <Tooltip title="Delete character">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleDeleteCharacter(character.id)}
+                />
+              </Tooltip>
+            </div>
+          ))}
+        </div>
       )}
 
       {characters.length > 5 && (

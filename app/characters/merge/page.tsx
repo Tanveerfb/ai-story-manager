@@ -85,7 +85,12 @@ export default function MergeCharactersPage() {
         }
         return prev.filter((selectedId) => selectedId !== id);
       } else {
-        return [...prev, id];
+        const next = [...prev, id];
+        // Auto-set as primary if it's the first selection
+        if (next.length === 1) {
+          setPrimaryId(id);
+        }
+        return next;
       }
     });
   };
@@ -256,6 +261,7 @@ export default function MergeCharactersPage() {
                 <Col xs={24} sm={12} md={8} key={character.id}>
                   <Card
                     hoverable
+                    onClick={() => toggleSelection(character.id)}
                     style={{
                       cursor: "pointer",
                       border: isPrimary
@@ -274,7 +280,11 @@ export default function MergeCharactersPage() {
                     >
                       <Checkbox
                         checked={isSelected}
-                        onChange={() => toggleSelection(character.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleSelection(character.id);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                         style={{ marginRight: 8 }}
                       />
                       <Avatar
@@ -314,7 +324,10 @@ export default function MergeCharactersPage() {
                       <Button
                         size="small"
                         block
-                        onClick={() => handleSetPrimary(character.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSetPrimary(character.id);
+                        }}
                       >
                         Set as Primary
                       </Button>

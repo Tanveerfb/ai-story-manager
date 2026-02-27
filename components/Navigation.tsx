@@ -301,7 +301,7 @@ export default function Navigation({
       >
         <Header
           style={{
-            padding: "0 24px",
+            padding: "0 16px",
             height: 56,
             lineHeight: "56px",
             display: "flex",
@@ -346,7 +346,7 @@ export default function Navigation({
             style={{ borderRadius: 8 }}
           />
         </Header>
-        <Content style={{ padding: "20px 28px", minHeight: 280 }}>
+        <Content style={{ padding: "16px 12px", minHeight: 280 }}>
           {children}
         </Content>
       </Layout>

@@ -5,6 +5,7 @@ import { Typography, Input, Select, Button, Alert, Spin, Row, Col } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import CharacterCard from "@/components/CharacterCard";
 import CharacterRefineDialog from "@/components/CharacterRefineDialog";
+import { useWorld } from "@/components/WorldProvider";
 import { useRouter } from "next/navigation";
 
 const { Title, Text } = Typography;
@@ -21,6 +22,7 @@ export default function CharactersPage() {
   } | null>(null);
   const [refineTarget, setRefineTarget] = useState<any | null>(null);
   const router = useRouter();
+  const { worldId } = useWorld();
 
   useEffect(() => {
     fetchCharacters();
@@ -60,7 +62,10 @@ export default function CharactersPage() {
     setMessage(null);
 
     try {
-      const response = await fetch("/api/characters?action=extract", {
+      const url = worldId
+        ? `/api/characters?action=extract&world_id=${worldId}`
+        : `/api/characters?action=extract`;
+      const response = await fetch(url, {
         method: "POST",
       });
 
@@ -113,21 +118,28 @@ export default function CharactersPage() {
           <Title level={2} style={{ margin: 0 }}>
             Characters
           </Title>
-          <Button
-            type="primary"
-            onClick={handleExtractFromStory}
-            disabled={extracting}
-            icon={
-              extracting ? (
-                <Spin
-                  indicator={<LoadingOutlined style={{ fontSize: 16 }} spin />}
-                  size="small"
-                />
-              ) : null
-            }
-          >
-            {extracting ? "Extracting..." : "Extract from Story Parts"}
-          </Button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Button onClick={() => router.push("/characters/merge")}>
+              Combine Characters
+            </Button>
+            <Button
+              type="primary"
+              onClick={handleExtractFromStory}
+              disabled={extracting}
+              icon={
+                extracting ? (
+                  <Spin
+                    indicator={
+                      <LoadingOutlined style={{ fontSize: 16 }} spin />
+                    }
+                    size="small"
+                  />
+                ) : null
+              }
+            >
+              {extracting ? "Extracting..." : "Extract from Story Parts"}
+            </Button>
+          </div>
         </div>
 
         {message && (

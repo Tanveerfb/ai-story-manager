@@ -68,6 +68,7 @@ export default function ContinuePage() {
     "strict",
   );
   const [maxTokens, setMaxTokens] = useState(600);
+  const [temperature, setTemperature] = useState<number | null>(null); // null = use style default
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Status
@@ -222,6 +223,7 @@ export default function ContinuePage() {
           model: selectedModel,
           generationStyle,
           maxTokens,
+          temperature,
           worldId,
         }),
       });
@@ -770,6 +772,41 @@ export default function ContinuePage() {
                     tooltip={{ open: undefined }}
                     style={{ maxWidth: 400 }}
                   />
+
+                  <div style={{ marginTop: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Temperature:{" "}
+                      {temperature === null
+                        ? `Auto (${generationStyle === "strict" ? "0.45" : "0.82"})`
+                        : temperature.toFixed(2)}
+                    </Text>
+                    <Slider
+                      value={temperature ?? (generationStyle === "strict" ? 0.45 : 0.82)}
+                      onChange={(v) => setTemperature(v)}
+                      min={0.1}
+                      max={1.5}
+                      step={0.05}
+                      disabled={loading}
+                      marks={{
+                        0.1: "Precise",
+                        0.45: "0.45",
+                        0.82: "0.82",
+                        1.2: "Wild",
+                      }}
+                      tooltip={{ open: undefined }}
+                      style={{ maxWidth: 400 }}
+                    />
+                    {temperature !== null && (
+                      <Button
+                        size="small"
+                        type="link"
+                        onClick={() => setTemperature(null)}
+                        style={{ padding: 0, fontSize: 12 }}
+                      >
+                        Reset to auto
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -796,6 +833,7 @@ export default function ContinuePage() {
                   gap: 8,
                   marginTop: 16,
                   alignItems: "center",
+                  flexWrap: "wrap",
                 }}
               >
                 <Button
@@ -829,9 +867,16 @@ export default function ContinuePage() {
 
               {/* Auto-Continue Section */}
               <Card size="small" style={{ marginTop: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    flexWrap: "wrap",
+                  }}
+                >
                   <SyncOutlined style={{ color: token.colorTextSecondary }} />
-                  <Text strong style={{ flex: 1 }}>
+                  <Text strong style={{ flex: 1, minWidth: 100 }}>
                     Auto-Continue
                   </Text>
                   <Input

@@ -187,7 +187,7 @@ export default function StoryPage() {
               </Text>
             )}
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Button
               icon={<DownloadOutlined />}
               onClick={() => {

@@ -129,13 +129,14 @@ export default function ArcsPage() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
+            gap: 8,
             width: "100%",
+            flexWrap: "wrap",
           }}
         >
           <UserOutlined style={{ color: "rgba(0,0,0,0.45)" }} />
           <span
-            style={{ fontSize: 16, fontWeight: 500, cursor: "pointer" }}
+            style={{ fontSize: 15, fontWeight: 500, cursor: "pointer" }}
             onClick={(e) => {
               e.stopPropagation();
               router.push(`/characters/${arc.character.id}`);
@@ -152,10 +153,10 @@ export default function ArcsPage() {
           <Tag color={roleColor(arc.character.role)}>
             {arc.character.role || "unassigned"}
           </Tag>
-          <span style={{ flex: 1 }} />
-          <Text type="secondary" style={{ marginRight: 16 }}>
+          <span style={{ flex: 1, minWidth: 0 }} />
+          <Text type="secondary" style={{ fontSize: 13 }}>
             {arc.total_mentions} mentions &middot; {arc.chapters_present}/
-            {totalChapters} chapters ({presencePercent}%)
+            {totalChapters} ch. ({presencePercent}%)
           </Text>
         </div>
       ),

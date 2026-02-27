@@ -144,12 +144,24 @@ export default function WorldsPage() {
       dataIndex: "name",
       key: "name",
       render: (name: string, record: World) => (
-        <Space>
-          <GlobalOutlined style={{ color: token.colorPrimary }} />
-          <Text strong>{name}</Text>
-          {record.id === worldId && (
-            <Tag icon={<CheckCircleOutlined />} color="success">
-              Active
+        <Space direction="vertical" size={4}>
+          <Space wrap>
+            <GlobalOutlined style={{ color: token.colorPrimary }} />
+            <Text strong>{name}</Text>
+            {record.id === worldId && (
+              <Tag icon={<CheckCircleOutlined />} color="success">
+                Active
+              </Tag>
+            )}
+          </Space>
+          {/* Show genre inline on mobile */}
+          {record.genre && (
+            <Tag
+              color="blue"
+              className="mobile-only-genre"
+              style={{ margin: 0 }}
+            >
+              {record.genre}
             </Tag>
           )}
         </Space>
@@ -159,6 +171,7 @@ export default function WorldsPage() {
       title: "Genre",
       dataIndex: "genre",
       key: "genre",
+      responsive: ["md"] as any,
       render: (genre: string) =>
         genre ? (
           <Tag color="blue">{genre}</Tag>
@@ -171,6 +184,7 @@ export default function WorldsPage() {
       dataIndex: "description",
       key: "description",
       ellipsis: true,
+      responsive: ["lg"] as any,
       render: (desc: string) =>
         desc ? (
           <Text style={{ maxWidth: 300 }} ellipsis={{ tooltip: desc }}>
@@ -184,7 +198,8 @@ export default function WorldsPage() {
       title: "Created",
       dataIndex: "created_at",
       key: "created_at",
-      width: 160,
+      width: 120,
+      responsive: ["sm"] as any,
       render: (date: string) => (
         <Text type="secondary" style={{ fontSize: 12 }}>
           {new Date(date).toLocaleDateString()}
@@ -194,9 +209,9 @@ export default function WorldsPage() {
     {
       title: "Actions",
       key: "actions",
-      width: 220,
+      width: 160,
       render: (_: any, record: World) => (
-        <Space>
+        <Space wrap size={4}>
           {record.id !== worldId && (
             <Button
               size="small"
@@ -233,6 +248,8 @@ export default function WorldsPage() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
             marginBottom: 16,
           }}
         >
@@ -282,6 +299,7 @@ export default function WorldsPage() {
               loading={loading}
               pagination={false}
               size="middle"
+              scroll={{ x: "max-content" }}
             />
           )}
         </Card>

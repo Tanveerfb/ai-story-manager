@@ -206,12 +206,14 @@ export default function FlashbacksPage() {
           justifyContent: "space-between",
           width: "100%",
           alignItems: "center",
+          flexWrap: "wrap",
+          gap: 8,
         }}
       >
-        <Text strong style={{ fontSize: 16 }}>
+        <Text strong style={{ fontSize: 15 }}>
           {flashback.title}
         </Text>
-        <div style={{ display: "flex", gap: 8, marginRight: 16 }}>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {flashback.keywords.slice(0, 3).map((keyword, i) => (
             <Tag key={i}>{keyword}</Tag>
           ))}

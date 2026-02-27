@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
       model, // Add model parameter for AI model selection
       generationStyle, // Add generation style parameter ('strict' or 'creative')
       maxTokens, // Add max tokens parameter for generation control
+      temperature, // Optional temperature override (null = use style default)
       worldId, // World filter
     } = await request.json();
 
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
           generationStyle,
           maxTokens,
           worldId,
+          temperature,
         );
 
       case "revise":
@@ -158,6 +160,7 @@ async function generateContinuation(
   generationStyle: "strict" | "creative" = DEFAULT_GENERATION_STYLE,
   maxTokens: number = DEFAULT_MAX_TOKENS,
   worldId?: string,
+  temperature?: number | null,
 ): Promise<{ continuation: string; contextNotes: string[] }> {
   if (!userPrompt) {
     throw new Error("User prompt is required");
@@ -283,6 +286,7 @@ async function generateContinuation(
     maxTokens,
     playAsCharacterProfile,
     otherCharacterProfiles,
+    temperature,
   );
 
   return {
@@ -300,6 +304,7 @@ async function handleGenerate(
   generationStyle: "strict" | "creative" = DEFAULT_GENERATION_STYLE,
   maxTokens: number = DEFAULT_MAX_TOKENS,
   worldId?: string,
+  temperature?: number | null,
 ) {
   try {
     const result = await generateContinuation(
@@ -310,6 +315,7 @@ async function handleGenerate(
       generationStyle,
       maxTokens,
       worldId,
+      temperature,
     );
     return NextResponse.json({
       ...result,

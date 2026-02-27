@@ -175,6 +175,8 @@ export default function ScenesPage() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
+          gap: 8,
           marginBottom: 24,
         }}
       >
@@ -215,10 +217,11 @@ export default function ScenesPage() {
         <div
           style={{
             display: "flex",
-            gap: 16,
+            gap: 12,
             overflowX: "auto",
             paddingBottom: 16,
             minHeight: 400,
+            WebkitOverflowScrolling: "touch",
           }}
         >
           {COLUMNS.map((col) => {
@@ -227,8 +230,8 @@ export default function ScenesPage() {
               <Card
                 key={col.key}
                 style={{
-                  flex: "1 0 260px",
-                  minWidth: 260,
+                  flex: "1 0 240px",
+                  minWidth: 240,
                   maxWidth: 360,
                   display: "flex",
                   flexDirection: "column",
