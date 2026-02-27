@@ -17,6 +17,7 @@ import {
   GlobalOutlined,
   SunOutlined,
   MoonOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
 import { useThemeMode } from "./ThemeProvider";
@@ -35,6 +36,7 @@ const menuItems = [
   { key: "/worlds", icon: <GlobalOutlined />, label: "Worlds" },
   { key: "/story", icon: <BookOutlined />, label: "Story Viewer" },
   { key: "/scenes", icon: <AppstoreOutlined />, label: "Scene Planner" },
+  { key: "/image-studio", icon: <PictureOutlined />, label: "Image Studio" },
   { key: "/arcs", icon: <LineChartOutlined />, label: "Character Arcs" },
   { key: "/timeline", icon: <FieldTimeOutlined />, label: "Timeline" },
   { key: "/search", icon: <SearchOutlined />, label: "Search" },

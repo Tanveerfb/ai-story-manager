@@ -74,3 +74,40 @@ export interface ExtractedEntities {
   }>;
   summary?: string;
 }
+
+// ── Image Studio types ──────────────────────────────────────────────────
+
+export interface GeneratedImage {
+  id?: string;
+  world_id?: string;
+  title?: string | null;
+  prompt: string;
+  negative_prompt?: string | null;
+  image_url: string;
+  width?: number;
+  height?: number;
+  category?: "scene" | "character_design" | "environment" | "item" | "custom";
+  character_ids?: string[];
+  story_part_ids?: string[];
+  location_ids?: string[];
+  model_used?: string | null;
+  seed?: number | null;
+  steps?: number | null;
+  cfg_scale?: number | null;
+  tags?: string[];
+  notes?: string | null;
+  created_at?: string;
+}
+
+export interface CharacterDesign {
+  id?: string;
+  character_id: string;
+  image_id?: string | null;
+  image_url: string;
+  design_notes?: string | null;
+  is_active?: boolean;
+  created_at?: string;
+  // Joined fields
+  character?: Character;
+  generated_image?: GeneratedImage;
+}

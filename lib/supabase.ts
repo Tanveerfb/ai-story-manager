@@ -217,3 +217,75 @@ export async function getThemes(storyPartId?: string) {
   if (error) throw error;
   return data;
 }
+
+// ── Supabase Storage helpers (Image Studio) ──────────────────────────────
+
+const IMAGE_BUCKET = "story-images";
+
+/**
+ * Ensure the storage bucket exists. Creates it (public) if missing.
+ * Safe to call repeatedly — idempotent.
+ */
+async function ensureBucket() {
+  const { data: buckets } = await supabase.storage.listBuckets();
+  const exists = buckets?.some((b) => b.name === IMAGE_BUCKET);
+  if (!exists) {
+    const { error } = await supabase.storage.createBucket(IMAGE_BUCKET, {
+      public: true,
+      fileSizeLimit: 10 * 1024 * 1024, // 10 MB max
+    });
+    if (error && !error.message?.includes("already exists")) {
+      console.error("Failed to create storage bucket:", error);
+      throw error;
+    }
+  }
+}
+
+/**
+ * Upload a base64 data-URL image to Supabase Storage and return the public URL.
+ * Falls back to returning the original data-URL if storage is unavailable.
+ */
+export async function uploadImageToStorage(
+  base64DataUrl: string,
+  folder = "gallery",
+): Promise<string> {
+  try {
+    await ensureBucket();
+
+    // Strip the data:image/...;base64, prefix
+    const matches = base64DataUrl.match(/^data:image\/(\w+);base64,(.+)$/s);
+    if (!matches) {
+      console.warn("Not a valid base64 data URL, storing as-is");
+      return base64DataUrl;
+    }
+
+    const ext = matches[1] === "jpeg" ? "jpg" : matches[1];
+    const raw = matches[2];
+    const buffer = Buffer.from(raw, "base64");
+    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(fileName, buffer, {
+        contentType: `image/${matches[1]}`,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error(
+        "Storage upload failed, falling back to data URL:",
+        uploadError,
+      );
+      return base64DataUrl;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from(IMAGE_BUCKET)
+      .getPublicUrl(fileName);
+
+    return urlData.publicUrl;
+  } catch (err) {
+    console.error("Storage upload error, falling back to data URL:", err);
+    return base64DataUrl;
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfigProvider, theme as antdTheme } from "antd";
+import { ConfigProvider, App, theme as antdTheme } from "antd";
 import { getAntdTheme } from "@/lib/theme";
 import {
   useState,
@@ -45,7 +45,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ mode, toggleTheme }}>
-      <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>
+      <ConfigProvider theme={themeConfig}>
+        <App>{children}</App>
+      </ConfigProvider>
     </ThemeContext.Provider>
   );
 }

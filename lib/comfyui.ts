@@ -3,22 +3,46 @@ const COMFYUI_HOST =
   process.env.COMFYUI_HOST ||
   "http://127.0.0.1:8188";
 
-const SD_MODEL = process.env.SD_MODEL || "v1-5-pruned-emaonly.safetensors";
+const SD_MODEL = process.env.SD_MODEL || "animagineXLV31_v31.safetensors";
+
+export interface ImageGenerationOptions {
+  positivePrompt: string;
+  negativePrompt?: string;
+  width?: number;
+  height?: number;
+  steps?: number;
+  cfg?: number;
+  seed?: number;
+  model?: string;
+  filenamePrefix?: string;
+}
+
+export interface ImageGenerationResult {
+  imageDataUrl: string;
+  seed: number;
+  model: string;
+  width: number;
+  height: number;
+  steps: number;
+  cfg: number;
+}
 
 // Build a text-to-image workflow JSON for ComfyUI
 function buildWorkflow(
   positivePrompt: string,
   negativePrompt: string,
-  width = 512,
-  height = 768,
-  steps = 25,
-  cfg = 7.0,
+  width = 832,
+  height = 1216,
+  steps = 28,
+  cfg = 6.0,
   seed = Math.floor(Math.random() * 9999999999),
+  model?: string,
+  filenamePrefix = "studio",
 ) {
   return {
     "1": {
       class_type: "CheckpointLoaderSimple",
-      inputs: { ckpt_name: SD_MODEL },
+      inputs: { ckpt_name: model || SD_MODEL },
     },
     "2": {
       class_type: "CLIPTextEncode",
@@ -53,7 +77,7 @@ function buildWorkflow(
     },
     "7": {
       class_type: "SaveImage",
-      inputs: { filename_prefix: "portrait", images: ["6", 0] },
+      inputs: { filename_prefix: filenamePrefix, images: ["6", 0] },
     },
   };
 }
@@ -161,6 +185,81 @@ export async function generateImage(
   // Poll history until done (max 3 minutes)
   const imageData = await pollForResult(prompt_id, 180);
   return imageData;
+}
+
+// Default negative prompt — optimised for Animagine XL 3.1
+export const DEFAULT_NEGATIVE_PROMPT = [
+  "lowres",
+  "(bad)",
+  "text",
+  "error",
+  "fewer",
+  "extra",
+  "missing",
+  "worst quality",
+  "jpeg artifacts",
+  "low quality",
+  "watermark",
+  "unfinished",
+  "displeasing",
+  "oldest",
+  "early",
+  "chromatic aberration",
+  "signature",
+  "extra digits",
+  "artistic error",
+  "username",
+  "scan",
+  "[abstract]",
+].join(", ");
+
+// Advanced generation with full options and metadata return
+export async function generateImageAdvanced(
+  opts: ImageGenerationOptions,
+): Promise<ImageGenerationResult> {
+  const seed = opts.seed ?? Math.floor(Math.random() * 9999999999);
+  const width = opts.width ?? 832;
+  const height = opts.height ?? 1216;
+  const steps = opts.steps ?? 28;
+  const cfg = opts.cfg ?? 6.0;
+  const negativePrompt = opts.negativePrompt || DEFAULT_NEGATIVE_PROMPT;
+  const model = opts.model || SD_MODEL;
+
+  const workflow = buildWorkflow(
+    opts.positivePrompt,
+    negativePrompt,
+    width,
+    height,
+    steps,
+    cfg,
+    seed,
+    model,
+    opts.filenamePrefix || "studio",
+  );
+
+  const queueRes = await fetch(`${COMFYUI_HOST}/prompt`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: workflow }),
+  });
+
+  if (!queueRes.ok) {
+    const err = await queueRes.text();
+    throw new Error(`ComfyUI queue error: ${err}`);
+  }
+
+  const { prompt_id } = await queueRes.json();
+  const imageDataUrl = await pollForResult(prompt_id, 300);
+
+  return {
+    imageDataUrl,
+    seed,
+    model,
+    width,
+    height,
+    steps,
+    cfg,
+  };
 }
 
 async function pollForResult(
