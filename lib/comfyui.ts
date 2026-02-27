@@ -15,6 +15,10 @@ export interface ImageGenerationOptions {
   seed?: number;
   model?: string;
   filenamePrefix?: string;
+  /** Filename already uploaded to ComfyUI input/ folder */
+  referenceImageFilename?: string;
+  /** 0.0 = exact copy, 1.0 = ignore reference. Default 0.65 */
+  denoise?: number;
 }
 
 export interface ImageGenerationResult {
@@ -80,6 +84,130 @@ function buildWorkflow(
       inputs: { filename_prefix: filenamePrefix, images: ["6", 0] },
     },
   };
+}
+
+// Build an img2img workflow — uses a reference image as the starting latent
+function buildImg2ImgWorkflow(
+  positivePrompt: string,
+  negativePrompt: string,
+  referenceFilename: string,
+  width = 832,
+  height = 1216,
+  steps = 28,
+  cfg = 6.0,
+  denoise = 0.65,
+  seed = Math.floor(Math.random() * 9999999999),
+  model?: string,
+  filenamePrefix = "studio",
+) {
+  return {
+    "1": {
+      class_type: "CheckpointLoaderSimple",
+      inputs: { ckpt_name: model || SD_MODEL },
+    },
+    "2": {
+      class_type: "CLIPTextEncode",
+      inputs: { text: positivePrompt, clip: ["1", 1] },
+    },
+    "3": {
+      class_type: "CLIPTextEncode",
+      inputs: { text: negativePrompt, clip: ["1", 1] },
+    },
+    // Load the reference image instead of empty latent
+    "8": {
+      class_type: "LoadImage",
+      inputs: { image: referenceFilename },
+    },
+    // Resize to target dimensions
+    "9": {
+      class_type: "ImageScale",
+      inputs: {
+        image: ["8", 0],
+        upscale_method: "lanczos",
+        width,
+        height,
+        crop: "center",
+      },
+    },
+    // Encode the reference into latent space
+    "10": {
+      class_type: "VAEEncode",
+      inputs: { pixels: ["9", 0], vae: ["1", 2] },
+    },
+    "5": {
+      class_type: "KSampler",
+      inputs: {
+        seed,
+        steps,
+        cfg,
+        sampler_name: "euler_ancestral",
+        scheduler: "karras",
+        denoise,
+        model: ["1", 0],
+        positive: ["2", 0],
+        negative: ["3", 0],
+        latent_image: ["10", 0],
+      },
+    },
+    "6": {
+      class_type: "VAEDecode",
+      inputs: { samples: ["5", 0], vae: ["1", 2] },
+    },
+    "7": {
+      class_type: "SaveImage",
+      inputs: { filename_prefix: filenamePrefix, images: ["6", 0] },
+    },
+  };
+}
+
+/**
+ * Upload an image (from URL or base64 data-URL) to ComfyUI's input/ folder.
+ * Returns the filename as ComfyUI knows it.
+ */
+export async function uploadImageToComfyUI(
+  imageSource: string,
+): Promise<string> {
+  let buffer: Buffer;
+  let ext = "png";
+
+  if (imageSource.startsWith("data:image/")) {
+    // base64 data URL
+    const m = imageSource.match(/^data:image\/(\w+);base64,(.+)$/s);
+    if (!m) throw new Error("Invalid base64 data URL for reference image");
+    ext = m[1] === "jpeg" ? "jpg" : m[1];
+    buffer = Buffer.from(m[2], "base64");
+  } else {
+    // HTTP URL — download
+    const res = await fetch(imageSource);
+    if (!res.ok)
+      throw new Error(`Failed to download reference image: ${res.status}`);
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("jpeg") || contentType.includes("jpg"))
+      ext = "jpg";
+    else if (contentType.includes("webp")) ext = "webp";
+    const ab = await res.arrayBuffer();
+    buffer = Buffer.from(ab);
+  }
+
+  const filename = `ref_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
+
+  // ComfyUI /upload/image endpoint expects multipart/form-data
+  const form = new FormData();
+  form.append("image", new Blob([buffer], { type: `image/${ext}` }), filename);
+  form.append("overwrite", "true");
+
+  const uploadRes = await fetch(`${COMFYUI_HOST}/upload/image`, {
+    method: "POST",
+    body: form as any,
+  });
+
+  if (!uploadRes.ok) {
+    const err = await uploadRes.text();
+    throw new Error(`ComfyUI image upload failed: ${err}`);
+  }
+
+  const data = await uploadRes.json();
+  return data.name || filename;
 }
 
 // Build a character-appropriate SD prompt from character fields
@@ -225,17 +353,32 @@ export async function generateImageAdvanced(
   const negativePrompt = opts.negativePrompt || DEFAULT_NEGATIVE_PROMPT;
   const model = opts.model || SD_MODEL;
 
-  const workflow = buildWorkflow(
-    opts.positivePrompt,
-    negativePrompt,
-    width,
-    height,
-    steps,
-    cfg,
-    seed,
-    model,
-    opts.filenamePrefix || "studio",
-  );
+  // Choose txt2img or img2img workflow based on reference image
+  const workflow = opts.referenceImageFilename
+    ? buildImg2ImgWorkflow(
+        opts.positivePrompt,
+        negativePrompt,
+        opts.referenceImageFilename,
+        width,
+        height,
+        steps,
+        cfg,
+        opts.denoise ?? 0.65,
+        seed,
+        model,
+        opts.filenamePrefix || "studio",
+      )
+    : buildWorkflow(
+        opts.positivePrompt,
+        negativePrompt,
+        width,
+        height,
+        steps,
+        cfg,
+        seed,
+        model,
+        opts.filenamePrefix || "studio",
+      );
 
   const queueRes = await fetch(`${COMFYUI_HOST}/prompt`, {
     method: "POST",
@@ -279,13 +422,25 @@ async function pollForResult(
 
     if (!job) continue; // not done yet
 
-    // Find the output image
+    // Find the output image — prefer SaveImage node ("7"), fall back to any node
     const outputs = job.outputs;
+    // First check our known SaveImage node
+    if (outputs["7"]?.images?.length > 0) {
+      const img = outputs["7"].images[0];
+      const imgRes = await fetch(
+        `${COMFYUI_HOST}/view?filename=${encodeURIComponent(img.filename)}&subfolder=${encodeURIComponent(img.subfolder || "")}&type=${img.type || "output"}`,
+      );
+      if (!imgRes.ok) throw new Error("Failed to fetch generated image");
+      const buffer = await imgRes.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString("base64");
+      return `data:image/png;base64,${base64}`;
+    }
+    // Fallback: find any node with output type "output" images
     for (const nodeId of Object.keys(outputs)) {
       const node = outputs[nodeId];
       if (node.images && node.images.length > 0) {
         const img = node.images[0];
-        // Fetch the actual image bytes
+        if (img.type && img.type !== "output") continue; // skip input/temp images
         const imgRes = await fetch(
           `${COMFYUI_HOST}/view?filename=${encodeURIComponent(img.filename)}&subfolder=${encodeURIComponent(img.subfolder || "")}&type=${img.type || "output"}`,
         );

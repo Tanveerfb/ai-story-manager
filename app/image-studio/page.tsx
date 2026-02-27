@@ -22,7 +22,6 @@ import {
   Empty,
   Badge,
   Segmented,
-  Checkbox,
   App,
 } from "antd";
 import {
@@ -223,6 +222,7 @@ export default function ImageStudioPage() {
   const [generating, setGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [genMeta, setGenMeta] = useState<any>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // ── Story context inclusion ──
   const [characters, setCharacters] = useState<any[]>([]);
@@ -231,9 +231,9 @@ export default function ImageStudioPage() {
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>(
     [],
   );
-  const [selectedStoryPartIds, setSelectedStoryPartIds] = useState<string[]>(
-    [],
-  );
+  const [selectedStoryPartId, setSelectedStoryPartId] = useState<
+    string | undefined
+  >(undefined);
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
 
   // ── Gallery ──
@@ -259,6 +259,18 @@ export default function ImageStudioPage() {
   const [designImageUrl, setDesignImageUrl] = useState("");
   const [settingDesign, setSettingDesign] = useState(false);
 
+  // ── Reference images (auto-fetched for selected characters) ──
+  const [characterRefs, setCharacterRefs] = useState<
+    Array<{
+      characterId: string;
+      characterName: string;
+      imageUrl: string;
+      source: "design" | "gallery";
+    }>
+  >([]);
+  const [denoise, setDenoise] = useState(0.65);
+  const [refsLoading, setRefsLoading] = useState(false);
+
   // ── Active tab ──
   const [activeTab, setActiveTab] = useState("generate");
 
@@ -273,6 +285,30 @@ export default function ImageStudioPage() {
     if (activeTab === "gallery") fetchGallery();
     if (activeTab === "designs") fetchDesigns();
   }, [activeTab, worldId]);
+
+  // Auto-fetch reference images whenever selected characters change
+  useEffect(() => {
+    if (selectedCharacterIds.length === 0) {
+      setCharacterRefs([]);
+      return;
+    }
+    fetchCharacterRefs(selectedCharacterIds);
+  }, [selectedCharacterIds]);
+
+  const fetchCharacterRefs = async (charIds: string[]) => {
+    setRefsLoading(true);
+    try {
+      const res = await fetch(
+        `/api/image-studio/generate?action=references&characterIds=${charIds.join(",")}`,
+      );
+      const data = await res.json();
+      setCharacterRefs(data.references || []);
+    } catch {
+      setCharacterRefs([]);
+    } finally {
+      setRefsLoading(false);
+    }
+  };
 
   const checkComfyUI = async () => {
     try {
@@ -348,22 +384,102 @@ export default function ImageStudioPage() {
 
   /* ────────────────────── Generation ────────────────────── */
 
+  /**
+   * Auto-build a Danbooru-style prompt from selected characters, story part,
+   * and locations. The user's manual prompt (if any) is appended at the end.
+   */
+  const buildAutoPrompt = useCallback((): string => {
+    const tags: string[] = [
+      "masterpiece",
+      "best quality",
+      "very aesthetic",
+      "absurdres",
+      "newest",
+    ];
+
+    const selChars = characters.filter((c) =>
+      selectedCharacterIds.includes(c.id),
+    );
+
+    // Character count tag
+    if (selChars.length === 1) {
+      tags.push("1girl"); // default — user can override via manual prompt
+    } else if (selChars.length === 2) {
+      tags.push("2others");
+    } else if (selChars.length >= 3) {
+      tags.push("multiple others");
+    }
+
+    // Character descriptions → tags
+    for (const c of selChars) {
+      if (c.name) tags.push(c.name);
+      if (c.physical_traits) {
+        const traits =
+          typeof c.physical_traits === "string"
+            ? c.physical_traits
+            : Object.values(c.physical_traits).flat().join(", ");
+        tags.push(traits);
+      }
+      if (c.description) {
+        // Take short description keywords, not whole sentences
+        tags.push(c.description);
+      }
+    }
+
+    // Story part → scene context
+    if (selectedStoryPartId) {
+      const part = storyParts.find((p) => p.id === selectedStoryPartId);
+      if (part) {
+        if (part.summary) tags.push(part.summary);
+        else if (part.title) tags.push(part.title);
+      }
+    }
+
+    // Locations
+    const selLocs = locations.filter((l) => selectedLocationIds.includes(l.id));
+    for (const l of selLocs) {
+      if (l.description) tags.push(l.description);
+      else if (l.name) tags.push(l.name);
+    }
+
+    // Append manual prompt if present
+    if (prompt.trim()) {
+      tags.push(prompt.trim());
+    }
+
+    return tags.join(", ");
+  }, [
+    characters,
+    storyParts,
+    locations,
+    selectedCharacterIds,
+    selectedStoryPartId,
+    selectedLocationIds,
+    prompt,
+  ]);
+
   const handleGenerate = async () => {
-    if (!prompt.trim()) {
-      message.warning("Enter a prompt first");
+    // Must have at least characters selected OR a manual prompt
+    const hasSelections =
+      selectedCharacterIds.length > 0 || selectedStoryPartId;
+    if (!hasSelections && !prompt.trim()) {
+      message.warning("Select characters/story part or write a prompt");
       return;
     }
+
     setGenerating(true);
     setGeneratedImage(null);
     setGenMeta(null);
 
     try {
+      const finalPrompt = buildAutoPrompt();
       const size = SIZE_PRESETS[selectedSize];
+      const hasRefs = characterRefs.length > 0;
       const res = await fetch("/api/image-studio/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: prompt.trim(),
+          prompt: finalPrompt,
           negativePrompt: negativePrompt.trim() || undefined,
           width: size.width,
           height: size.height,
@@ -371,6 +487,9 @@ export default function ImageStudioPage() {
           cfg,
           seed: seed || undefined,
           model: selectedModel || undefined,
+          characterIds: selectedCharacterIds,
+          useReference: hasRefs,
+          denoise: hasRefs ? denoise : undefined,
         }),
       });
 
@@ -381,7 +500,7 @@ export default function ImageStudioPage() {
 
       const data = await res.json();
       setGeneratedImage(data.image);
-      setGenMeta(data);
+      setGenMeta({ ...data, prompt: finalPrompt });
       message.success("Image generated!");
     } catch (e: any) {
       message.error(e.message || "Generation failed");
@@ -389,61 +508,6 @@ export default function ImageStudioPage() {
       setGenerating(false);
     }
   };
-
-  /* ────────────────────── Build prompt from story parts ─────────── */
-
-  const buildStoryPrompt = useCallback(() => {
-    const parts: string[] = [];
-
-    // Gather selected characters
-    const selChars = characters.filter((c) =>
-      selectedCharacterIds.includes(c.id),
-    );
-    for (const c of selChars) {
-      const bits = [c.name];
-      if (c.description) bits.push(c.description);
-      if (c.physical_traits) {
-        const traits =
-          typeof c.physical_traits === "string"
-            ? c.physical_traits
-            : JSON.stringify(c.physical_traits);
-        bits.push(traits);
-      }
-      parts.push(bits.join(", "));
-    }
-
-    // Gather selected story parts summaries
-    const selParts = storyParts.filter((p) =>
-      selectedStoryPartIds.includes(p.id),
-    );
-    for (const p of selParts) {
-      if (p.summary) parts.push(`scene: ${p.summary}`);
-      else if (p.title) parts.push(`scene: ${p.title}`);
-    }
-
-    // Gather selected locations
-    const selLocs = locations.filter((l) => selectedLocationIds.includes(l.id));
-    for (const l of selLocs) {
-      if (l.description) parts.push(`setting: ${l.description}`);
-      else parts.push(`setting: ${l.name}`);
-    }
-
-    if (parts.length === 0) {
-      message.info("Select at least one entity to build a prompt from");
-      return;
-    }
-
-    const builtPrompt = parts.join("; ");
-    setPrompt((prev) => (prev ? `${prev}, ${builtPrompt}` : builtPrompt));
-    message.success("Story context added to prompt");
-  }, [
-    characters,
-    storyParts,
-    locations,
-    selectedCharacterIds,
-    selectedStoryPartIds,
-    selectedLocationIds,
-  ]);
 
   /* ────────────────────── Save image ────────────────────── */
 
@@ -457,12 +521,12 @@ export default function ImageStudioPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           imageUrl: generatedImage,
-          prompt: prompt.trim(),
+          prompt: genMeta?.prompt || prompt.trim(),
           negativePrompt: negativePrompt.trim() || undefined,
           title: saveTitle.trim() || undefined,
           category,
           characterIds: selectedCharacterIds,
-          storyPartIds: selectedStoryPartIds,
+          storyPartIds: selectedStoryPartId ? [selectedStoryPartId] : [],
           locationIds: selectedLocationIds,
           modelUsed: genMeta?.model,
           seed: genMeta?.seed,
@@ -764,27 +828,188 @@ export default function ImageStudioPage() {
   /* ═══════════════════════ GENERATE TAB ═══════════════════════════════ */
 
   function renderGenerateTab() {
+    const hasRefs = characterRefs.length > 0;
+    const canGenerate =
+      comfyAvailable &&
+      (selectedCharacterIds.length > 0 || selectedStoryPartId || prompt.trim());
+
     return (
       <Row gutter={[20, 20]}>
-        {/* Left: Prompt & Settings */}
+        {/* Left: Story selections */}
         <Col xs={24} lg={12}>
           <Card style={glassCard} styles={{ body: { padding: 20 } }}>
+            {/* ── 1. Characters ── */}
             <Title level={5} style={{ marginTop: 0 }}>
-              Prompt
+              <UserOutlined style={{ marginRight: 8 }} />
+              Characters
             </Title>
+            <Select
+              mode="multiple"
+              value={selectedCharacterIds}
+              onChange={setSelectedCharacterIds}
+              placeholder="Select characters involved..."
+              style={{ width: "100%", marginBottom: 8 }}
+              optionFilterProp="label"
+              options={characters.map((c) => ({
+                value: c.id,
+                label: `${c.name} (${c.role || "?"})`,
+              }))}
+            />
+
+            {/* Reference thumbnails (auto) */}
+            {selectedCharacterIds.length > 0 && (
+              <div
+                style={{
+                  marginBottom: 12,
+                  padding: 8,
+                  background: sc.subtleBg,
+                  borderRadius: 8,
+                  border: `1px solid ${sc.border}`,
+                }}
+              >
+                {refsLoading ? (
+                  <Spin size="small" />
+                ) : hasRefs ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                    }}
+                  >
+                    {characterRefs.map((ref) => (
+                      <Tooltip
+                        key={ref.characterId}
+                        title={`${ref.characterName} — ${ref.source === "design" ? "Official Design" : "Gallery Image"} (will be used as reference)`}
+                      >
+                        <div
+                          style={{
+                            position: "relative",
+                            border: `2px solid ${token.colorPrimary}`,
+                            borderRadius: 6,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <img
+                            src={ref.imageUrl}
+                            alt={ref.characterName}
+                            style={{
+                              width: 56,
+                              height: 70,
+                              objectFit: "cover",
+                              display: "block",
+                            }}
+                          />
+                          <div
+                            style={{
+                              position: "absolute",
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              background: "rgba(0,0,0,0.7)",
+                              fontSize: 9,
+                              color: "#fff",
+                              textAlign: "center",
+                              padding: "1px 2px",
+                            }}
+                          >
+                            {ref.characterName}
+                          </div>
+                        </div>
+                      </Tooltip>
+                    ))}
+                    <Text type="secondary" style={{ fontSize: 11 }}>
+                      Designs will keep characters consistent
+                    </Text>
+                  </div>
+                ) : (
+                  <Text type="secondary" style={{ fontSize: 11 }}>
+                    No designs found — image will be generated from description
+                    only. Save a generated image as an official design to enable
+                    consistency.
+                  </Text>
+                )}
+              </div>
+            )}
+
+            {/* ── 2. Story Part ── */}
+            <Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>
+              <BookOutlined style={{ marginRight: 8 }} />
+              Story Part
+            </Title>
+            <Select
+              value={selectedStoryPartId}
+              onChange={setSelectedStoryPartId}
+              allowClear
+              placeholder="Select a story part for scene context..."
+              style={{ width: "100%", marginBottom: 12 }}
+              optionFilterProp="label"
+              options={storyParts.map((p) => ({
+                value: p.id,
+                label: `Part ${p.part_number}${p.title ? ": " + p.title : ""}`,
+              }))}
+            />
+
+            {/* Story part summary preview */}
+            {selectedStoryPartId &&
+              (() => {
+                const part = storyParts.find(
+                  (p) => p.id === selectedStoryPartId,
+                );
+                return part?.summary ? (
+                  <div
+                    style={{
+                      marginBottom: 12,
+                      padding: "8px 12px",
+                      background: sc.subtleBg,
+                      borderRadius: 8,
+                      fontSize: 12,
+                      border: `1px solid ${sc.border}`,
+                    }}
+                  >
+                    <Text type="secondary" style={{ fontSize: 11 }}>
+                      <BookOutlined /> {part.summary}
+                    </Text>
+                  </div>
+                ) : null;
+              })()}
+
+            {/* ── 3. Location (optional) ── */}
+            <Title level={5} style={{ marginTop: 8, marginBottom: 8 }}>
+              <EnvironmentOutlined style={{ marginRight: 8 }} />
+              Location{" "}
+              <Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>
+                (optional)
+              </Text>
+            </Title>
+            <Select
+              mode="multiple"
+              value={selectedLocationIds}
+              onChange={setSelectedLocationIds}
+              placeholder="Select location..."
+              style={{ width: "100%", marginBottom: 16 }}
+              optionFilterProp="label"
+              options={locations.map((l) => ({
+                value: l.id,
+                label: l.name,
+              }))}
+            />
+
+            {/* ── 4. Extra prompt (optional) ── */}
             <TextArea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              rows={4}
-              placeholder="Describe the image you want to generate... No restrictions, full creative freedom."
+              rows={2}
+              placeholder="Extra details / style tags (optional) — e.g. kitchen, dramatic lighting, action pose..."
               style={{ marginBottom: 12 }}
             />
 
-            {/* ── Quick-add prompt templates ── */}
+            {/* ── Quick templates ── */}
             <div
               style={{
                 display: "flex",
-                gap: 6,
+                gap: 4,
                 marginBottom: 16,
                 flexWrap: "wrap",
               }}
@@ -793,224 +1018,19 @@ export default function ImageStudioPage() {
                 <Tooltip title={tpl.hint} key={tpl.label}>
                   <Button
                     size="small"
+                    type="dashed"
                     onClick={() =>
                       setPrompt((p) => (p ? `${p}, ${tpl.text}` : tpl.text))
                     }
+                    style={{ fontSize: 11 }}
                   >
-                    + {tpl.label}
+                    {tpl.label}
                   </Button>
                 </Tooltip>
               ))}
             </div>
 
-            <Divider style={{ margin: "12px 0" }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Story Context
-              </Text>
-            </Divider>
-
-            {/* Characters selector */}
-            <div style={{ marginBottom: 12 }}>
-              <Text
-                type="secondary"
-                style={{ fontSize: 12, display: "block", marginBottom: 4 }}
-              >
-                <UserOutlined /> Include Characters
-              </Text>
-              <Select
-                mode="multiple"
-                value={selectedCharacterIds}
-                onChange={setSelectedCharacterIds}
-                placeholder="Select characters to include..."
-                style={{ width: "100%" }}
-                optionFilterProp="label"
-                options={characters.map((c) => ({
-                  value: c.id,
-                  label: `${c.name} (${c.role || "?"})`,
-                }))}
-              />
-            </div>
-
-            {/* Story parts selector */}
-            <div style={{ marginBottom: 12 }}>
-              <Text
-                type="secondary"
-                style={{ fontSize: 12, display: "block", marginBottom: 4 }}
-              >
-                <BookOutlined /> Include Story Parts
-              </Text>
-              <Select
-                mode="multiple"
-                value={selectedStoryPartIds}
-                onChange={setSelectedStoryPartIds}
-                placeholder="Select story parts for context..."
-                style={{ width: "100%" }}
-                optionFilterProp="label"
-                options={storyParts.map((p) => ({
-                  value: p.id,
-                  label: `Part ${p.part_number}${p.title ? ": " + p.title : ""}`,
-                }))}
-              />
-            </div>
-
-            {/* Location selector */}
-            <div style={{ marginBottom: 12 }}>
-              <Text
-                type="secondary"
-                style={{ fontSize: 12, display: "block", marginBottom: 4 }}
-              >
-                <EnvironmentOutlined /> Include Locations
-              </Text>
-              <Select
-                mode="multiple"
-                value={selectedLocationIds}
-                onChange={setSelectedLocationIds}
-                placeholder="Select locations for setting..."
-                style={{ width: "100%" }}
-                optionFilterProp="label"
-                options={locations.map((l) => ({
-                  value: l.id,
-                  label: l.name,
-                }))}
-              />
-            </div>
-
-            <Button
-              block
-              onClick={buildStoryPrompt}
-              disabled={
-                selectedCharacterIds.length === 0 &&
-                selectedStoryPartIds.length === 0 &&
-                selectedLocationIds.length === 0
-              }
-              style={{ marginBottom: 16 }}
-            >
-              Add Story Context to Prompt
-            </Button>
-
-            <Divider style={{ margin: "12px 0" }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Negative Prompt
-              </Text>
-            </Divider>
-
-            <TextArea
-              value={negativePrompt}
-              onChange={(e) => setNegativePrompt(e.target.value)}
-              rows={2}
-              placeholder="Things to avoid (defaults to standard quality negatives if empty)"
-              style={{ marginBottom: 16 }}
-            />
-
-            <Divider style={{ margin: "12px 0" }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                <SettingOutlined /> Settings
-              </Text>
-            </Divider>
-
-            {/* Model selector */}
-            {availableModels.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <Text
-                  type="secondary"
-                  style={{ fontSize: 12, display: "block", marginBottom: 4 }}
-                >
-                  Model
-                </Text>
-                <Select
-                  value={selectedModel}
-                  onChange={setSelectedModel}
-                  style={{ width: "100%" }}
-                  options={[
-                    { value: "", label: "Default" },
-                    ...availableModels.map((m) => ({ value: m, label: m })),
-                  ]}
-                />
-              </div>
-            )}
-
-            {/* Size preset */}
-            <div style={{ marginBottom: 12 }}>
-              <Text
-                type="secondary"
-                style={{ fontSize: 12, display: "block", marginBottom: 4 }}
-              >
-                Size
-              </Text>
-              <Segmented
-                value={selectedSize}
-                onChange={(v) => setSelectedSize(v as number)}
-                options={SIZE_PRESETS.map((p, i) => ({
-                  label: p.label,
-                  value: i,
-                }))}
-                style={{ flexWrap: "wrap" }}
-              />
-            </div>
-
-            {/* Steps */}
-            <div style={{ marginBottom: 12 }}>
-              <Text
-                type="secondary"
-                style={{ fontSize: 12, display: "block", marginBottom: 4 }}
-              >
-                Steps: {steps}
-              </Text>
-              <Slider min={10} max={80} value={steps} onChange={setSteps} />
-            </div>
-
-            {/* CFG */}
-            <div style={{ marginBottom: 12 }}>
-              <Text
-                type="secondary"
-                style={{ fontSize: 12, display: "block", marginBottom: 4 }}
-              >
-                CFG Scale: {cfg}
-              </Text>
-              <Slider
-                min={1}
-                max={20}
-                step={0.5}
-                value={cfg}
-                onChange={setCfg}
-              />
-            </div>
-
-            {/* Seed */}
-            <div style={{ marginBottom: 16 }}>
-              <Text
-                type="secondary"
-                style={{ fontSize: 12, display: "block", marginBottom: 4 }}
-              >
-                Seed (leave empty for random)
-              </Text>
-              <Input
-                type="number"
-                value={seed ?? ""}
-                onChange={(e) =>
-                  setSeed(e.target.value ? Number(e.target.value) : undefined)
-                }
-                placeholder="Random"
-                style={{ width: 200 }}
-              />
-            </div>
-
-            {/* Category */}
-            <div style={{ marginBottom: 16 }}>
-              <Text
-                type="secondary"
-                style={{ fontSize: 12, display: "block", marginBottom: 4 }}
-              >
-                Category
-              </Text>
-              <Select
-                value={category}
-                onChange={setCategory}
-                options={CATEGORIES}
-                style={{ width: "100%" }}
-              />
-            </div>
-
+            {/* ── GENERATE BUTTON ── */}
             <Button
               type="primary"
               size="large"
@@ -1018,10 +1038,201 @@ export default function ImageStudioPage() {
               icon={<ThunderboltOutlined />}
               onClick={handleGenerate}
               loading={generating}
-              disabled={!comfyAvailable || !prompt.trim()}
+              disabled={!canGenerate}
             >
               {generating ? "Generating..." : "Generate Image"}
             </Button>
+
+            {/* ── Advanced (collapsed) ── */}
+            <Divider style={{ margin: "16px 0 8px" }}>
+              <Button
+                type="text"
+                size="small"
+                icon={<SettingOutlined />}
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                style={{ fontSize: 12, color: sc.textSecondary }}
+              >
+                {showAdvanced ? "Hide" : "Show"} Advanced Settings
+              </Button>
+            </Divider>
+
+            {showAdvanced && (
+              <div style={{ marginTop: 8 }}>
+                {/* Negative prompt */}
+                <Text
+                  type="secondary"
+                  style={{ fontSize: 12, display: "block", marginBottom: 4 }}
+                >
+                  Negative Prompt
+                </Text>
+                <TextArea
+                  value={negativePrompt}
+                  onChange={(e) => setNegativePrompt(e.target.value)}
+                  rows={2}
+                  placeholder="Defaults to Animagine quality negatives if empty"
+                  style={{ marginBottom: 12 }}
+                />
+
+                {/* Reference denoise */}
+                {hasRefs && (
+                  <div style={{ marginBottom: 12 }}>
+                    <Text
+                      type="secondary"
+                      style={{
+                        fontSize: 12,
+                        display: "block",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Design Influence: {denoise.toFixed(2)}{" "}
+                      <Tooltip title="Lower = closer to character design. Higher = more creative freedom. 0.65 is balanced.">
+                        <InfoCircleOutlined />
+                      </Tooltip>
+                    </Text>
+                    <Slider
+                      min={0.2}
+                      max={1.0}
+                      step={0.05}
+                      value={denoise}
+                      onChange={setDenoise}
+                    />
+                  </div>
+                )}
+
+                {/* Model */}
+                {availableModels.length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <Text
+                      type="secondary"
+                      style={{
+                        fontSize: 12,
+                        display: "block",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Model
+                    </Text>
+                    <Select
+                      value={selectedModel}
+                      onChange={setSelectedModel}
+                      style={{ width: "100%" }}
+                      options={[
+                        { value: "", label: "Default" },
+                        ...availableModels.map((m) => ({
+                          value: m,
+                          label: m,
+                        })),
+                      ]}
+                    />
+                  </div>
+                )}
+
+                {/* Size */}
+                <div style={{ marginBottom: 12 }}>
+                  <Text
+                    type="secondary"
+                    style={{ fontSize: 12, display: "block", marginBottom: 4 }}
+                  >
+                    Size
+                  </Text>
+                  <Select
+                    value={selectedSize}
+                    onChange={(v) => setSelectedSize(v as number)}
+                    options={SIZE_PRESETS.map((p, i) => ({
+                      label: p.label,
+                      value: i,
+                    }))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+
+                {/* Steps + CFG */}
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Text
+                      type="secondary"
+                      style={{
+                        fontSize: 12,
+                        display: "block",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Steps: {steps}
+                    </Text>
+                    <Slider
+                      min={10}
+                      max={80}
+                      value={steps}
+                      onChange={setSteps}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Text
+                      type="secondary"
+                      style={{
+                        fontSize: 12,
+                        display: "block",
+                        marginBottom: 4,
+                      }}
+                    >
+                      CFG: {cfg}
+                    </Text>
+                    <Slider
+                      min={1}
+                      max={20}
+                      step={0.5}
+                      value={cfg}
+                      onChange={setCfg}
+                    />
+                  </Col>
+                </Row>
+
+                {/* Seed + Category */}
+                <Row gutter={16} style={{ marginTop: 8 }}>
+                  <Col span={12}>
+                    <Text
+                      type="secondary"
+                      style={{
+                        fontSize: 12,
+                        display: "block",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Seed
+                    </Text>
+                    <Input
+                      type="number"
+                      value={seed ?? ""}
+                      onChange={(e) =>
+                        setSeed(
+                          e.target.value ? Number(e.target.value) : undefined,
+                        )
+                      }
+                      placeholder="Random"
+                      style={{ width: "100%" }}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Text
+                      type="secondary"
+                      style={{
+                        fontSize: 12,
+                        display: "block",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Category
+                    </Text>
+                    <Select
+                      value={category}
+                      onChange={setCategory}
+                      options={CATEGORIES}
+                      style={{ width: "100%" }}
+                    />
+                  </Col>
+                </Row>
+              </div>
+            )}
           </Card>
         </Col>
 
@@ -1079,6 +1290,9 @@ export default function ImageStudioPage() {
                       Seed: {genMeta.seed} | Model: {genMeta.model} |{" "}
                       {genMeta.width}×{genMeta.height} | Steps: {genMeta.steps}{" "}
                       | CFG: {genMeta.cfg}
+                      {genMeta.referenceUsed && (
+                        <> | Ref: {genMeta.referenceUsed}</>
+                      )}
                     </Text>
                   </div>
                 )}
