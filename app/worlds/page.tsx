@@ -144,7 +144,7 @@ export default function WorldsPage() {
       dataIndex: "name",
       key: "name",
       render: (name: string, record: World) => (
-        <Space direction="vertical" size={4}>
+        <Space orientation="vertical" size={4}>
           <Space wrap>
             <GlobalOutlined style={{ color: token.colorPrimary }} />
             <Text strong>{name}</Text>
