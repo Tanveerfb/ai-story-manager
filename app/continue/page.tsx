@@ -781,7 +781,10 @@ export default function ContinuePage() {
                         : temperature.toFixed(2)}
                     </Text>
                     <Slider
-                      value={temperature ?? (generationStyle === "strict" ? 0.45 : 0.82)}
+                      value={
+                        temperature ??
+                        (generationStyle === "strict" ? 0.45 : 0.82)
+                      }
                       onChange={(v) => setTemperature(v)}
                       min={0.1}
                       max={1.5}
