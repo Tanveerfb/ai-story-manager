@@ -1,26 +1,106 @@
 @import "tailwindcss";
 
+/*
+ * Ink & Indigo palette (approved). Tailwind v4: design tokens are defined as
+ * CSS variables and exposed to utilities via @theme inline. Dark-first — the
+ * root layout sets <html class="dark">; :root holds the light theme.
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --radius: 0.625rem;
+
+  --background: #faf9f6;
+  --foreground: #1a1c22;
+  --card: #ffffff;
+  --card-foreground: #1a1c22;
+  --popover: #ffffff;
+  --popover-foreground: #1a1c22;
+  --primary: #5b62e0;
+  --primary-foreground: #ffffff;
+  --secondary: #eceae4;
+  --secondary-foreground: #1a1c22;
+  --muted: #f0eee9;
+  --muted-foreground: #5c6270;
+  --accent: #c8862f;
+  --accent-foreground: #ffffff;
+  --destructive: #d4362c;
+  --destructive-foreground: #ffffff;
+  --success: #2e9e46;
+  --success-foreground: #ffffff;
+  --warning: #b67d12;
+  --warning-foreground: #ffffff;
+  --info: #2f7fe0;
+  --info-foreground: #ffffff;
+  --border: #e4e2dc;
+  --input: #e4e2dc;
+  --ring: #5b62e0;
+}
+
+.dark {
+  --background: #0d0f14;
+  --foreground: #e6e4df;
+  --card: #161922;
+  --card-foreground: #e6e4df;
+  --popover: #161922;
+  --popover-foreground: #e6e4df;
+  --primary: #7c83ff;
+  --primary-foreground: #0c0e16;
+  --secondary: #232834;
+  --secondary-foreground: #e6e4df;
+  --muted: #1c2029;
+  --muted-foreground: #8b909a;
+  --accent: #e0a458;
+  --accent-foreground: #1a1205;
+  --destructive: #f85149;
+  --destructive-foreground: #160b0a;
+  --success: #3fb950;
+  --success-foreground: #07140a;
+  --warning: #d29922;
+  --warning-foreground: #1a1304;
+  --info: #58a6ff;
+  --info-foreground: #061018;
+  --border: #262b36;
+  --input: #262b36;
+  --ring: #7c83ff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
