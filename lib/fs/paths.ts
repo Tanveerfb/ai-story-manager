@@ -53,6 +53,33 @@ export async function writeText(file: string, content: string): Promise<void> {
   await fs.writeFile(file, content, "utf8");
 }
 
+/**
+ * Append one record as a line to a JSON Lines file (O(1) write, no full
+ * rewrite). Used for unbounded, append-heavy collections — the embedding index
+ * and the timeline — so cost stays linear as a story grows indefinitely.
+ */
+export async function appendJsonl(file: string, record: unknown): Promise<void> {
+  await ensureDir(path.dirname(file));
+  await fs.appendFile(file, `${JSON.stringify(record)}\n`, "utf8");
+}
+
+/** Read a JSON Lines file into an array; malformed lines are skipped. */
+export async function readJsonl<T>(file: string): Promise<T[]> {
+  const text = await readText(file);
+  if (!text) return [];
+  const out: T[] = [];
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      out.push(JSON.parse(trimmed) as T);
+    } catch {
+      // Skip a corrupt line rather than failing the whole read.
+    }
+  }
+  return out;
+}
+
 /** Sorted names of immediate subdirectories ([] when the dir is missing). */
 export async function listDirs(dir: string): Promise<string[]> {
   try {

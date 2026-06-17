@@ -3,55 +3,99 @@
 import { useState } from "react";
 import { Button } from "@/components/layout/Button";
 import { useSimulationStore } from "@/store/useSimulationStore";
+import { useArtifactSync } from "@/hooks/useArtifactSync";
 import { MAX_SIMULATED_CHARACTERS } from "@/lib/constants";
 
 const fieldClass =
-  "h-10 w-full rounded-md border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-10 w-full rounded-md border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+
+/** The author can play a real character or sit outside the scene as interviewer. */
+const INTERVIEWER = "Interviewer";
 
 /** Pre-session setup (plan §11D): who the LLM plays, who the author plays. */
 export function SimulationSetup() {
   const start = useSimulationStore((s) => s.start);
+  const { bundle, isLoading } = useArtifactSync();
   const [char1, setChar1] = useState("");
   const [char2, setChar2] = useState("");
   const [userCharacter, setUserCharacter] = useState("");
   const [privateNotes, setPrivateNotes] = useState("");
 
+  const canon = (bundle?.characters ?? []).map((c) => c.name);
   const simulated = [char1, char2].map((c) => c.trim()).filter(Boolean);
   const canStart = simulated.length > 0 && userCharacter.trim().length > 0;
+
+  // No canon characters yet — nothing to simulate (selections are canon-only).
+  if (!isLoading && canon.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No characters in the story bible yet. Extract characters from the editor
+        first — simulation only plays canon characters.
+      </p>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
         Choose up to {MAX_SIMULATED_CHARACTERS} characters for the assistant to
-        play, and who you&apos;ll play.
+        play, and who you&apos;ll play. Only canon characters are selectable.
       </p>
+
       <label className="flex flex-col gap-1 text-sm">
         Character the assistant plays
-        <input
+        <select
           className={fieldClass}
           value={char1}
+          disabled={isLoading}
           onChange={(e) => setChar1(e.target.value)}
-          placeholder="e.g. Elara Voss"
-        />
+        >
+          <option value="">Select a character</option>
+          {canon.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
       </label>
+
       <label className="flex flex-col gap-1 text-sm">
         Second character (optional)
-        <input
+        <select
           className={fieldClass}
           value={char2}
+          disabled={isLoading}
           onChange={(e) => setChar2(e.target.value)}
-          placeholder="optional"
-        />
+        >
+          <option value="">None</option>
+          {canon
+            .filter((name) => name !== char1)
+            .map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+        </select>
       </label>
+
       <label className="flex flex-col gap-1 text-sm">
         Who you play
-        <input
+        <select
           className={fieldClass}
           value={userCharacter}
+          disabled={isLoading}
           onChange={(e) => setUserCharacter(e.target.value)}
-          placeholder="a character name, or 'interviewer'"
-        />
+        >
+          <option value="">Select who you play</option>
+          <option value={INTERVIEWER}>{INTERVIEWER} (outside the scene)</option>
+          {canon.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
       </label>
+
       <label className="flex flex-col gap-1 text-sm">
         Private session knowledge (optional)
         <textarea
@@ -62,6 +106,7 @@ export function SimulationSetup() {
           placeholder="Facts the character knows that aren't in the story yet"
         />
       </label>
+
       <Button
         variant="primary"
         disabled={!canStart}

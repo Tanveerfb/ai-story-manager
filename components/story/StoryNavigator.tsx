@@ -36,7 +36,7 @@ function QuickAdd({
   return (
     <div className="flex gap-2">
       <input
-        className="h-9 flex-1 rounded-md border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="h-9 w-full min-w-0 flex-1 rounded-md border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         value={value}
         placeholder={placeholder}
         onChange={(e) => setValue(e.target.value)}
@@ -45,7 +45,7 @@ function QuickAdd({
         }}
         aria-label={label}
       />
-      <Button size="sm" variant="primary" loading={busy} onClick={submit}>
+      <Button size="sm" variant="primary" loading={busy} onClick={submit} className="shrink-0">
         <Plus className="size-4" /> Add
       </Button>
     </div>

@@ -17,6 +17,7 @@ export const useSettingsStore = create<SettingsStore>()(
       embeddingModel: "",
       connectionState: "idle",
       connectionError: null,
+      availableModels: [],
 
       setProvider: (provider) =>
         set({
@@ -26,10 +27,13 @@ export const useSettingsStore = create<SettingsStore>()(
           embeddingModel: "",
           connectionState: "idle",
           connectionError: null,
+          availableModels: [],
         }),
-      setBaseUrl: (baseUrl) => set({ baseUrl, connectionState: "idle" }),
+      setBaseUrl: (baseUrl) =>
+        set({ baseUrl, connectionState: "idle", availableModels: [] }),
       setGenerationModel: (generationModel) => set({ generationModel }),
       setEmbeddingModel: (embeddingModel) => set({ embeddingModel }),
+      setAvailableModels: (availableModels) => set({ availableModels }),
       setConnectionState: (connectionState, connectionError = null) =>
         set({ connectionState, connectionError }),
     }),

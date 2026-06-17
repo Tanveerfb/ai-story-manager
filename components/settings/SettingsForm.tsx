@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/layout/Button";
 import { useSettingsStore } from "@/store/useSettingsStore";
@@ -9,7 +8,7 @@ import type { HealthCheckResult, LLMProvider } from "@/types/llm";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
-  "h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
 
 function Field({
   label,
@@ -29,26 +28,35 @@ function Field({
   );
 }
 
+/**
+ * Build the option list for a model select: the models reported by the last
+ * successful connection test, plus the currently-saved value (so a persisted
+ * choice still shows after reload, before the connection is re-tested).
+ */
+function modelOptions(available: string[], current: string): string[] {
+  return Array.from(new Set([...available, current].filter(Boolean)));
+}
+
 export function SettingsForm() {
   const {
     provider,
     baseUrl,
     generationModel,
     embeddingModel,
+    availableModels,
     connectionState,
     connectionError,
     setProvider,
     setBaseUrl,
     setGenerationModel,
     setEmbeddingModel,
+    setAvailableModels,
     setConnectionState,
   } = useSettingsStore();
 
-  const [models, setModels] = useState<string[]>([]);
-
   async function testConnection() {
     setConnectionState("testing");
-    setModels([]);
+    setAvailableModels([]);
     try {
       const res = await fetch("/api/llm/health", {
         method: "POST",
@@ -57,7 +65,7 @@ export function SettingsForm() {
       });
       const result = (await res.json()) as HealthCheckResult;
       if (result.ok) {
-        setModels(result.models ?? []);
+        setAvailableModels(result.models ?? []);
         setConnectionState("success");
       } else {
         setConnectionState("error", result.error ?? "Connection failed");
@@ -69,6 +77,10 @@ export function SettingsForm() {
       );
     }
   }
+
+  const genOptions = modelOptions(availableModels, generationModel);
+  const embedOptions = modelOptions(availableModels, embeddingModel);
+  const noModels = availableModels.length === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,22 +111,54 @@ export function SettingsForm() {
         />
       </Field>
 
-      <Field label="Generation model" hint="e.g. llama3.1, qwen2.5">
-        <input
+      <Field
+        label="Generation model"
+        hint={
+          noModels
+            ? "Test the connection to load the provider's models."
+            : "Pick from the models the provider has loaded."
+        }
+      >
+        <select
           className={fieldClass}
           value={generationModel}
+          disabled={genOptions.length === 0}
           onChange={(e) => setGenerationModel(e.target.value)}
-          placeholder="model name"
-        />
+        >
+          <option value="" disabled>
+            {genOptions.length === 0 ? "No models loaded" : "Select a model"}
+          </option>
+          {genOptions.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
       </Field>
 
-      <Field label="Embedding model" hint="e.g. nomic-embed-text">
-        <input
+      <Field
+        label="Embedding model"
+        hint={
+          noModels
+            ? "Test the connection to load the provider's models."
+            : "Pick from the models the provider has loaded."
+        }
+      >
+        <select
           className={fieldClass}
           value={embeddingModel}
+          disabled={embedOptions.length === 0}
           onChange={(e) => setEmbeddingModel(e.target.value)}
-          placeholder="model name"
-        />
+        >
+          <option value="" disabled>
+            {embedOptions.length === 0 ? "No models loaded" : "Select a model"}
+          </option>
+          {embedOptions.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
       </Field>
 
       <div className="flex flex-col gap-3">
@@ -128,7 +172,7 @@ export function SettingsForm() {
         </Button>
 
         {connectionState === "success" ? (
-          <ConnectionBanner ok models={models} />
+          <ConnectionBanner ok models={availableModels} />
         ) : null}
         {connectionState === "error" ? (
           <ConnectionBanner ok={false} error={connectionError} />

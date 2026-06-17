@@ -17,8 +17,10 @@ import type {
   TimelineEvent,
 } from "@/types/artifacts";
 import {
+  appendJsonl,
   listFiles,
   readJson,
+  readJsonl,
   storyRoot,
   writeJson,
 } from "@/lib/fs/paths";
@@ -29,6 +31,7 @@ const characterFile = (slug: string) =>
   path.join(charactersDir(), `${slug}.json`);
 const collectionFile = (name: string) =>
   path.join(artifactsDir(), `${name}.json`);
+const timelineFile = () => path.join(artifactsDir(), "timeline.jsonl");
 const syncFile = () => path.join(artifactsDir(), "sync.json");
 
 export async function readCharacters(): Promise<Character[]> {
@@ -54,11 +57,22 @@ export async function writeLocations(items: Location[]): Promise<void> {
   await writeJson(collectionFile("locations"), items);
 }
 
+/**
+ * Timeline is append-only JSON Lines (timeline.jsonl): one line per event, no
+ * full-array rewrite, so it stays linear for an indefinitely long story. A
+ * legacy timeline.json array is read and merged for back-compat; events are
+ * deduped by id (later wins).
+ */
 export async function readTimeline(): Promise<TimelineEvent[]> {
-  return (await readJson<TimelineEvent[]>(collectionFile("timeline"))) ?? [];
+  const legacy =
+    (await readJson<TimelineEvent[]>(collectionFile("timeline"))) ?? [];
+  const lines = await readJsonl<TimelineEvent>(timelineFile());
+  const byId = new Map<string, TimelineEvent>();
+  for (const event of [...legacy, ...lines]) byId.set(event.id, event);
+  return Array.from(byId.values());
 }
-export async function writeTimeline(items: TimelineEvent[]): Promise<void> {
-  await writeJson(collectionFile("timeline"), items);
+export async function appendTimelineEvent(event: TimelineEvent): Promise<void> {
+  await appendJsonl(timelineFile(), event);
 }
 
 export async function readFactions(): Promise<Faction[]> {

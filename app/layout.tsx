@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { Navbar } from "@/components/layout/Navbar";
+import { FloatingNavToggle } from "@/components/layout/FloatingNavToggle";
 import { QueueProcessor } from "@/components/queue/QueueProcessor";
 import { QueueStatusBar } from "@/components/queue/QueueStatusBar";
 
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AuthGate>
           <Navbar />
+          <FloatingNavToggle />
           {children}
         </AuthGate>
         <QueueProcessor />

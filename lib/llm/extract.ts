@@ -36,18 +36,17 @@ import type {
 } from "@/types/artifacts";
 import type { StoryRef } from "@/types/story";
 import {
+  appendTimelineEvent,
   readCharacter,
   readCharacters,
   readFactions,
   readLocations,
   readLore,
-  readTimeline,
   writeCharacter,
   writeFactions,
   writeLastSynced,
   writeLocations,
   writeLore,
-  writeTimeline,
 } from "@/lib/fs/artifacts";
 
 type ExtractInput = {
@@ -85,6 +84,27 @@ const pick = (o: Obj, keys: string[]): unknown => {
   return undefined;
 };
 const union = (a: string[], b: string[]) => Array.from(new Set([...a, ...b]));
+
+/**
+ * Local models cross-contaminate types — re-listing characters and locations as
+ * factions or lore. Characters and locations are the primary record; this builds
+ * a test that flags a secondary-type candidate colliding with an existing
+ * primary entity, by exact slug or whole-word name match (catches "Vael" inside
+ * "Captain Vael"). Used to keep the always-injected story bible free of dupes.
+ */
+function makeCollisionTest(
+  names: string[],
+  slugs: Set<string>,
+): (name: string, slug: string) => boolean {
+  const patterns = names
+    .map((n) => n.trim().toLowerCase())
+    .filter((n) => n.length > 0)
+    .map(
+      (n) => new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"),
+    );
+  return (name, slug) =>
+    slugs.has(slug) || patterns.some((re) => re.test(name));
+}
 
 /** Run one typed extraction, returning a raw object array (retry once). */
 async function extractRaw(
@@ -253,7 +273,6 @@ export async function runExtraction(
 
   const events = await extractRaw(input, "timeline");
   if (events) {
-    const timeline = await readTimeline();
     for (const o of events) {
       const summary = asString(pick(o, ["summary", "event", "description"])).trim();
       if (!summary) continue;
@@ -266,20 +285,33 @@ export async function runExtraction(
       };
       const valid = timelineEventSchema.safeParse(candidate);
       if (valid.success) {
-        timeline.push(valid.data);
+        await appendTimelineEvent(valid.data);
         updated.timeline++;
       }
     }
-    await writeTimeline(timeline);
   } else failed.push("timeline");
 
   const factions = await extractRaw(input, "factions");
   if (factions) {
     let items = await readFactions();
+    // A faction must not duplicate a character or location.
+    const primaryChars = await readCharacters();
+    const primaryLocs = await readLocations();
+    const factionCollides = makeCollisionTest(
+      [
+        ...primaryChars.map((c) => c.name),
+        ...primaryLocs.map((l) => l.name),
+      ],
+      new Set([
+        ...primaryChars.map((c) => c.slug),
+        ...primaryLocs.map((l) => l.slug),
+      ]),
+    );
     for (const o of factions) {
       const name = asString(pick(o, ["name", "faction", "group"])).trim();
       if (!name) continue;
       const slug = slugify(name);
+      if (factionCollides(name, slug)) continue;
       const existing = items.find((i) => i.slug === slug);
       const candidate: Faction = {
         slug,
@@ -304,10 +336,28 @@ export async function runExtraction(
   const lore = await extractRaw(input, "lore");
   if (lore) {
     let items = await readLore();
+    // Lore is a glossary of world concepts — not a re-listing of characters,
+    // locations, or factions already captured by their own types.
+    const namedChars = await readCharacters();
+    const namedLocs = await readLocations();
+    const namedFactions = await readFactions();
+    const loreCollides = makeCollisionTest(
+      [
+        ...namedChars.map((c) => c.name),
+        ...namedLocs.map((l) => l.name),
+        ...namedFactions.map((f) => f.name),
+      ],
+      new Set([
+        ...namedChars.map((c) => c.slug),
+        ...namedLocs.map((l) => l.slug),
+        ...namedFactions.map((f) => f.slug),
+      ]),
+    );
     for (const o of lore) {
       const term = asString(pick(o, ["term", "name", "title"])).trim();
       if (!term) continue;
       const slug = slugify(term);
+      if (loreCollides(term, slug)) continue;
       const existing = items.find((i) => i.slug === slug);
       const candidate: LoreEntry = {
         slug,

@@ -39,6 +39,7 @@ yarn-error.log*
 
 # local story data (author-owned content, never committed)
 /story-data/
+/.audit-story/
 
 # typescript
 *.tsbuildinfo

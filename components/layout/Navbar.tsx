@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { EyeOff, Menu, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useUIStore } from "@/store/useUIStore";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -16,15 +17,16 @@ const LINKS = [
   { href: "/settings", label: "Settings" },
 ];
 
-// Writing surfaces stay distraction-free (plan §13); login has no chrome.
-const HIDDEN_ON = ["/editor", "/simulation", "/login"];
-
 export function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { enabled, user, signOut } = useAuth();
+  const navbarHidden = useUIStore((s) => s.navbarHidden);
+  const hideNavbar = useUIStore((s) => s.setNavbarHidden);
 
-  if (HIDDEN_ON.includes(pathname)) return null;
+  // The bar is ever-present across routes; the author hides it explicitly and
+  // restores it via the draggable floating toggle.
+  if (navbarHidden) return null;
 
   const linkClass = (href: string) =>
     cn(
@@ -54,17 +56,34 @@ export function Navbar() {
               Sign out
             </button>
           ) : null}
+          <button
+            onClick={() => hideNavbar(true)}
+            className="ml-1 rounded-md p-1.5 text-muted-foreground hover:text-foreground"
+            aria-label="Hide navigation"
+            title="Hide navigation"
+          >
+            <EyeOff className="size-4" />
+          </button>
         </div>
 
-        {/* Mobile toggle */}
-        <button
-          className="sm:hidden"
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle menu"
-          aria-expanded={open}
-        >
-          {open ? <X className="size-5" /> : <Menu className="size-5" />}
-        </button>
+        {/* Mobile controls */}
+        <div className="flex items-center gap-1 sm:hidden">
+          <button
+            onClick={() => hideNavbar(true)}
+            className="rounded-md p-1.5 text-muted-foreground hover:text-foreground"
+            aria-label="Hide navigation"
+            title="Hide navigation"
+          >
+            <EyeOff className="size-5" />
+          </button>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Toggle menu"
+            aria-expanded={open}
+          >
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
+          </button>
+        </div>
       </nav>
 
       {/* Mobile dropdown */}
